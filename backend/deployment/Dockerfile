@@ -1,5 +1,5 @@
 # ── Build stage ──────────────────────────────────────────────────────────────
-FROM rust:1.78-slim AS builder
+FROM rust:1-slim-bookworm AS builder
 
 WORKDIR /app
 
@@ -9,7 +9,7 @@ RUN mkdir src && echo "fn main(){}" > src/main.rs
 RUN cargo build --release
 RUN rm -f target/release/deps/backend*
 
-# Build thực sự
+# Build application
 COPY src ./src
 RUN cargo build --release
 
