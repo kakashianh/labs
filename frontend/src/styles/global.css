@@ -1,0 +1,35 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  overflow: hidden;
+  background: #000;
+}
+
+.home-page {
+  width: 100%;
+  height: 100%;
+}
+
+.cesium-map-container {
+  width: 100%;
+  height: 100%;
+}
+
+.cesium-map-container .cesium-viewer,
+.cesium-map-container canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
