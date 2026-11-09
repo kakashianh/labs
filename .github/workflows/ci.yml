@@ -1,4 +1,4 @@
-name: Rust CI/CD
+name: Rust CI
 
 on:
   push:
@@ -7,7 +7,6 @@ on:
   pull_request:
     branches:
       - "project/3D-map-medical"
-  workflow_dispatch:
 
 permissions:
   contents: read
