@@ -28,3 +28,8 @@ jobs:
           fi
 
           curl --fail --silent --show-error --request POST "$RENDER_DEPLOY_HOOK_URL"
+      - name: Smoke test
+        env:
+          API_URL: ${{ vars.API_URL }}
+        run: |
+          curl --fail-with-body "$API_URL/health"
