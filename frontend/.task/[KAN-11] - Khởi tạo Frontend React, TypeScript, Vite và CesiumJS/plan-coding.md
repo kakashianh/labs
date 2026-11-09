@@ -47,11 +47,11 @@ Tích hợp CesiumJS để hiển thị một bản đồ 3D cơ bản trên tr�
 
 ### Step 1 – Initialize React + TypeScript + Vite
 
-- [ ] Kiểm tra Node.js và npm đã được cài đặt.
-- [ ] Khởi tạo React application sử dụng TypeScript template.
-- [ ] Cài đặt dependencies.
-- [ ] Chạy thử development server.
-- [ ] Xác nhận trang React mặc định hiển thị thành công.
+- [x] Kiểm tra Node.js và npm đã được cài đặt.
+- [x] Khởi tạo React application sử dụng TypeScript template.
+- [x] Cài đặt dependencies.
+- [x] Chạy thử development server.
+- [x] Xác nhận trang React mặc định hiển thị thành công.
 
 Expected commands:
 
@@ -104,10 +104,10 @@ frontend/
 └── vite.config.ts
 ```
 
-- [ ] Tạo component `CesiumViewer`.
-- [ ] Tạo `HomePage` để chứa bản đồ.
-- [ ] Tách CSS khỏi component chính.
-- [ ] Xóa các thành phần demo mặc định không cần thiết của Vite.
+- [x] Tạo component `CesiumViewer`.
+- [x] Tạo `HomePage` để chứa bản đồ.
+- [x] Tách CSS khỏi component chính.
+- [x] Xóa các thành phần demo mặc định không cần thiết của Vite.
 
 ### Step 3 – Install and Configure CesiumJS
 
@@ -152,11 +152,11 @@ Import Cesium widget stylesheet:
 import "cesium/Build/Cesium/Widgets/widgets.css";
 ```
 
-- [ ] Cài đặt CesiumJS.
-- [ ] Cấu hình static assets.
-- [ ] Cấu hình `CESIUM_BASE_URL`.
-- [ ] Import Cesium widgets CSS.
-- [ ] Xác nhận không có lỗi tải Workers hoặc assets khi chạy ứng dụng.
+- [x] Cài đặt CesiumJS.
+- [x] Cấu hình static assets.
+- [x] Cấu hình `CESIUM_BASE_URL`.
+- [x] Import Cesium widgets CSS.
+- [x] Xác nhận không có lỗi tải Workers hoặc assets khi chạy ứng dụng.
 
 ### Step 4 – Implement Cesium Viewer Component
 
@@ -189,12 +189,12 @@ Lưu ý:
 - Tránh khởi tạo nhiều Viewer trên cùng một DOM element.
 - Container bản đồ phải có width và height xác định.
 
-- [ ] Tạo Cesium Viewer component.
-- [ ] Khởi tạo Viewer trong `useEffect`.
-- [ ] Cấu hình camera mặc định.
-- [ ] Cấu hình bản đồ nền.
-- [ ] Cleanup Viewer đúng lifecycle.
-- [ ] Kiểm tra không có lỗi khi React StrictMode mount/unmount.
+- [x] Tạo Cesium Viewer component.
+- [x] Khởi tạo Viewer trong `useEffect`.
+- [x] Cấu hình camera mặc định.
+- [x] Cấu hình bản đồ nền.
+- [x] Cleanup Viewer đúng lifecycle.
+- [x] Kiểm tra không có lỗi khi React StrictMode mount/unmount.
 
 ### Step 5 – Implement Initial Map Page
 
@@ -225,19 +225,19 @@ Yêu cầu:
 
 Ở bước này có thể sử dụng OpenStreetMap imagery làm bản đồ nền để kiểm tra mà chưa cần dữ liệu 3D hoặc Cesium Ion token.
 
-- [ ] Tích hợp CesiumViewer vào HomePage.
-- [ ] Thiết lập layout full-screen.
-- [ ] Kiểm tra zoom, rotate, tilt và pan.
-- [ ] Kiểm tra hiển thị trên kích thước màn hình khác nhau.
+- [x] Tích hợp CesiumViewer vào HomePage.
+- [x] Thiết lập layout full-screen.
+- [x] Kiểm tra zoom, rotate, tilt và pan.
+- [x] Kiểm tra hiển thị trên kích thước màn hình khác nhau.
 
 ### Step 6 – Configure Environment and Git
 
-- [ ] Kiểm tra file `.env` hiện tại.
-- [ ] Chỉ thêm environment variables thực sự cần thiết.
-- [ ] Không commit API token hoặc secret lên Git.
-- [ ] Cập nhật `.gitignore`.
-- [ ] Đảm bảo `package-lock.json` được commit.
-- [ ] Đảm bảo các Cesium static assets được generate/copy tự động khi chạy build, không cần commit `node_modules`.
+- [x] Kiểm tra file `.env` hiện tại.
+- [x] Chỉ thêm environment variables thực sự cần thiết.
+- [x] Không commit API token hoặc secret lên Git.
+- [x] Cập nhật `.gitignore`.
+- [x] Đảm bảo `package-lock.json` được commit.
+- [x] Đảm bảo các Cesium static assets được generate/copy tự động khi chạy build, không cần commit `node_modules`.
 
 Nếu sử dụng Cesium Ion token ở các bước mở rộng sau này, đặt token trong biến môi trường:
 
@@ -262,27 +262,27 @@ npm run build
 ```
 
 Kiểm tra:
-- [ ] Không có TypeScript errors.
-- [ ] Không có lỗi import CesiumJS.
-- [ ] Không có lỗi load Cesium Workers.
-- [ ] Không có lỗi load Cesium static assets.
-- [ ] Viewer hiển thị thành công.
-- [ ] Các thao tác camera hoạt động.
-- [ ] Production build hoàn tất thành công.
+- [x] Không có TypeScript errors.
+- [x] Không có lỗi import CesiumJS.
+- [x] Không có lỗi load Cesium Workers.
+- [x] Không có lỗi load Cesium static assets.
+- [x] Viewer hiển thị thành công.
+- [x] Các thao tác camera hoạt động.
+- [x] Production build hoàn tất thành công.
 
 ## 5. Acceptance Criteria
 
 Ticket được xem là hoàn thành khi đáp ứng tất cả điều kiện:
 
-- [ ] React + TypeScript + Vite được khởi tạo thành công trong `frontend/`.
-- [ ] Có cấu trúc source code cơ bản.
-- [ ] CesiumJS được cài đặt và tích hợp.
-- [ ] Cesium static assets được cấu hình chính xác.
-- [ ] Trình duyệt hiển thị được Cesium Viewer.
-- [ ] Bản đồ nền hiển thị thành công.
-- [ ] Có thể zoom, rotate, tilt và pan bản đồ.
-- [ ] Không có lỗi runtime nghiêm trọng.
-- [ ] `npm run build` chạy thành công.
+- [x] React + TypeScript + Vite được khởi tạo thành công trong `frontend/`.
+- [x] Có cấu trúc source code cơ bản.
+- [x] CesiumJS được cài đặt và tích hợp.
+- [x] Cesium static assets được cấu hình chính xác.
+- [x] Trình duyệt hiển thị được Cesium Viewer.
+- [x] Bản đồ nền hiển thị thành công.
+- [x] Có thể zoom, rotate, tilt và pan bản đồ.
+- [x] Không có lỗi runtime nghiêm trọng.
+- [x] `npm run build` chạy thành công.
 
 ## 6. Deliverables
 
