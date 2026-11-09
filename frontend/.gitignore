@@ -1,0 +1,35 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Environment variables (never commit secrets / tokens)
+.env
+.env.local
+.env.*.local
+
+# Cesium static assets are generated from node_modules at dev/build time
+# via vite-plugin-static-copy (served in dev, copied to dist/cesium/ on build).
+# Never commit generated copies.
+public/cesium/*
+!public/cesium/.gitkeep
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
