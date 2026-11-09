@@ -1,0 +1,53 @@
+name: Rust CI
+
+on:
+  push:
+    branches:
+      - "project/3D-map-medical"
+  pull_request:
+    branches:
+      - "project/3D-map-medical"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Format, lint and test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Locate Cargo workspace
+        id: cargo
+        shell: bash
+        run: |
+          manifest="$(find . -name Cargo.toml -not -path './target/*' -not -path '*/target/*' -print -quit)"
+          if [ -z "$manifest" ]; then
+            echo "::error::No Cargo.toml found. Add the Rust crate/workspace before running Rust CI."
+            exit 1
+          fi
+          echo "manifest=$manifest" >> "$GITHUB_OUTPUT"
+          echo "Using Cargo manifest: $manifest"
+
+      - name: Check formatting
+        run: cargo fmt --manifest-path "${{ steps.cargo.outputs.manifest }}" --all -- --check
+
+      - name: Run Clippy
+        run: cargo clippy --manifest-path "${{ steps.cargo.outputs.manifest }}" --all-targets --all-features -- -D warnings
+
+      - name: Run tests
+        run: cargo test --manifest-path "${{ steps.cargo.outputs.manifest }}" --all-targets --all-features
