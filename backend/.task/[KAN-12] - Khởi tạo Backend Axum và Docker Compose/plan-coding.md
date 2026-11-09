@@ -348,13 +348,37 @@ sqlx migrate run
 
 ## Tiêu chí hoàn thành (Definition of Done)
 
-- [ ] `cargo build --release` không có lỗi / warning
-- [ ] `GET /health` trả về `{"status":"ok"}` với HTTP 200
+- [x] `cargo build --release` không có lỗi / warning
+- [x] `GET /health` trả về `{"status":"ok"}` với HTTP 200
 - [ ] `docker compose up` khởi động thành công Postgres, Redis, backend
 - [ ] Backend kết nối được Postgres qua SQLx pool
 - [ ] Migration chạy tự động khi container start
 - [ ] Tracing logs hiển thị request/response đầy đủ
-- [ ] File `.env.example` đã được commit, `.env` đã có trong `.gitignore`
+- [x] File `.env.example` đã được commit, `.env` đã có trong `.gitignore`
+
+### Kết quả kiểm tra (Verification — 2026-11-09, sandbox)
+
+Đã kiểm tra trong sandbox (Rust 1.99.1, Cargo 1.99.1):
+
+- [x] `cargo build --release` thành công, không có warning từ crate `backend`
+  (chỉ có `future-incompat` của dependency `sqlx-postgres v0.7.4`, không phải code dự án).
+  Nhị phân `backend/target/release/backend` ~6.6 MB.
+  `cargo fmt --check` sạch, `cargo clippy --all-targets --all-features -- -D warnings` sạch,
+  `cargo test` 8/8 tests pass (config 2, error 4, health 2).
+- [x] `GET /health` trả HTTP 200, body `{"status":"ok","service":"backend"}`
+  (superset của yêu cầu `{"status":"ok"}`) — kiểm chứng qua
+  `cargo test health_router_serves_get_health` (oneshot qua `Router` + `TraceLayer`)
+  và `health_handler_returns_ok_status`.
+- [x] File `.env.example` đã tạo tại `backend/.env.example`, `.env` đã có trong `.gitignore`
+  (root `.gitignore` + `backend/.dockerignore` đã tạo, `docker compose config --quiet` OK).
+  Lưu ý: các file mới hiện là untracked, cần `git add`/`commit` mới tính là committed.
+- [ ] `docker compose up`, kết nối Postgres qua SQLx, migration tự động và tracing request/response
+  chưa kiểm chứng được trong sandbox: Docker daemon không truy cập được
+  (`permission denied /var/run/docker.sock`, user không thuộc group `docker`, sudo bị chặn `no new privileges`),
+  và chưa có Postgres live để chạy migration. `docker-compose.yml` chỉ được kiểm chứng bằng
+  `docker compose config` (YAML hợp lệ). Code đã triển khai `PgPoolOptions::connect_lazy` + retry migrations
+  và `TraceLayer::new_for_http()` + `tracing-subscriber`, nhưng cần chạy `docker compose up --build`
+  trên máy local để xác thực các mục này trước khi tick thêm.
 
 ---
 
