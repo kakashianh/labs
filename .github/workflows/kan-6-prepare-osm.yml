@@ -31,7 +31,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y gdal-bin osmium-tool jq curl
-          npm install --global osmtogeojson
+          mkdir -p "$RUNNER_TEMP/osm-converter"\n          npm install --prefix "$RUNNER_TEMP/osm-converter" osmtogeojson\n          echo "NODE_PATH=$RUNNER_TEMP/osm-converter/node_modules" >> "$GITHUB_ENV"
           echo "GDAL: $(ogr2ogr --version)"
           echo "OSmium: $(osmium --version)"
           echo "Node: $(node --version)"
@@ -40,7 +40,7 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-          mkdir -p data/sample/source data/sample/processed build/kan-6
+          [[ "${{ inputs.confirm_scope }}" == "old-hcmc" ]] || { echo "Unexpected study area selection"; exit 1; }\n          mkdir -p data/sample/source data/sample/processed build/kan-6
           # OSM relation 1973756 is the pre-merger Ho Chi Minh City administrative
           # boundary (admin_level=4). Pinning the relation prevents a geocoder
           # from silently returning the post-2025 expanded city.
