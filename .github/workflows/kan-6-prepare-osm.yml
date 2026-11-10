@@ -1,0 +1,196 @@
+name: KAN-6 - Prepare HCMC OSM sample data
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_scope:
+        description: "Confirm the historical HCMC boundary (before 2025-07-01)"
+        required: true
+        type: choice
+        options:
+          - old-hcmc
+        default: old-hcmc
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kan-6-osm-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Download, extract, validate and package GIS data
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Checkout selected branch
+        uses: actions/checkout@v4
+
+      - name: Install GIS and conversion tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gdal-bin osmium-tool jq curl
+          npm install --global osmtogeojson
+          echo "GDAL: $(ogr2ogr --version)"
+          echo "OSmium: $(osmium --version)"
+          echo "Node: $(node --version)"
+
+      - name: Resolve and verify historical HCMC boundary
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p data/sample/source data/sample/processed build/kan-6
+          # OSM relation 1973756 is the pre-merger Ho Chi Minh City administrative
+          # boundary (admin_level=4). Pinning the relation prevents a geocoder
+          # from silently returning the post-2025 expanded city.
+          QUERY='[out:json][timeout:180];relation(1973756);out body;>;out skel qt;'
+          curl --fail --location --retry 4 --retry-delay 5 \
+            --get 'https://overpass-api.de/api/interpreter' \
+            --data-urlencode "data=$QUERY" \
+            --output build/kan-6/hcm_relation.osm.json
+          jq -e '
+            any(.elements[]; .type == "relation" and .id == 1973756
+              and .tags.boundary == "administrative"
+              and .tags.admin_level == "4"
+              and ((.tags.name // "") | test("Ho Chi Minh|Hồ Chí Minh"; "i")))
+          ' build/kan-6/hcm_relation.osm.json >/dev/null
+          node - <<'NODE'
+          const fs = require("fs");
+          const convert = require("osmtogeojson");
+          const osm = JSON.parse(fs.readFileSync("build/kan-6/hcm_relation.osm.json", "utf8"));
+          const geo = convert(osm);
+          const features = (geo.features || []).filter(f =>
+            f.id === "relation/1973756" || f.properties?.id === "relation/1973756" ||
+            f.properties?.tags?.name === "Thành phố Hồ Chí Minh" ||
+            f.properties?.tags?.name === "Ho Chi Minh City"
+          );
+          if (features.length !== 1 || !features[0].geometry) {
+            throw new Error("Could not resolve exactly one polygon for OSM relation 1973756");
+          }
+          const geometryType = features[0].geometry.type;
+          if (!["Polygon", "MultiPolygon"].includes(geometryType)) {
+            throw new Error("Unexpected boundary geometry: " + geometryType);
+          }
+          fs.writeFileSync("data/sample/source/hcm_boundary.geojson",
+            JSON.stringify({type:"FeatureCollection", features}, null, 2) + "\n");
+          NODE
+          ogrinfo -ro -so data/sample/source/hcm_boundary.geojson
+          # Guard against accidentally receiving the expanded post-2025 HCMC area.
+          EXTENT="$(ogrinfo -ro -so data/sample/source/hcm_boundary.geojson | sed -n 's/^Extent: //p' | head -n 1)"
+          echo "Boundary extent: $EXTENT"
+          python3 - "$EXTENT" <<'PY'
+          import re, sys
+          values = [float(x) for x in re.findall(r"[-+]?(?:\d+\.?\d*|\.\d+)", sys.argv[1])]
+          if len(values) != 4:
+              raise SystemExit("Cannot parse boundary extent")
+          xmin, ymin, xmax, ymax = values
+          if not (106.2 < xmin < 106.8 and 106.5 < xmax < 107.2 and
+                  10.2 < ymin < 10.7 and 10.7 < ymax < 11.5):
+              raise SystemExit("Boundary extent is outside expected historical HCMC envelope; stopping.")
+          PY
+          echo "Boundary source: OSM relation 1973756" >> "$GITHUB_STEP_SUMMARY"
+          echo "Boundary tags verified: boundary=administrative, admin_level=4" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Download Geofabrik Vietnam extract
+        run: |
+          set -Eeuo pipefail
+          curl --fail --location --retry 4 --retry-delay 5 \
+            --output data/sample/source/vietnam-latest.osm.pbf \
+            https://download.geofabrik.de/asia/vietnam-latest.osm.pbf
+          test -s data/sample/source/vietnam-latest.osm.pbf
+          sha256sum data/sample/source/vietnam-latest.osm.pbf | tee build/kan-6/pbf.sha256
+          stat -c 'PBF size: %s bytes' data/sample/source/vietnam-latest.osm.pbf
+
+      - name: Clip Vietnam PBF to historical HCMC
+        run: |
+          set -Eeuo pipefail
+          osmium extract \
+            --polygon data/sample/source/hcm_boundary.geojson \
+            --strategy=smart \
+            data/sample/source/vietnam-latest.osm.pbf \
+            --output build/kan-6/hcm-extract.osm.pbf \
+            --overwrite
+          test -s build/kan-6/hcm-extract.osm.pbf
+          ls -lh build/kan-6/hcm-extract.osm.pbf
+
+      - name: Prepare building footprints
+        run: |
+          set -Eeuo pipefail
+          OSM_PBF_FILE="$PWD/build/kan-6/hcm-extract.osm.pbf" \
+            bash scripts/gis/prepare_osm_data.sh
+
+      - name: Validate outputs and write quality report
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          BOUNDARY=data/sample/processed/hcm_boundary.geojson
+          BUILDINGS=data/sample/processed/hcm_buildings.geojson
+          test -s "$BOUNDARY"
+          test -s "$BUILDINGS"
+          ogrinfo -ro -so "$BOUNDARY" | tee build/kan-6/boundary-inspection.txt
+          ogrinfo -ro -so "$BUILDINGS" | tee build/kan-6/buildings-inspection.txt
+          BOUNDARY_COUNT="$(ogrinfo -ro -so "$BOUNDARY" | sed -n 's/^Feature Count: //p' | head -n 1)"
+          BUILDING_COUNT="$(ogrinfo -ro -so "$BUILDINGS" | sed -n 's/^Feature Count: //p' | head -n 1)"
+          test "${BOUNDARY_COUNT:-0}" -ge 1
+          test "${BUILDING_COUNT:-0}" -gt 0
+          # Load into a temporary SQLite/GeoPackage database for attribute QA.
+          ogr2ogr -f GPKG build/kan-6/qa.gpkg "$BUILDINGS" -nln buildings
+          NULL_IDS="$(ogrinfo -ro -dialect SQLite -sql 'SELECT COUNT(*) AS n FROM buildings WHERE building_id IS NULL OR building_id = ""' build/kan-6/qa.gpkg | sed -n 's/.*n (Integer) = //p' | head -n 1)"
+          DUPLICATE_IDS="$(ogrinfo -ro -dialect SQLite -sql 'SELECT COUNT(*) AS n FROM (SELECT building_id FROM buildings GROUP BY building_id HAVING COUNT(*) > 1)' build/kan-6/qa.gpkg | sed -n 's/.*n (Integer) = //p' | head -n 1)"
+          NULL_IDS="${NULL_IDS:-0}"
+          DUPLICATE_IDS="${DUPLICATE_IDS:-0}"
+          sha256sum "$BOUNDARY" "$BUILDINGS" | tee build/kan-6/output.sha256
+          cat > data/sample/processed/quality-summary.md <<EOF
+          # KAN-6 automated data quality summary
+
+          - Study area: historical Ho Chi Minh City boundary before 2025-07-01
+          - Boundary source: OpenStreetMap relation 1973756
+          - Building source: Geofabrik Vietnam OSM extract
+          - Boundary features: $BOUNDARY_COUNT
+          - Building features: $BUILDING_COUNT
+          - Buildings with null building_id: $NULL_IDS
+          - Duplicate building_id groups: $DUPLICATE_IDS
+          - Boundary CRS / geometry inspection: see workflow logs
+          - Building CRS / geometry inspection: see workflow logs
+          - Source PBF SHA-256: $(cut -d ' ' -f 1 build/kan-6/pbf.sha256)
+          - Output SHA-256 values: see output.sha256 in the artifact
+
+          ## Interpretation
+
+          This report contains automated structural and identifier checks only.
+          It does not claim complete OSM coverage or replace visual inspection in QGIS.
+          OSM building footprints are 2D and do not include inferred height, floors,
+          population, occupancy, or epidemiological attributes.
+          EOF
+          cat data/sample/processed/quality-summary.md >> "$GITHUB_STEP_SUMMARY"
+          echo "Null building IDs: $NULL_IDS; duplicate ID groups: $DUPLICATE_IDS"
+
+      - name: Package data and provenance
+        if: always()
+        run: |
+          mkdir -p build/kan-6/package
+          cp -f data/sample/source/hcm_boundary.geojson build/kan-6/package/ 2>/dev/null || true
+          cp -f data/sample/processed/*.geojson build/kan-6/package/ 2>/dev/null || true
+          cp -f data/sample/processed/quality-summary.md build/kan-6/package/ 2>/dev/null || true
+          cp -f build/kan-6/*.sha256 build/kan-6/package/ 2>/dev/null || true
+          cp -f build/kan-6/*inspection.txt build/kan-6/package/ 2>/dev/null || true
+          cat > build/kan-6/package/README.md <<'EOF'
+          # KAN-6 HCMC OSM data artifact
+
+          Study area: historical Ho Chi Minh City boundary before 2025-07-01.
+          Boundary: OSM administrative relation 1973756.
+          Buildings: 2D OSM building footprints clipped to the boundary.
+          CRS: GeoJSON RFC 7946 / WGS 84 longitude-latitude (EPSG:4326).
+          Attribution: © OpenStreetMap contributors, ODbL.
+          This artifact is a reproducible snapshot; consult quality-summary.md and checksums.
+          EOF
+
+      - name: Upload GIS data artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kan-6-hcmc-old-osm-data
+          path: build/kan-6/package/
+          if-no-files-found: error
+          retention-days: 30
