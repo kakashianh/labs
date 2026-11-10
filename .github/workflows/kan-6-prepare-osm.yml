@@ -48,10 +48,40 @@ jobs:
           # boundary (admin_level=4). Pinning the relation prevents a geocoder
           # from silently returning the post-2025 expanded city.
           QUERY='[out:json][timeout:180];relation(1973756);out body;>;out skel qt;'
-          curl --fail --location --retry 4 --retry-delay 5 \
-            --get 'https://overpass-api.de/api/interpreter' \
-            --data-urlencode "data=$QUERY" \
-            --output build/kan-6/hcm_relation.osm.json
+          # Overpass instances may reject or throttle GitHub-hosted runners.
+          # Try independent public instances and identify this workflow clearly.
+          OVERPASS_ENDPOINTS=(
+            "https://overpass.kumi.systems/api/interpreter"
+            "https://overpass-api.de/api/interpreter"
+            "https://overpass.private.coffee/api/interpreter"
+          )
+          BOUNDARY_FETCHED=false
+          for endpoint in "${OVERPASS_ENDPOINTS[@]}"; do
+            echo "Requesting OSM relation 1973756 from $endpoint"
+            if curl --fail --show-error --silent --location \
+              --retry 2 --retry-all-errors --retry-delay 5 \
+              --connect-timeout 20 --max-time 240 \
+              --user-agent "KAN-6-GIS-Data-Preparation/1.0 (GitHub Actions; OpenStreetMap data workflow)" \
+              --header "Accept: application/json" \
+              --get "$endpoint" \
+              --data-urlencode "data=$QUERY" \
+              --output build/kan-6/hcm_relation.osm.json; then
+              if jq -e 'any(.elements[]?; .type == "relation" and .id == 1973756)' \
+                build/kan-6/hcm_relation.osm.json >/dev/null; then
+                BOUNDARY_FETCHED=true
+                echo "Successfully fetched relation 1973756 from $endpoint"
+                break
+              fi
+              echo "::warning::Endpoint returned a response without relation 1973756: $endpoint"
+            else
+              echo "::warning::Overpass request failed: $endpoint"
+            fi
+            rm -f build/kan-6/hcm_relation.osm.json
+          done
+          if [[ "$BOUNDARY_FETCHED" != "true" ]]; then
+            echo "::error::Could not fetch OSM relation 1973756 from any configured Overpass endpoint."
+            exit 1
+          fi
           jq -e '
             any(.elements[]; .type == "relation" and .id == 1973756
               and .tags.boundary == "administrative"
@@ -183,7 +213,7 @@ jobs:
           echo "Null building IDs: $NULL_IDS; duplicate ID groups: $DUPLICATE_IDS"
 
       - name: Package data and provenance
-        if: always()
+        if: success()
         run: |
           mkdir -p build/kan-6/package
           cp -f data/sample/source/hcm_boundary.geojson build/kan-6/package/ 2>/dev/null || true
@@ -203,7 +233,7 @@ jobs:
           EOF
 
       - name: Upload GIS data artifact
-        if: always()
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: kan-6-hcmc-old-osm-data
