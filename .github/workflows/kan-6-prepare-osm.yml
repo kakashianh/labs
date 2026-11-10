@@ -109,14 +109,37 @@ jobs:
           NODE
           ogrinfo -ro -so data/sample/source/hcm_boundary.geojson
           # Guard against accidentally receiving the expanded post-2025 HCMC area.
-          EXTENT="$(ogrinfo -ro -so data/sample/source/hcm_boundary.geojson | sed -n 's/^Extent: //p' | head -n 1)"
-          echo "Boundary extent: $EXTENT"
-          python3 - "$EXTENT" <<'PY'
-          import re, sys
-          values = [float(x) for x in re.findall(r"[-+]?(?:\d+\.?\d*|\.\d+)", sys.argv[1])]
-          if len(values) != 4:
-              raise SystemExit("Cannot parse boundary extent")
-          xmin, ymin, xmax, ymax = values
+          # Read coordinates from GeoJSON directly; ogrinfo summary output does not
+          # consistently include an Extent line across GDAL versions.
+          python3 - <<'PY'
+          import json
+          from numbers import Real
+
+          with open("data/sample/source/hcm_boundary.geojson", encoding="utf-8") as f:
+              document = json.load(f)
+
+          coordinates = []
+          def collect(value):
+              if isinstance(value, list):
+                  if len(value) >= 2 and isinstance(value[0], Real) and isinstance(value[1], Real):
+                      coordinates.append((float(value[0]), float(value[1])))
+                  else:
+                      for child in value:
+                          collect(child)
+
+          for feature in document.get("features", []):
+              geometry = feature.get("geometry") or {}
+              collect(geometry.get("coordinates", []))
+
+          if not coordinates:
+              raise SystemExit("Boundary GeoJSON contains no coordinate pairs")
+
+          xmin = min(point[0] for point in coordinates)
+          ymin = min(point[1] for point in coordinates)
+          xmax = max(point[0] for point in coordinates)
+          ymax = max(point[1] for point in coordinates)
+          print(f"Boundary extent: ({xmin}, {ymin}) - ({xmax}, {ymax})")
+
           if not (106.2 < xmin < 106.8 and 106.5 < xmax < 107.2 and
                   10.2 < ymin < 10.7 and 10.7 < ymax < 11.5):
               raise SystemExit("Boundary extent is outside expected historical HCMC envelope; stopping.")
