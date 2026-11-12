@@ -11,7 +11,7 @@ Chuẩn bị bộ dữ liệu GIS 2D từ OpenStreetMap (OSM) cho khu vực nghi
 - Định dạng bàn giao: GeoJSON theo RFC 7946, tọa độ WGS 84 (longitude, latitude; EPSG:4326).
 - Công cụ: GDAL/OGR và QGIS; không thêm Python service vào backend Rust + Axum.
 
-**Lưu ý phạm vi:** TP.HCM là phạm vi dữ liệu mục tiêu. Không tự thu hẹp sang một quận hoặc khu vực trung tâm nếu chưa được duyệt. Bước đầu phải xác minh boundary OSM đúng là ranh giới cấp thành phố; không chọn relation chỉ dựa trên tên gần giống.
+**Lưu ý phạm vi đã duyệt:** sử dụng boundary TP.HCM trước thay đổi địa giới 01/07/2025, tái dựng từ OSM relation `1973756` tại thời điểm `2025-06-30T23:59:59Z` (UTC). Workflow phải truy vấn OSM historical/attic data; tuyệt đối không lấy geometry hiện tại làm dữ liệu thay thế. Buildings được lấy từ Geofabrik snapshot mới nhất tại thời điểm chạy và clip theo boundary historical — đây không phải snapshot buildings của năm 2025.
 
 ## 2. Scope
 
@@ -63,13 +63,13 @@ Không tự tạo `height`, `building_levels`, dân số hoặc thuộc tính m�
 
 ## 4. Implementation plan
 
-### Step 1 – Confirm study boundary and source
+### Step 1 – Reconstruct the approved historical boundary
 
-- [ ] Mở Overpass Turbo và tìm relation có `boundary=administrative` đại diện đúng TP.HCM.
-- [ ] Kiểm tra tag `name`, `admin_level`, loại relation, phạm vi và hình dạng trên bản đồ; không hard-code admin_level hoặc relation ID trước khi xác minh.
-- [ ] Export đúng một boundary feature thành GeoJSON và lưu tại `data/sample/source/hcm_boundary.geojson`.
-- [ ] Ghi relation ID, URL truy vấn, ngày tải, attribution và ghi chú xác minh vào `metadata.md`.
-- [ ] Kiểm tra file boundary có CRS hợp lệ và chỉ chứa đúng phạm vi thành phố.
+- [x] Chốt phạm vi historical: relation `1973756`, truy vấn tại `2025-06-30T23:59:59Z` (UTC); không dùng current geometry.
+- [x] Cập nhật GitHub Actions workflow để truy vấn Overpass attic tại timestamp cố định, kiểm tra relation/tags/geometry extent và ghi version provenance.
+- [ ] Chạy workflow và xác nhận relation version/timestamp được trả về thực sự không muộn hơn cutoff.
+- [ ] Tạo `data/sample/source/hcm_boundary.geojson`, kiểm tra geometry và đối chiếu trực quan với bản đồ TP.HCM trước 01/07/2025.
+- [ ] Ghi version, timestamp, Overpass endpoint, checksum và attribution từ lần chạy thật vào metadata.
 
 ### Step 2 – Acquire OSM PBF
 
@@ -168,4 +168,4 @@ data(gis): add validated HCMC GeoJSON sample
 
 KAN-6 chỉ hoàn thành khi boundary TP.HCM đã được xác minh, bộ building footprints thật từ OSM đã được trích xuất/clip/chuẩn hóa, kết quả đọc lại được bằng công cụ GIS, chất lượng và giới hạn được báo cáo, và KAN-13 có đủ thông tin để thiết kế schema PostGIS.
 
-**Trạng thái hiện tại sau rà soát source:** đã có script xử lý, README hướng dẫn, data dictionary và các template metadata/quality report. Chưa thấy boundary input, Vietnam PBF hoặc hai GeoJSON đầu ra trong nhánh; `data_quality_report.md` vẫn ghi `NOT RUN`. Vì vậy, các bước xác minh boundary, tải/kiểm tra PBF, chạy pipeline, QA bằng GDAL/QGIS và hoàn thiện metadata/quality report vẫn pending. Lưu ý cần đồng bộ `data/sample/README.md` (đang mô tả GitHub Actions, preset `old-hcmc` và relation ID `1973756`) với quy trình trong plan/script (boundary xác minh thủ công); chưa tìm thấy workflow tương ứng trong các đường dẫn workflow đã kiểm tra.
+**Trạng thái sau cập nhật workflow:** đã có script xử lý, GitHub Actions workflow, README, data dictionary và template metadata/quality report. Workflow hiện truy vấn relation `1973756` tại `2025-06-30T23:59:59Z`, thay vì lấy geometry hiện tại. README đã được đồng bộ để phân biệt boundary historical với buildings từ Geofabrik snapshot mới nhất. Chưa có kết quả chạy workflow được xác nhận; boundary/PBF/GeoJSON và số liệu QA vẫn pending. GitHub chỉ cho phép `workflow_dispatch` khi workflow đã có trên default branch; nếu file chỉ nằm trên task branch thì cần merge workflow file vào default branch trước khi chạy task branch.
