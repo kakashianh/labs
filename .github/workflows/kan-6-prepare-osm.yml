@@ -146,12 +146,30 @@ jobs:
           BUILDINGS=data/sample/processed/hcm_buildings.geojson
           test -s "$BOUNDARY"
           test -s "$BUILDINGS"
-          ogrinfo -ro -so "$BOUNDARY" | tee build/kan-6/boundary-inspection.txt
-          ogrinfo -ro -so "$BUILDINGS" | tee build/kan-6/buildings-inspection.txt
-          BOUNDARY_COUNT="$(ogrinfo -ro -so "$BOUNDARY" | sed -n 's/^Feature Count: //p' | head -n 1)"
-          BUILDING_COUNT="$(ogrinfo -ro -so "$BUILDINGS" | sed -n 's/^Feature Count: //p' | head -n 1)"
-          test "${BOUNDARY_COUNT:-0}" -ge 1
-          test "${BUILDING_COUNT:-0}" -gt 0
+          # -al is required here: without it ogrinfo only lists layer names and
+          # does not print per-layer Feature Count in this GDAL version.
+          ogrinfo -ro -al -so "$BOUNDARY" | tee build/kan-6/boundary-inspection.txt
+          ogrinfo -ro -al -so "$BUILDINGS" | tee build/kan-6/buildings-inspection.txt
+          BOUNDARY_COUNT="$(sed -n 's/^Feature Count: //p' build/kan-6/boundary-inspection.txt | head -n 1)"
+          BUILDING_COUNT="$(sed -n 's/^Feature Count: //p' build/kan-6/buildings-inspection.txt | head -n 1)"
+          if [[ ! "$BOUNDARY_COUNT" =~ ^[0-9]+$ ]]; then
+            echo "::error::Could not read boundary feature count from ogrinfo output."
+            cat build/kan-6/boundary-inspection.txt
+            exit 1
+          fi
+          if [[ ! "$BUILDING_COUNT" =~ ^[0-9]+$ ]]; then
+            echo "::error::Could not read building feature count from ogrinfo output."
+            cat build/kan-6/buildings-inspection.txt
+            exit 1
+          fi
+          if (( BOUNDARY_COUNT < 1 )); then
+            echo "::error::Boundary layer contains no features."
+            exit 1
+          fi
+          if (( BUILDING_COUNT < 1 )); then
+            echo "::error::Building layer contains no features."
+            exit 1
+          fi
           # Load into a temporary SQLite/GeoPackage database for attribute QA.
           ogr2ogr -f GPKG build/kan-6/qa.gpkg "$BUILDINGS" -nln buildings
           read -r NULL_IDS DUPLICATE_IDS < <(python3 - <<'PY'
