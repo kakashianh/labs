@@ -2,52 +2,83 @@
 
 ## 1. Objective
 
-Define module boundaries and contracts before implementation grows.
+Define stable boundaries and data contracts for ingestion, Spark, structure features, graph, vector search, ML, API, and UI.
 
-## 2. Context and scope
+## 2. Scope and design context
 
-Document the layered architecture and responsibilities for API, ingestion, processing, structural features, graph, vector search, ML, and persistence; define shared schemas and dependency direction.
+Translate the platform flow into modules with one-way dependencies. This task defines interfaces; implementation belongs to later tasks.
 
-This plan covers the implementation of **PP-10**. Keep changes within this ticket's scope and preserve the interfaces agreed with dependent modules.
+**Upstream dependencies:** PP-9 provides the repository conventions.
 
-## 3. Implementation plan
+**Related plans:** `PP-11` · `PP-12` · `PP-13–PP-42`. Use the links below to keep contracts aligned; update this plan if an upstream interface changes.
 
-1. Inspect the current repository structure and related modules before changing files.
-2. Confirm input/output contracts, configuration, source versions, and error cases.
-3. Implement the smallest cohesive module or pipeline for this ticket.
-4. Add structured logging, validation, and explicit handling for missing, invalid, and duplicate data where relevant.
-5. Add automated tests and a reproducible sample execution; update documentation and examples.
+## 3. Step-by-step implementation and to-do
 
-## 4. Expected deliverables
+### Step 1 — Map the end-to-end data flow
 
-- Implementation and configuration required by the stated scope.
-- Documented inputs, outputs, assumptions, and operational instructions.
-- Automated tests and representative test fixtures.
-- Clear error handling and logs sufficient to diagnose failures without exposing secrets.
-- A concise record of limitations and follow-up work, if any.
+Trace external sources through raw storage, Spark normalization, feature extraction, graph/vector stores, ML, API, and dashboard.
+
+**To-do**
+- [ ] Draw a component diagram and data-flow diagram
+- [ ] Identify batch jobs versus online request paths
+- [ ] Mark ownership of each dataset and service
+
+### Step 2 — Define module boundaries and dependency direction
+
+Separate source adapters, domain schemas, processing jobs, repositories, model code, API routes, and presentation contracts.
+
+**To-do**
+- [ ] Define package/module responsibilities
+- [ ] Enforce inward dependency direction and avoid circular imports
+- [ ] Identify shared libraries versus task-specific code
+
+### Step 3 — Specify shared identifiers and schemas
+
+Define canonical protein ID, source ID mapping, PPI edge, GO annotation, structure metadata, feature vector, and prediction records.
+
+**To-do**
+- [ ] Define canonical UniProt accession policy and external ID mapping fields
+- [ ] Specify PPI edge directionality, confidence score, and evidence metadata
+- [ ] Specify versioned schemas and nullability for shared records
+- [ ] Define dataset/model version and provenance fields
+
+### Step 4 — Publish architecture decisions
+
+Record decisions, trade-offs, and contract ownership so downstream tasks can implement consistently.
+
+**To-do**
+- [ ] Add architecture overview and module diagram to docs
+- [ ] Add interface/schema contract documents
+- [ ] Link each later task to the relevant contract
+- [ ] Review architecture against Docker and persistence choices
+
+## 4. Deliverables
+
+- Implementation/configuration and documentation within this ticket's scope.
+- Versioned interfaces and assumptions needed by dependent tasks.
+- Automated tests and reproducible verification instructions.
 
 ## 5. Acceptance criteria
 
-- [ ] The implementation satisfies the objective and stays within the agreed scope.
-- [ ] Inputs, outputs, schemas, and configuration are documented.
-- [ ] Invalid, missing, duplicate, or ambiguous data is handled explicitly where applicable.
-- [ ] The result is reproducible on a representative sample.
-- [ ] Automated tests pass and relevant integration boundaries are verified.
-- [ ] Documentation is updated and no secrets or local-only artifacts are committed.
+- [ ] All step to-dos are completed and reviewed.
+- [ ] Contracts, configuration, and operational assumptions are documented.
+- [ ] Failure cases are explicit; no credentials or generated large datasets are committed.
+- [ ] Tests pass from the documented local environment.
+- [ ] Downstream plans and interfaces remain consistent.
 
 ## 6. Testing strategy
 
-- **Unit tests:** core transformations/business rules, schema validation, boundary cases, and error handling.
-- **Integration tests:** interaction with the adjacent data store, service, graph/vector engine, or API used by this ticket.
-- **Regression checks:** verify stable identifiers, record counts, and output contracts on a fixed fixture.
-- **Manual verification:** follow the documented setup and execution steps from a clean environment.
+- **Unit:** validate core rules, configuration, schemas, and edge cases.
+- **Integration:** verify the relevant infrastructure or module boundary.
+- **Regression:** preserve stable IDs and contracts with fixed fixtures.
+- **Manual:** follow the documented clean-checkout workflow.
 
-## 7. Dependencies and constraints
+## 7. Cross-task links
 
-Parent Epic: **false**
-
-Coordinate with the parent Epic and upstream Tasks before changing shared schemas or interfaces. Do not assume that unavailable source fields or external service behavior exist; validate them against the actual source.
+- **Upstream:** PP-9 provides the repository conventions.
+- **Downstream / coordination:** PP-11, PP-12, PP-13–PP-42
+- **Rule:** consume upstream outputs as defined; do not silently redefine shared identifiers, schemas, or configuration. If a contract must change, update the owning plan and all affected consumers in the same change set.
 
 ## 8. Completion notes
 
-Record the implementation approach, test commands/results, generated artifacts, data/source versions, and any deviations from this plan when the ticket is completed.
+Record implementation decisions, commands and test results, artifacts produced, data/source versions, and deviations from this plan.
