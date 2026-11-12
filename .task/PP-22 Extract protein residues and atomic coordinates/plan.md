@@ -2,50 +2,83 @@
 
 ## 1. Objective
 
-Extract ordered residue records and atom coordinates from parsed structures.
+Convert parsed structures into residue-level and atom-level coordinate arrays with consistent indexing.
 
-## 2. Context and scope
+## 2. Scope and dependencies
 
-Represent chain/residue identity, amino-acid type, atom names, coordinates, occupancy, and B-factor/pLDDT where available; handle gaps and non-standard residues.
+PP-21 parser output; PP-20 protein master; PP-10 structural feature contracts.
 
-Parent Epic: **PP-4**. Inspect the current repository and upstream contracts before implementation. Keep the ticket focused on its stated deliverable and coordinate changes to shared schemas with dependent modules.
+Related plans: [PP-20](../PP-20%20Generate%20protein%20master%20and%20PPI%20Parquet%20datasets/plan.md) · [PP-21](../PP-21%20Implement%20PDB%2FmmCIF%20structure%20parser/plan.md) · [PP-23](../PP-23%20Calculate%20geometric%20and%20structural%20features/plan.md) · [PP-24](../PP-24%20Extract%20secondary%20structure%20and%20confidence%20metrics/plan.md) · [PP-25](../PP-25%20Generate%20protein%20structure%20feature%20vectors/plan.md) · [PP-30](../PP-30%20Design%20protein%20embedding%20generation%20pipeline/plan.md) · [PP-33](../PP-33%20Integrate%20structure%2C%20sequence%20and%20PPI%20features/plan.md). Coordinate residue indices, units, missingness, and feature versioning with these linked tasks.
 
-## 3. Implementation plan
+## 3. Step-by-step implementation and to-do
 
-1. Inspect existing code, data contracts, configuration, and related tests before changing files.
-2. Confirm inputs, outputs, source/model versions, identifiers, and error cases.
-3. Implement the smallest cohesive module or pipeline for this ticket.
-4. Add validation, structured logging, and explicit handling for missing, invalid, duplicate, or ambiguous records where applicable.
-5. Add automated tests and a reproducible sample execution; update documentation and examples.
+### Step 1 — Define residue/atom representation
 
-## 4. Expected deliverables
+Specify residue index, amino-acid code, chain, atom name, element, coordinates, and missingness representation.
 
-- Implementation and configuration required by the stated scope.
-- Documented inputs, outputs, assumptions, and operational instructions.
-- Automated tests and representative fixtures.
-- Diagnostic logs and explicit error handling without exposing secrets.
-- Notes on limitations and deferred work, if any.
+**To-do**
+- [ ] Define canonical residue numbering independent of raw author numbering
+- [ ] Define atom coordinate dtype and units (Å)
+- [ ] Define backbone atom and all-heavy-atom policies
+- [ ] Preserve mapping to source chain/residue identifiers
+
+### Step 2 — Implement coordinate extraction
+
+Generate ordered arrays/tables from parser output without losing residue-to-atom relationships.
+
+**To-do**
+- [ ] Extract x/y/z coordinates for selected atoms
+- [ ] Extract residue sequence and atom-to-residue index mapping
+- [ ] Handle alternate locations and missing atoms consistently
+- [ ] Preserve chain boundaries and residue masks
+
+### Step 3 — Validate coordinate integrity
+
+Check coordinate ranges, residue counts, duplicate atoms, and sequence alignment metadata.
+
+**To-do**
+- [ ] Reject NaN/inf coordinates and malformed records
+- [ ] Verify atom records map to exactly one residue
+- [ ] Compare extracted sequence/length with PP-21 validation results
+- [ ] Add tests for gaps, insertion codes, and multi-chain structures
+
+### Step 4 — Publish coordinate artifacts
+
+Write compact, versioned residue/coordinate artifacts for feature engineering and embeddings.
+
+**To-do**
+- [ ] Define serialization format and metadata sidecar
+- [ ] Store artifact URI, checksum, and parser version
+- [ ] Add read-back test and sample visual inspection
+- [ ] Document coordinate conventions for PP-23/PP-25/PP-30
+
+## 4. Deliverables
+
+- Parser/extractor/feature implementation and versioned output schema.
+- Representative structural fixtures and reproducible sample artifacts.
+- Documentation of units, indexing, assumptions, tool versions, and limitations.
 
 ## 5. Acceptance criteria
 
-- [ ] The implementation satisfies the objective and remains within ticket scope.
-- [ ] Inputs, outputs, schemas, and configuration are documented.
-- [ ] Invalid, missing, duplicate, or ambiguous data is handled explicitly.
-- [ ] The result is reproducible on a representative sample.
-- [ ] Unit and relevant integration tests pass.
-- [ ] Documentation is updated and no secrets or local-only artifacts are committed.
+- [ ] All step-level to-dos are complete.
+- [ ] Residue and atom mappings remain traceable to source structures.
+- [ ] Units, numbering, missing-value policy, and feature definitions are documented.
+- [ ] Numerical and structural validation tests pass.
+- [ ] Downstream consumers can load the output without custom undocumented transformations.
 
 ## 6. Testing strategy
 
-- **Unit tests:** core logic, transformations, schema validation, edge cases, and error handling.
-- **Integration tests:** the relevant adjacent pipeline, data store, graph/vector service, or API boundary.
-- **Regression checks:** stable identifiers, expected record counts, and output-contract compatibility.
-- **Manual verification:** execute the documented workflow from a clean environment.
+- **Unit:** parser edge cases, coordinate transforms, formulas, alignment, and missingness.
+- **Integration:** raw structure manifest to normalized feature artifact.
+- **Regression:** compare fixed structure fixtures and schema/version metadata.
+- **Scientific sanity:** validate ranges, invariances, coverage, and representative structures.
 
-## 7. Dependencies and constraints
+## 7. Cross-task handoff
 
-Use outputs from upstream tickets in **PP-4**. Do not assume unavailable source fields or external service behavior; validate them against actual source data and document any assumptions.
+- **Upstream:** PP-21 parser output; PP-20 protein master; PP-10 structural feature contracts.
+- **Consumers / coordination:** PP-20, PP-21, PP-23, PP-24, PP-25, PP-30, PP-33
+- **Contract rule:** publish coordinate units, residue indexing, feature definitions, schema version, provenance, and known limitations; notify all linked consumers of changes.
 
 ## 8. Completion notes
 
-Record implementation decisions, test commands/results, generated artifacts, data/source versions, and deviations from this plan when the ticket is completed.
+Record parser/tool versions, parameters, artifact URIs, sample protein accessions, test results, and deviations.
