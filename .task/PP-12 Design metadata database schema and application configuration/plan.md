@@ -2,52 +2,85 @@
 
 ## 1. Objective
 
-Persist dataset and processing metadata and centralize runtime configuration.
+Define persistent metadata and configuration contracts for protein records, source provenance, jobs, and generated artifacts.
 
-## 2. Context and scope
+## 2. Scope and design context
 
-Model proteins, source records, ingestion runs, processing status, dataset versions, and configuration; define migrations and secret handling.
+Keep large raw structures, Parquet files, and embeddings out of relational metadata tables; store references and lifecycle metadata instead.
 
-This plan covers the implementation of **PP-12**. Keep changes within this ticket's scope and preserve the interfaces agreed with dependent modules.
+**Upstream dependencies:** PP-10 defines schemas; PP-11 provides local database services.
 
-## 3. Implementation plan
+**Related plans:** `PP-13–PP-16` · `PP-17–PP-20` · `PP-39–PP-42`. Use the links below to keep contracts aligned; update this plan if an upstream interface changes.
 
-1. Inspect the current repository structure and related modules before changing files.
-2. Confirm input/output contracts, configuration, source versions, and error cases.
-3. Implement the smallest cohesive module or pipeline for this ticket.
-4. Add structured logging, validation, and explicit handling for missing, invalid, and duplicate data where relevant.
-5. Add automated tests and a reproducible sample execution; update documentation and examples.
+## 3. Step-by-step implementation and to-do
 
-## 4. Expected deliverables
+### Step 1 — Identify metadata entities and lifecycle
 
-- Implementation and configuration required by the stated scope.
-- Documented inputs, outputs, assumptions, and operational instructions.
-- Automated tests and representative test fixtures.
-- Clear error handling and logs sufficient to diagnose failures without exposing secrets.
-- A concise record of limitations and follow-up work, if any.
+Model protein identity, source cross-references, structure records, dataset runs, processing status, and artifact locations.
+
+**To-do**
+- [ ] Define entity relationships and ownership
+- [ ] Separate canonical protein identity from source-specific identifiers
+- [ ] Define dataset/run status and timestamps
+- [ ] Store artifact URI/checksum rather than large binary payloads
+
+### Step 2 — Design schema and migrations
+
+Create normalized tables, constraints, indexes, and migration strategy.
+
+**To-do**
+- [ ] Define DDL/ORM models and primary/foreign keys
+- [ ] Add uniqueness constraints for canonical IDs and source mappings
+- [ ] Add indexes for common protein and job lookups
+- [ ] Define migration and rollback conventions
+
+### Step 3 — Define configuration model
+
+Centralize typed configuration for databases, external APIs, storage, Spark, graph/vector stores, and model paths.
+
+**To-do**
+- [ ] Define environment-specific config profiles
+- [ ] Validate required settings at startup
+- [ ] Define timeout, retry, batch-size, and concurrency defaults
+- [ ] Ensure secrets are injected through environment/secret management
+
+### Step 4 — Implement schema smoke checks
+
+Apply migrations and test key constraints using local infrastructure.
+
+**To-do**
+- [ ] Apply migrations against Compose database
+- [ ] Test duplicate and invalid reference rejection
+- [ ] Test config loading and missing-secret failure behavior
+- [ ] Document schema and configuration changes
+
+## 4. Deliverables
+
+- Implementation/configuration and documentation within this ticket's scope.
+- Versioned interfaces and assumptions needed by dependent tasks.
+- Automated tests and reproducible verification instructions.
 
 ## 5. Acceptance criteria
 
-- [ ] The implementation satisfies the objective and stays within the agreed scope.
-- [ ] Inputs, outputs, schemas, and configuration are documented.
-- [ ] Invalid, missing, duplicate, or ambiguous data is handled explicitly where applicable.
-- [ ] The result is reproducible on a representative sample.
-- [ ] Automated tests pass and relevant integration boundaries are verified.
-- [ ] Documentation is updated and no secrets or local-only artifacts are committed.
+- [ ] All step to-dos are completed and reviewed.
+- [ ] Contracts, configuration, and operational assumptions are documented.
+- [ ] Failure cases are explicit; no credentials or generated large datasets are committed.
+- [ ] Tests pass from the documented local environment.
+- [ ] Downstream plans and interfaces remain consistent.
 
 ## 6. Testing strategy
 
-- **Unit tests:** core transformations/business rules, schema validation, boundary cases, and error handling.
-- **Integration tests:** interaction with the adjacent data store, service, graph/vector engine, or API used by this ticket.
-- **Regression checks:** verify stable identifiers, record counts, and output contracts on a fixed fixture.
-- **Manual verification:** follow the documented setup and execution steps from a clean environment.
+- **Unit:** validate core rules, configuration, schemas, and edge cases.
+- **Integration:** verify the relevant infrastructure or module boundary.
+- **Regression:** preserve stable IDs and contracts with fixed fixtures.
+- **Manual:** follow the documented clean-checkout workflow.
 
-## 7. Dependencies and constraints
+## 7. Cross-task links
 
-Parent Epic: **false**
-
-Coordinate with the parent Epic and upstream Tasks before changing shared schemas or interfaces. Do not assume that unavailable source fields or external service behavior exist; validate them against the actual source.
+- **Upstream:** PP-10 defines schemas; PP-11 provides local database services.
+- **Downstream / coordination:** PP-13–PP-16, PP-17–PP-20, PP-39–PP-42
+- **Rule:** consume upstream outputs as defined; do not silently redefine shared identifiers, schemas, or configuration. If a contract must change, update the owning plan and all affected consumers in the same change set.
 
 ## 8. Completion notes
 
-Record the implementation approach, test commands/results, generated artifacts, data/source versions, and any deviations from this plan when the ticket is completed.
+Record implementation decisions, commands and test results, artifacts produced, data/source versions, and deviations from this plan.
