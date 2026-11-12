@@ -389,3 +389,12 @@ KAN-14 chỉ chịu trách nhiệm nạp và kiểm tra dữ liệu nền. Khôn
 - Region metadata được map đầy đủ: name, area_note, boundary_method, source_reference; region code ổn định là hcm-ben-thanh-1km2.
 - Implementation artifacts: scripts/gis/import_sample_to_postgis.sh và ba SQL files trong scripts/gis/sql/.
 - Chạy validate trước để hoàn tất Gate 1; chỉ chạy apply sau khi người review chấp thuận. Gate 3 (QGIS Visual QA) và Gate 4 (Final Acceptance) vẫn cần người thực hiện xác nhận.
+
+
+## 12. Human Review Record (2026-11-12)
+
+- Gate 1: **Approved** by user. Input snapshot (1 region, 431 buildings), region code `hcm-ben-thanh-1km2`, and mapping `building` → `buildings.building_type` accepted.
+- Gate 2: **Approved** by user. No blocking validation exceptions. 326 records with nullable `name` are retained as-is.
+- Gate 3: **Approved** by user. User completed QGIS visual inspection of the KAN-6 GeoJSON source layers and confirmed the result looks correct.
+- Gate 4: **Pending target database import**. CI import, post-import checks, and idempotency test passed on a disposable CI PostGIS database (1 region, 431 buildings). The user's local/project PostGIS database has not been changed. Run the importer against the intended target database and verify it before marking KAN-14 Done.
+
