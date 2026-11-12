@@ -47,7 +47,11 @@ jobs:
           # OSM relation 1973756 is the pre-merger Ho Chi Minh City administrative
           # boundary (admin_level=4). Pinning the relation prevents a geocoder
           # from silently returning the post-2025 expanded city.
-          QUERY='[out:json][timeout:180];relation(1973756);out body;>;out skel qt;'
+          # Reconstruct the relation exactly as it existed at the agreed historical cutoff.
+          # Keep this timestamp explicit: querying the current relation would silently
+          # change the study area after administrative-boundary edits.
+          BOUNDARY_AS_OF='2025-06-30T23:59:59Z'
+          QUERY="[out:json][timeout:180][date:\"${BOUNDARY_AS_OF}\"];relation(1973756);out meta;>;out skel qt;"
           # Overpass instances may reject or throttle GitHub-hosted runners.
           # Try independent public instances and identify this workflow clearly.
           OVERPASS_ENDPOINTS=(
@@ -144,7 +148,12 @@ jobs:
                   10.2 < ymin < 10.7 and 10.7 < ymax < 11.5):
               raise SystemExit("Boundary extent is outside expected historical HCMC envelope; stopping.")
           PY
-          echo "Boundary source: OSM relation 1973756" >> "$GITHUB_STEP_SUMMARY"
+          BOUNDARY_VERSION="$(jq -r '.elements[] | select(.type == "relation" and .id == 1973756) | .version' build/kan-6/hcm_relation.osm.json)"
+          BOUNDARY_VERSION_TIMESTAMP="$(jq -r '.elements[] | select(.type == "relation" and .id == 1973756) | .timestamp' build/kan-6/hcm_relation.osm.json)"
+          printf 'Boundary relation: 1973756\\nBoundary as-of UTC: %s\\nBoundary version: %s\\nBoundary version timestamp: %s\\nOverpass endpoint: %s\\n' \\
+            "$BOUNDARY_AS_OF" "$BOUNDARY_VERSION" "$BOUNDARY_VERSION_TIMESTAMP" "$endpoint" \\
+            > build/kan-6/boundary-provenance.txt
+          echo "Boundary source: OSM relation 1973756, historical state at $BOUNDARY_AS_OF (version $BOUNDARY_VERSION; version timestamp $BOUNDARY_VERSION_TIMESTAMP)" >> "$GITHUB_STEP_SUMMARY"
           echo "Boundary tags verified: boundary=administrative, admin_level=4" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Download Geofabrik Vietnam extract
@@ -244,12 +253,14 @@ jobs:
           cp -f data/sample/processed/quality-summary.md build/kan-6/package/ 2>/dev/null || true
           cp -f build/kan-6/*.sha256 build/kan-6/package/ 2>/dev/null || true
           cp -f build/kan-6/*inspection.txt build/kan-6/package/ 2>/dev/null || true
+          cp -f build/kan-6/boundary-provenance.txt build/kan-6/package/ 2>/dev/null || true
           cat > build/kan-6/package/README.md <<'EOF'
           # KAN-6 HCMC OSM data artifact
 
           Study area: historical Ho Chi Minh City boundary before 2025-07-01.
-          Boundary: OSM administrative relation 1973756.
-          Buildings: 2D OSM building footprints clipped to the boundary.
+          Boundary: OSM administrative relation 1973756, historical database state at 2025-06-30T23:59:59Z.
+          Buildings: 2D OSM building footprints from the downloaded Geofabrik snapshot, clipped to the historical boundary.
+          Boundary version and retrieval endpoint are recorded in boundary-provenance.txt.
           CRS: GeoJSON RFC 7946 / WGS 84 longitude-latitude (EPSG:4326).
           Attribution: © OpenStreetMap contributors, ODbL.
           This artifact is a reproducible snapshot; consult quality-summary.md and checksums.
