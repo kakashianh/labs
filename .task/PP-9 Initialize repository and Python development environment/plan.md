@@ -10,7 +10,7 @@ Create the repository layout, Python version policy, dependency lock strategy, e
 
 **Upstream dependencies:** None; this is the starting task.
 
-**Related plans:** `PP-10` · `PP-11` · `PP-12`. Use the links below to keep contracts aligned; update this plan if an upstream interface changes.
+**Related plans:** [PP-10](../PP-10%20Design%20project%20architecture%20and%20module%20structure/plan.md) · [PP-11](../PP-11%20Configure%20Docker%20Compose%20infrastructure/plan.md) · [PP-12](../PP-12%20Design%20metadata%20database%20schema%20and%20application%20configuration/plan.md). Keep the contracts and dependency direction consistent with these linked tasks.
 
 ## 3. Step-by-step implementation and to-do
 
