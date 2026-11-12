@@ -1,0 +1,58 @@
+name: KAN-14 PostGIS sample import
+
+on:
+  push:
+    branches:
+      - "feat/kan-14-postgis-import"
+  pull_request:
+    branches:
+      - "project/3D-map-medical"
+    paths:
+      - "scripts/gis/**"
+      - "data/sample/processed/**"
+      - "backend/src/db/migrations/**"
+      - "docker-compose.yml"
+      - ".github/workflows/kan-14-postgis-import.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  import-integration:
+    name: Validate and import KAN-6 sample into PostGIS
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: apppassword
+      POSTGRES_DB: appdb
+      EXPECTED_BUILDINGS: "431"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install GDAL with PostgreSQL driver
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes gdal-bin
+          ogrinfo --formats | grep PostgreSQL
+
+      - name: Prepare backend environment
+        run: cp backend/.env.example backend/.env
+
+      - name: Start PostGIS and run KAN-13 migrations
+        run: docker compose up -d --build --wait --wait-timeout 180 postgres backend
+
+      - name: Run KAN-14 pre-import validation
+        run: bash scripts/gis/import_sample_to_postgis.sh validate
+
+      - name: Import, verify and test idempotency
+        run: bash scripts/gis/import_sample_to_postgis.sh apply --yes
+
+      - name: Print service logs on failure
+        if: failure()
+        run: docker compose logs postgres backend
+
+      - name: Stop services
+        if: always()
+        run: docker compose down --volumes --remove-orphans

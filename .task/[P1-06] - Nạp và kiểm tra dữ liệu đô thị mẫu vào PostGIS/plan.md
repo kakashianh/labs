@@ -30,7 +30,7 @@ Dataset snapshot:
 - Khu vực: 1 feature.
 - Công trình: 431 features.
 - CRS: EPSG:4326.
-- Boundary nguồn: Polygon.
+- Boundary nguồn trong GeoJSON hiện tại: MultiPolygon 2D.
 - Building geometry nguồn: MultiPolygon 2D.
 - Khu vực nghiên cứu: vùng mẫu quanh chợ Bến Thành, TP.HCM, diện tích xấp xỉ 1 km².
 - `building_id` được định danh theo namespace `way/{osm_way_id}` hoặc `relation/{osm_id}`.
@@ -49,7 +49,7 @@ Sử dụng schema đã được triển khai, không thiết kế lại nếu c
 - `region_id`: UUID FK đến `regions.id`.
 - `external_id`: định danh nguồn OSM, unique.
 - `osm_type`, `osm_id`, `osm_way_id`.
-- `name`, `building`.
+- `name`, `building_type` (nhận giá trị từ thuộc tính nguồn `building`).
 - `footprint`: `geometry(MultiPolygon, 4326)`.
 
 Các index chính:
@@ -87,7 +87,7 @@ Các index chính:
 | Database | PostgreSQL 16 | Lưu trữ dữ liệu |
 | Spatial extension | PostGIS 3.5 | Geometry và spatial query |
 | Input | GeoJSON EPSG:4326 | Dữ liệu KAN-6 |
-| Import | ogr2ogr hoặc staging + SQL | Nạp dữ liệu |
+| Import | GDAL/ogr2ogr + PostgreSQL staging + SQL | Nạp và upsert dữ liệu |
 | Backend context | Rust + Axum | Ứng dụng sử dụng database |
 
 Không tạo Python backend/service cho tác vụ import. Nếu cần script hỗ trợ, script phải có hướng dẫn chạy lại và không chứa credentials.
@@ -126,7 +126,7 @@ Mục tiêu: xác định chính xác dữ liệu nguồn và mapping sang schem
 | Source | Target |
 |---|---|
 | Region code được xác định ổn định | `regions.code` |
-| Boundary Polygon | `regions.boundary` MultiPolygon, SRID 4326 |
+| Boundary MultiPolygon | `regions.boundary` MultiPolygon, SRID 4326 |
 | Database-generated | `regions.id` |
 
 **Building mapping**
@@ -138,7 +138,7 @@ Mục tiêu: xác định chính xác dữ liệu nguồn và mapping sang schem
 | `osm_id` | `osm_id` |
 | `osm_way_id` | `osm_way_id` |
 | `name` | `name` |
-| `building` | `building` |
+| `building` | `building_type` |
 | Geometry | `footprint` |
 | Region UUID sau khi import | `region_id` |
 | Database-generated | `id` |
@@ -148,7 +148,7 @@ Mục tiêu: xác định chính xác dữ liệu nguồn và mapping sang schem
 - [ ] Không sử dụng GDAL FID hoặc thứ tự feature làm business identity.
 - [ ] Không hard-code UUID của region.
 - [ ] Lấy `region_id` từ region đã được import thông qua `regions.code`.
-- [ ] Chuyển Polygon boundary thành MultiPolygon bằng `ST_Multi` hoặc cách tương đương.
+- [ ] Xác nhận boundary nguồn là MultiPolygon; dùng `ST_Multi` để bảo đảm geometry tương thích schema đích.
 - [ ] Không thay đổi schema chỉ để phù hợp với geometry nguồn.
 - [ ] Giữ nguyên các trường nullable như `name` và `building`.
 - [ ] Không tự suy luận height, floors, population hoặc epidemiology.
@@ -380,3 +380,12 @@ KAN-14 hoàn thành khi:
 - Có hướng dẫn tái tạo và báo cáo kết quả.
 
 KAN-14 chỉ chịu trách nhiệm nạp và kiểm tra dữ liệu nền. Không triển khai API, Cesium visualization hoặc mô phỏng SIR trong ticket này.
+
+
+## 11. Implementation Notes
+
+- GeoJSON boundary hiện tại thực tế đã là MultiPolygon 2D / EPSG:4326; importer vẫn dùng PROMOTE_TO_MULTI và ST_Multi để bảo đảm tương thích schema.
+- Schema KAN-13 đặt tên cột đích là buildings.building_type; thuộc tính nguồn building phải được map vào cột này. Không thay đổi migration KAN-13 chỉ để giữ nguyên tên thuộc tính GeoJSON.
+- Region metadata được map đầy đủ: name, area_note, boundary_method, source_reference; region code ổn định là hcm-ben-thanh-1km2.
+- Implementation artifacts: scripts/gis/import_sample_to_postgis.sh và ba SQL files trong scripts/gis/sql/.
+- Chạy validate trước để hoàn tất Gate 1; chỉ chạy apply sau khi người review chấp thuận. Gate 3 (QGIS Visual QA) và Gate 4 (Final Acceptance) vẫn cần người thực hiện xác nhận.
