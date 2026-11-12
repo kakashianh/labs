@@ -8,7 +8,7 @@ Download and catalog AlphaFold-predicted structures for the target human protein
 
 PP-10 schema contracts; PP-12 metadata/config; PP-16 ingestion validation conventions.
 
-Related plans: [PP-12](../PP-12%20Design%20metadata%20database%20schema%20and%20application%20configuration/plan.md) · [PP-14](../PP-14%20Implement%20STRING%20PPI%20data%20crawler/plan.md) · [PP-16](../PP-16%20Implement%20ingestion%20validation%20and%20raw%20data%20management/plan.md) · [PP-21](../PP-21%20/plan.md). These links describe the upstream/downstream contracts; coordinate changes rather than duplicating or redefining them.
+Related plans: [PP-12](../PP-12%20Design%20metadata%20database%20schema%20and%20application%20configuration/plan.md) · [PP-14](../PP-14%20Implement%20STRING%20PPI%20data%20crawler/plan.md) · [PP-16](../PP-16%20Implement%20ingestion%20validation%20and%20raw%20data%20management/plan.md) · [PP-21](../PP-21%20Implement%20PDB%2FmmCIF%20structure%20parser/plan.md). Keep source versions, identifiers, and schemas consistent with these linked tasks.
 
 ## 3. Step-by-step implementation and to-do
 
