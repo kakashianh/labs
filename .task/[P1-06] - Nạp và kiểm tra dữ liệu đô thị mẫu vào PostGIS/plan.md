@@ -398,3 +398,23 @@ KAN-14 chỉ chịu trách nhiệm nạp và kiểm tra dữ liệu nền. Khôn
 - Gate 3: **Approved** by user. User completed QGIS visual inspection of the KAN-6 GeoJSON source layers and confirmed the result looks correct.
 - Gate 4: **Pending target database import**. CI import, post-import checks, and idempotency test passed on a disposable CI PostGIS database (1 region, 431 buildings). The user's local/project PostGIS database has not been changed. Run the importer against the intended target database and verify it before marking KAN-14 Done.
 
+
+
+## 12. Supabase Target Database Import Record (2026-11-12)
+
+**Target:** Supabase project `gis-3d` (`ubltoieatdwdyzowpaig`), PostgreSQL 17.11.
+
+- [x] Confirmed target project is active and initially had no application tables or migration history.
+- [x] Enabled PostGIS 3.3.7 in Supabase's dedicated `extensions` schema.
+- [x] Applied KAN-13-equivalent `public.regions` and `public.buildings` schema, including UUID primary keys, unique constraints, OSM checks, FK, and GiST/B-tree indexes.
+- [x] Enabled RLS on both public tables and left `anon` / `authenticated` without grants or policies. This intentionally keeps raw GIS tables private until an application access model is designed.
+- [x] Imported the approved KAN-6 GeoJSON snapshot using client-supplied GeoJSON geometry converted with PostGIS; no server-side file access or local database credentials were used.
+- [x] Upsert result: 1 region and 431 buildings.
+- [x] Verified: 326 nullable names, 0 missing building types, 0 invalid/empty geometries, 0 wrong geometry type/SRID/dimensions, 0 orphan buildings, 0 duplicate external IDs, 0 buildings outside AOI.
+- [x] Verified extent: `BOX(106.693378 10.768079,106.702662 10.777061)`.
+- [x] Confirmed both tables exist with RLS enabled and expected columns/FK.
+- [ ] Human final acceptance remains pending.
+
+**Supabase security note:** security advisor reports the informational `rls_enabled_no_policy` lint for both tables. This is intentional: RLS is enabled and access for `anon` and `authenticated` is revoked. Do not add broad read policies until the intended client/backend access pattern is specified. Performance advisor reports the new indexes as unused because the dataset has just been imported; this is expected for a fresh, small dataset and is not a failure.
+
+**Environment note:** Supabase runs PostgreSQL 17.11 / PostGIS 3.3.7, whereas the local CI test used PostgreSQL 16 / PostGIS 3.5. Schema and import were adapted to Supabase's `extensions` schema for PostGIS. The GitHub KAN-13 migration remains the source schema definition for the local application; keep deployment-specific extension placement documented.
