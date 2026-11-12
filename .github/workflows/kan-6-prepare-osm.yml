@@ -12,7 +12,7 @@ on:
         default: old-hcmc
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: kan-6-osm-${{ github.ref }}
@@ -266,6 +266,45 @@ jobs:
           that historical boundary; they are not a historical building snapshot.
           EOF
           echo "Null building IDs: $NULL_IDS; duplicate ID groups: $DUPLICATE_IDS"
+
+      - name: Commit validated GeoJSON and lightweight provenance
+        if: success()
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          files=(
+            data/sample/source/hcm_boundary.geojson
+            data/sample/processed/hcm_boundary.geojson
+            data/sample/processed/hcm_buildings.geojson
+            data/sample/processed/metadata.md
+            data/sample/processed/quality-summary.md
+          )
+          max_bytes=$((50 * 1024 * 1024))
+          too_large=false
+          for file in "${files[@]}"; do
+            test -s "$file"
+            size="$(stat -c '%s' "$file")"
+            echo "$file: $size bytes"
+            if (( size > max_bytes )); then
+              echo "::warning::$file exceeds 50 MiB; keeping validated data in the workflow artifact instead of committing an oversized Git blob."
+              too_large=true
+            fi
+          done
+          if [[ "$too_large" == "true" ]]; then
+            echo "GeoJSON commit skipped due to the 50 MiB per-file safety limit; artifact will still be uploaded."
+            echo "GeoJSON commit skipped: at least one file exceeds 50 MiB; use the workflow artifact." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "${files[@]}"
+          if git diff --cached --quiet; then
+            echo "No generated GIS files changed; no commit created."
+          else
+            git commit -m "data(gis): add validated historical HCMC GeoJSON sample"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+            echo "Committed validated GeoJSON and lightweight provenance to ${GITHUB_REF_NAME}."
+          fi
 
       - name: Package data and provenance
         if: success()
