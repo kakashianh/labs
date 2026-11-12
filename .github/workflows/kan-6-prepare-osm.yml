@@ -153,6 +153,12 @@ jobs:
           printf 'Boundary relation: 1973756\nBoundary as-of UTC: %s\nBoundary version: %s\nBoundary version timestamp: %s\nOverpass endpoint: %s\n' \\
             "$BOUNDARY_AS_OF" "$BOUNDARY_VERSION" "$BOUNDARY_VERSION_TIMESTAMP" "$endpoint" \\
             > build/kan-6/boundary-provenance.txt
+          {
+            echo "BOUNDARY_AS_OF=$BOUNDARY_AS_OF"
+            echo "BOUNDARY_VERSION=$BOUNDARY_VERSION"
+            echo "BOUNDARY_VERSION_TIMESTAMP=$BOUNDARY_VERSION_TIMESTAMP"
+            echo "BOUNDARY_OVERPASS_ENDPOINT=$endpoint"
+          } >> "$GITHUB_ENV"
           echo "Boundary source: OSM relation 1973756, historical state at $BOUNDARY_AS_OF (version $BOUNDARY_VERSION; version timestamp $BOUNDARY_VERSION_TIMESTAMP)" >> "$GITHUB_STEP_SUMMARY"
           echo "Boundary tags verified: boundary=administrative, admin_level=4" >> "$GITHUB_STEP_SUMMARY"
 
@@ -165,6 +171,8 @@ jobs:
           test -s data/sample/source/vietnam-latest.osm.pbf
           sha256sum data/sample/source/vietnam-latest.osm.pbf | tee build/kan-6/pbf.sha256
           stat -c 'PBF size: %s bytes' data/sample/source/vietnam-latest.osm.pbf
+          echo "PBF_RETRIEVED_AT_UTC=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
+          echo "PBF_SIZE_BYTES=$(stat -c '%s' data/sample/source/vietnam-latest.osm.pbf)" >> "$GITHUB_ENV"
 
       - name: Clip Vietnam PBF to historical HCMC
         run: |
@@ -250,10 +258,12 @@ jobs:
           - Boundary as-of UTC: $BOUNDARY_AS_OF
           - Boundary relation version: $BOUNDARY_VERSION
           - Boundary relation version timestamp: $BOUNDARY_VERSION_TIMESTAMP
-          - Overpass endpoint: $endpoint
+          - Overpass endpoint: $BOUNDARY_OVERPASS_ENDPOINT
           - Boundary input SHA-256: $(sha256sum data/sample/source/hcm_boundary.geojson | cut -d ' ' -f 1)
           - Building source: Geofabrik Vietnam latest extract
           - Building PBF URL: https://download.geofabrik.de/asia/vietnam-latest.osm.pbf
+          - Building PBF retrieval UTC: $PBF_RETRIEVED_AT_UTC
+          - Building PBF size bytes: $PBF_SIZE_BYTES
           - Building PBF SHA-256: $(cut -d ' ' -f 1 build/kan-6/pbf.sha256)
           - GDAL: $(ogr2ogr --version)
           - Boundary features: $BOUNDARY_COUNT
