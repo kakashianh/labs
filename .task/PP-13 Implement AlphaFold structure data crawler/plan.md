@@ -2,52 +2,81 @@
 
 ## 1. Objective
 
-Retrieve AlphaFold structure files for the agreed human-protein scope.
+Download and catalog AlphaFold-predicted structures for the target human protein set with reproducible source provenance.
 
-## 2. Context and scope
+## 2. Scope, assumptions, and dependencies
 
-Implement source query and pagination, download mmCIF files, retries/timeouts, deterministic file naming, metadata capture, and resumable downloads.
+PP-10 schema contracts; PP-12 metadata/config; PP-16 ingestion validation conventions.
 
-This plan covers the implementation of **PP-13**. Keep changes within this ticket's scope and preserve the interfaces agreed with dependent modules.
+Related plans: [PP-12](../PP-12%20Design%20metadata%20database%20schema%20and%20application%20configuration/plan.md) · [PP-14](../PP-14%20Implement%20STRING%20PPI%20data%20crawler/plan.md) · [PP-16](../PP-16%20Implement%20ingestion%20validation%20and%20raw%20data%20management/plan.md) · [PP-21](../PP-21%20/plan.md). These links describe the upstream/downstream contracts; coordinate changes rather than duplicating or redefining them.
 
-## 3. Implementation plan
+## 3. Step-by-step implementation and to-do
 
-1. Inspect the current repository structure and related modules before changing files.
-2. Confirm input/output contracts, configuration, source versions, and error cases.
-3. Implement the smallest cohesive module or pipeline for this ticket.
-4. Add structured logging, validation, and explicit handling for missing, invalid, and duplicate data where relevant.
-5. Add automated tests and a reproducible sample execution; update documentation and examples.
+### Step 1 — Define query scope and source contract
 
-## 4. Expected deliverables
+Confirm Homo sapiens (Taxonomy ID 9606), accession format, AlphaFold endpoint/version, pagination, and expected mmCIF/PDB availability.
 
-- Implementation and configuration required by the stated scope.
-- Documented inputs, outputs, assumptions, and operational instructions.
-- Automated tests and representative test fixtures.
-- Clear error handling and logs sufficient to diagnose failures without exposing secrets.
-- A concise record of limitations and follow-up work, if any.
+**To-do**
+- [ ] Define eligible protein/accession selection and configurable limits
+- [ ] Document AlphaFold API/URL patterns and metadata fields
+- [ ] Define retry, timeout, rate-limit, and user-agent policy
+
+### Step 2 — Implement metadata discovery
+
+Fetch structure metadata without downloading all files at once; normalize source identifiers and retain source response metadata.
+
+**To-do**
+- [ ] Implement paginated/iterative metadata retrieval
+- [ ] Extract accession, model version, download URL, sequence length, and confidence metadata when available
+- [ ] Make discovery resumable and idempotent
+
+### Step 3 — Implement structure download and storage
+
+Download files to raw storage using deterministic paths and atomic writes.
+
+**To-do**
+- [ ] Stream downloads to avoid loading large structures into memory
+- [ ] Verify HTTP status, content type, non-zero size, and checksum
+- [ ] Save source URL, retrieval timestamp, checksum, and file format
+- [ ] Skip unchanged files and retry transient failures
+
+### Step 4 — Validate crawler output
+
+Run on a small accession sample and hand off records to ingestion validation.
+
+**To-do**
+- [ ] Test missing structure, 404, throttling, timeout, and corrupt-file cases
+- [ ] Compare discovered and downloaded counts
+- [ ] Emit a machine-readable manifest for PP-16
+- [ ] Document resume/re-run procedure
+
+## 4. Deliverables
+
+- Working crawler/validation capability within this ticket's scope.
+- Versioned raw/normalized output, manifests, and source provenance.
+- Automated tests, representative fixtures, and operational documentation.
 
 ## 5. Acceptance criteria
 
-- [ ] The implementation satisfies the objective and stays within the agreed scope.
-- [ ] Inputs, outputs, schemas, and configuration are documented.
-- [ ] Invalid, missing, duplicate, or ambiguous data is handled explicitly where applicable.
-- [ ] The result is reproducible on a representative sample.
-- [ ] Automated tests pass and relevant integration boundaries are verified.
-- [ ] Documentation is updated and no secrets or local-only artifacts are committed.
+- [ ] Every step to-do is complete.
+- [ ] Retrieval is reproducible, resumable, and idempotent where applicable.
+- [ ] Source version, parameters, checksums, and provenance are retained.
+- [ ] Invalid or ambiguous records are reported, not silently discarded.
+- [ ] Unit and integration tests pass; sample output is validated.
 
 ## 6. Testing strategy
 
-- **Unit tests:** core transformations/business rules, schema validation, boundary cases, and error handling.
-- **Integration tests:** interaction with the adjacent data store, service, graph/vector engine, or API used by this ticket.
-- **Regression checks:** verify stable identifiers, record counts, and output contracts on a fixed fixture.
-- **Manual verification:** follow the documented setup and execution steps from a clean environment.
+- **Unit:** adapters, parsers, validators, normalization, and error classification.
+- **Integration:** source API/storage and metadata database boundaries.
+- **Data quality:** counts, uniqueness, required fields, identifier coverage, and score ranges.
+- **Manual:** execute a small sample and a resumed run from documented instructions.
 
-## 7. Dependencies and constraints
+## 7. Cross-task handoff
 
-Parent Epic: **false**
-
-Coordinate with the parent Epic and upstream Tasks before changing shared schemas or interfaces. Do not assume that unavailable source fields or external service behavior exist; validate them against the actual source.
+- **Upstream:** PP-10 schema contracts; PP-12 metadata/config; PP-16 ingestion validation conventions.
+- **Consumers:** PP-12, PP-14, PP-16, PP-21
+- **Handoff rule:** publish schemas, manifests, source release, and known limitations; notify consumers if any contract changes.
 
 ## 8. Completion notes
 
-Record the implementation approach, test commands/results, generated artifacts, data/source versions, and any deviations from this plan when the ticket is completed.
+Record source versions, parameters, record counts, quality metrics, test commands/results, and deviations.
