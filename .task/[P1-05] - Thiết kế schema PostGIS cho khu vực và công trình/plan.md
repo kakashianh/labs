@@ -113,7 +113,7 @@ Lưu footprint và metadata OSM thực sự có trong KAN-6.
 | created_at | TIMESTAMPTZ | NOT NULL |
 | updated_at | TIMESTAMPTZ | NOT NULL |
 
-**Quyết định cần chốt ở Step 1:** kiểu khóa nội bộ (UUID) và kiểu dữ liệu OSM IDs sau khi kiểm tra giá trị thực tế. `external_id` phải giữ nguyên namespace `way/` hoặc `relation/`; không chỉ lưu số ID vì hai namespace khác nhau.
+**Quyết định đã chốt:** UUID là khóa chính nội bộ cho cả `regions` và `buildings`, dùng `gen_random_uuid()` làm default. `osm_id` và `osm_way_id` lưu BIGINT; kiểm tra toàn bộ 431 features cho thấy các giá trị non-null đều là chuỗi số hợp lệ (424 way IDs, 7 relation IDs). `external_id` giữ nguyên namespace `way/` hoặc `relation/`.
 
 Nếu sau này có nguồn height/floors đáng tin cậy, có thể bổ sung ở migration riêng. Không thêm các cột không có dữ liệu vào scope hiện tại chỉ để dự phòng.
 
@@ -124,14 +124,14 @@ Nếu sau này có nguồn height/floors đáng tin cậy, có thể bổ sung �
 Đọc trực tiếp KAN-6 metadata, data dictionary, quality report và GeoJSON trước khi tạo schema.
 
 - [ ] Xác nhận file `hcm_boundary.geojson` và `hcm_buildings.geojson` đúng version bàn giao.
-- [ ] Xác nhận 1 Polygon boundary và 431 MultiPolygon buildings.
-- [ ] Xác nhận SRID 4326 và geometry 2D.
-- [ ] Chốt mapping source fields sang database columns.
-- [ ] Chốt UUID cho primary key nội bộ.
-- [ ] Chốt kiểu lưu `osm_id`/`osm_way_id` là BIGINT sau khi xác nhận các giá trị nguồn là chuỗi số.
-- [ ] Chốt geometry(MultiPolygon,4326) cho AOI và geometry(MultiPolygon,4326) cho footprints, hoặc ghi lại lý do nếu chọn CRS lưu trữ khác.
-- [ ] Chốt quan hệ region/building và cách xử lý building không gắn được region.
-- [ ] Ghi rõ AOI là polygon nghiên cứu tự định nghĩa, không phải đơn vị hành chính.
+- [x] Xác nhận 1 MultiPolygon boundary và 431 MultiPolygon buildings từ GeoJSON thực tế.
+- [x] Xác nhận SRID 4326 và geometry 2D theo KAN-6 data contract.
+- [x] Chốt mapping source fields sang database columns; xem `backend/src/db/README.md`.
+- [x] Chốt UUID cho primary key nội bộ.
+- [x] Chốt `osm_id`/`osm_way_id` là BIGINT; 431 features đã được kiểm tra, không có ID non-numeric.
+- [x] Chốt geometry(MultiPolygon,4326) cho AOI và building footprints, theo đúng GeoJSON.
+- [x] Chốt quan hệ 1 region – N buildings; `region_id` bắt buộc và FK RESTRICT.
+- [x] Ghi rõ AOI là MultiPolygon nghiên cứu tự định nghĩa, không phải đơn vị hành chính.
 
 **Output:** data mapping và schema decision được chốt, đủ điều kiện triển khai migration.
 
@@ -139,12 +139,12 @@ Nếu sau này có nguồn height/floors đáng tin cậy, có thể bổ sung �
 
 Kiểm tra cấu hình database hiện có trong repository và môi trường Docker/local.
 
-- [ ] Kiểm tra PostgreSQL service/container hiện tại.
-- [ ] Kiểm tra phiên bản PostgreSQL và khả năng cài PostGIS.
-- [ ] Bật extension PostGIS trong database mục tiêu.
-- [ ] Xác nhận `SELECT PostGIS_Full_Version();` chạy thành công.
+- [x] Kiểm tra Docker Compose hiện có PostgreSQL service; đã đổi sang PostGIS image tương thích PostgreSQL 16.
+- [x] Chốt image `postgis/postgis:16-3.5`; runtime extension vẫn cần xác nhận khi chạy container.
+- [x] Thêm `CREATE EXTENSION IF NOT EXISTS postgis` vào migration; chưa xác nhận runtime.
+- [ ] Xác nhận `SELECT PostGIS_Full_Version();` chạy thành công (cần Docker runtime).
 - [ ] Không tạo database/service trùng lặp nếu repository đã có cấu hình phù hợp.
-- [ ] Xác nhận migration tool và convention đang dùng trong repository.
+- [x] Xác nhận SQLx embedded migrations tại `backend/src/db/migrations/`, tự chạy khi backend khởi động.
 
 **Output:** database mục tiêu sẵn sàng và xác định được cách chạy migration.
 
@@ -152,24 +152,24 @@ Kiểm tra cấu hình database hiện có trong repository và môi trường D
 
 Thiết kế schema tối thiểu cho hai lớp dữ liệu nền.
 
-- [ ] Tạo bảng `regions` với boundary MultiPolygon SRID đã chốt.
-- [ ] Tạo bảng `buildings` với footprint MultiPolygon SRID đã chốt.
-- [ ] Khai báo primary key nội bộ.
-- [ ] Khai báo unique constraint cho `regions.code` và `buildings.external_id`.
-- [ ] Khai báo foreign key `buildings.region_id`.
-- [ ] Khai báo NOT NULL cho các trường bắt buộc.
-- [ ] Khai báo CHECK constraint cho `osm_type` nếu phù hợp.
-- [ ] Giữ OSM way/relation ID và namespace để truy vết nguồn.
+- [x] Tạo DDL bảng `regions` với boundary MultiPolygon SRID 4326.
+- [x] Tạo DDL bảng `buildings` với footprint MultiPolygon SRID 4326.
+- [x] Khai báo UUID primary key cho hai bảng.
+- [x] Khai báo unique constraint cho `regions.code` và `buildings.external_id`.
+- [x] Khai báo foreign key `buildings.region_id`.
+- [x] Khai báo NOT NULL cho các trường bắt buộc.
+- [x] Khai báo CHECK constraint cho `osm_type` và cặp OSM identifier tương ứng.
+- [x] Giữ OSM way/relation ID và namespace trong `external_id`.
 - [ ] Không thêm height/floors/population hoặc dữ liệu mô phỏng chưa có nguồn.
 
 **Output:** DDL/schema draft được review trước khi migration.
 
 ### Step 4 – Add Spatial and Query Indexes
 
-- [ ] Tạo GiST index cho `regions.boundary`.
-- [ ] Tạo GiST index cho `buildings.footprint`.
-- [ ] Tạo B-tree index cho `buildings.region_id`.
-- [ ] Unique constraint/index cho `external_id` và `regions.code`.
+- [x] Tạo GiST index cho `regions.boundary` trong migration.
+- [x] Tạo GiST index cho `buildings.footprint` trong migration.
+- [x] Tạo B-tree index cho `buildings.region_id` trong migration.
+- [x] Unique constraint/index cho `external_id` và `regions.code`.
 - [ ] Kiểm tra index được tạo thành công.
 - [ ] Không tạo index dư thừa không gắn với truy vấn dự kiến.
 
@@ -179,10 +179,10 @@ Thiết kế schema tối thiểu cho hai lớp dữ liệu nền.
 
 Sử dụng migration mechanism đang có trong repository. Nếu chưa có, chọn công cụ phù hợp với backend Rust hiện tại và thống nhất cách chạy local/Docker.
 
-- [ ] Tạo migration bật PostGIS; database container sử dụng image PostGIS tương thích PostgreSQL 16.
-- [ ] Tạo migration bảng `regions`.
-- [ ] Tạo migration bảng `buildings`.
-- [ ] Tạo constraints và indexes.
+- [x] Tạo migration bật PostGIS; Docker Compose dùng image PostGIS cho PostgreSQL 16.
+- [x] Tạo migration bảng `regions`.
+- [x] Tạo migration bảng `buildings`.
+- [x] Tạo constraints và indexes.
 - [ ] SQLx embedded migrations trong repository hiện không khai báo convention down migration; rollback sẽ được ghi rõ bằng migration bù khi cần, không sửa migration đã áp dụng.
 - [ ] Kiểm tra migration chạy trên database rỗng.
 - [ ] Kiểm tra migration không phá vỡ cấu hình hiện có.
@@ -204,14 +204,14 @@ Sử dụng migration mechanism đang có trong repository. Nếu chưa có, ch�
 
 ### Step 7 – Document Schema and Handoff to KAN-14
 
-- [ ] Tạo tài liệu schema hoặc cập nhật tài liệu database hiện có.
-- [ ] Ghi mapping source field → database column.
-- [ ] Ghi geometry type, SRID và quy tắc transform.
-- [ ] Ghi cách tạo/giữ `external_id`.
-- [ ] Ghi quy tắc import idempotent/upsert dựa trên `external_id`.
-- [ ] Ghi thứ tự import: region trước, buildings sau để đáp ứng foreign key.
-- [ ] Ghi rõ nguồn OSM snapshot và caveat dữ liệu 2D.
-- [ ] Bàn giao hướng dẫn import cho KAN-14.
+- [x] Tạo `backend/src/db/README.md`.
+- [x] Ghi mapping source field → database column.
+- [x] Ghi geometry type, SRID và quy tắc transform.
+- [x] Ghi cách tạo/giữ `external_id`.
+- [x] Ghi quy tắc import idempotent/upsert dựa trên `external_id`.
+- [x] Ghi thứ tự import: region trước, buildings sau để đáp ứng foreign key.
+- [x] Ghi rõ nguồn OSM snapshot và caveat dữ liệu 2D.
+- [x] Bàn giao hướng dẫn import cho KAN-14.
 
 **Output:** KAN-14 có thể import sample dataset mà không phải tự suy đoán schema hoặc mapping.
 
@@ -257,4 +257,4 @@ docs(db): document GIS schema and KAN-14 import mapping
 
 KAN-13 hoàn thành khi database có thể được dựng mới bằng migration, lưu AOI và building geometry với type/SRID chính xác, đảm bảo source identifiers, quan hệ/constraints và spatial indexes, đồng thời có tài liệu mapping để KAN-14 import 1 AOI cùng 431 building features một cách nhất quán.
 
-**Trạng thái:** IMPLEMENTING. Đã xác minh SQLx embedded migrations, PostgreSQL 16 trong Docker Compose, và data contract thực tế. Quyết định: UUID internal PK; OSM numeric IDs là BIGINT; cả AOI và building footprint là MultiPolygon SRID 4326. Lưu ý quan trọng: metadata cũ mô tả AOI là Polygon nhưng GeoJSON bàn giao thực tế là MultiPolygon; schema phải theo dữ liệu thực tế.
+**Trạng thái:** IMPLEMENTED IN REPOSITORY / RUNTIME VERIFICATION PENDING. Đã cập nhật Docker Compose, tạo SQLx migration PostGIS, DDL cho hai bảng, constraints/indexes và tài liệu mapping KAN-14. Chưa chạy được Docker/PostGIS runtime từ GitHub connector; Step 6 và các acceptance criteria cần bằng chứng runtime vẫn để mở. Lưu ý: GeoJSON bàn giao thực tế là MultiPolygon dù một số mô tả cũ ghi Polygon.
