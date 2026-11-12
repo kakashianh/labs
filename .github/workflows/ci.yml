@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "project/3D-map-medical"
+  workflow_dispatch:
   pull_request:
     branches:
       - "project/3D-map-medical"
@@ -53,6 +54,114 @@ jobs:
             --file backend/deployment/Dockerfile \
             --tag gis-backend:ci \
             backend
+
+  postgis-integration:
+    name: Docker Compose + PostGIS migration verification
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # docker-compose.yml references backend/.env. CI creates it from the
+      # committed example; Compose overrides DATABASE_URL for container networking.
+      - name: Prepare backend environment
+        run: cp backend/.env.example backend/.env
+
+      - name: Start stack with Docker Compose Action
+        uses: hoverkraft-tech/compose-action@b659c744ee9bed25aea2307c017ad849bd104433 # v3.2.0
+        with:
+          compose-file: ./docker-compose.yml
+          up-flags: --build --wait --wait-timeout 180
+          down-flags: --remove-orphans
+          services-log-level: info
+
+      - name: Verify PostGIS extension and SQLx migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Wait until backend has connected to Postgres and applied SQLx migrations.
+          for attempt in $(seq 1 60); do
+            if docker compose exec -T postgres pg_isready -U appuser -d appdb >/dev/null 2>&1 \
+              && [ "$(docker compose exec -T postgres psql -U appuser -d appdb -tAc "SELECT to_regclass('public.regions')")" = "regions" ]; then
+              break
+            fi
+            if [ "$attempt" -eq 60 ]; then
+              echo "Timed out waiting for PostGIS schema migration."
+              docker compose logs postgres backend
+              exit 1
+            fi
+            sleep 2
+          done
+
+          docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U appuser -d appdb <<'SQL'
+          DO $
+          BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'postgis') THEN
+              RAISE EXCEPTION 'PostGIS extension is not enabled';
+            END IF;
+
+            IF to_regclass('public.regions') IS NULL THEN
+              RAISE EXCEPTION 'regions table is missing';
+            END IF;
+
+            IF to_regclass('public.buildings') IS NULL THEN
+              RAISE EXCEPTION 'buildings table is missing';
+            END IF;
+
+            IF NOT EXISTS (
+              SELECT 1 FROM geometry_columns
+              WHERE f_table_schema = 'public'
+                AND f_table_name = 'regions'
+                AND f_geometry_column = 'boundary'
+                AND type = 'MULTIPOLYGON'
+                AND srid = 4326
+            ) THEN
+              RAISE EXCEPTION 'regions.boundary must be MultiPolygon / EPSG:4326';
+            END IF;
+
+            IF NOT EXISTS (
+              SELECT 1 FROM geometry_columns
+              WHERE f_table_schema = 'public'
+                AND f_table_name = 'buildings'
+                AND f_geometry_column = 'footprint'
+                AND type = 'MULTIPOLYGON'
+                AND srid = 4326
+            ) THEN
+              RAISE EXCEPTION 'buildings.footprint must be MultiPolygon / EPSG:4326';
+            END IF;
+
+            IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='regions_boundary_gist_idx') THEN
+              RAISE EXCEPTION 'regions GiST index is missing';
+            END IF;
+
+            IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='buildings_footprint_gist_idx') THEN
+              RAISE EXCEPTION 'buildings GiST index is missing';
+            END IF;
+
+            IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='buildings_region_id_idx') THEN
+              RAISE EXCEPTION 'buildings.region_id B-tree index is missing';
+            END IF;
+
+            IF NOT EXISTS (
+              SELECT 1 FROM information_schema.table_constraints
+              WHERE table_schema='public' AND table_name='buildings'
+                AND constraint_type='FOREIGN KEY'
+                AND constraint_name='buildings_region_id_fkey'
+            ) THEN
+              RAISE EXCEPTION 'buildings.region_id foreign key is missing';
+            END IF;
+          END $;
+
+          SELECT PostGIS_Full_Version();
+          SELECT version, success FROM _sqlx_migrations ORDER BY version;
+          SELECT 'PostGIS schema verification passed' AS result;
+          SQL
+
+      - name: Print backend logs on failure
+        if: failure()
+        run: docker compose logs postgres redis backend
 
   deploy:
     name: Deploy to Render (manual)
