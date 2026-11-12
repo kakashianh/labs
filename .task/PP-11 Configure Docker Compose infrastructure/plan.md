@@ -10,7 +10,7 @@ Containerize infrastructure only; application modules can be added after their i
 
 **Upstream dependencies:** PP-9 for project tooling; PP-10 for component boundaries; PP-12 for persistence configuration.
 
-**Related plans:** `PP-12` · `PP-14–PP-16` · `PP-26–PP-33` · `PP-39–PP-42`. Use the links below to keep contracts aligned; update this plan if an upstream interface changes.
+**Related plans:** [PP-9](../PP-9%20Initialize%20repository%20and%20Python%20development%20environment/plan.md) · [PP-10](../PP-10%20Design%20project%20architecture%20and%20module%20structure/plan.md) · [PP-12](../PP-12%20Design%20metadata%20database%20schema%20and%20application%20configuration/plan.md) · [PP-13](../PP-13%20Implement%20AlphaFold%20structure%20data%20crawler/plan.md) · [PP-16](../PP-16%20Implement%20ingestion%20validation%20and%20raw%20data%20management/plan.md) · [PP-26](../PP-26%20Design%20JanusGraph%20protein%20interaction%20schema/plan.md) · [PP-31](../PP-31%20Configure%20Milvus%20collections%20and%20vector%20indexing/plan.md) · [PP-39](../PP-39%20Implement%20protein%20search%20and%20detail%20REST%20APIs/plan.md) · [PP-42](../PP-42%20Integrate%20prediction%20results%20and%20perform%20end-to-end%20testing/plan.md). Keep the contracts and dependency direction consistent with these linked tasks.
 
 ## 3. Step-by-step implementation and to-do
 
