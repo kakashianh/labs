@@ -2,52 +2,81 @@
 
 ## 1. Objective
 
-Ensure downloaded source data is complete, traceable, and safe for downstream processing.
+Create a consistent raw-data landing and validation layer for all crawlers before processing.
 
-## 2. Context and scope
+## 2. Scope, assumptions, and dependencies
 
-Validate file format, schema, required identifiers, duplicates, checksums, and source metadata; organize immutable raw files and ingestion manifests.
+PP-10 source contracts; PP-11 storage services; PP-12 metadata/config; PP-13–PP-15 crawlers.
 
-This plan covers the implementation of **PP-16**. Keep changes within this ticket's scope and preserve the interfaces agreed with dependent modules.
+Related plans: [PP-13](../PP-13%20Implement%20AlphaFold%20structure%20data%20crawler/plan.md) · [PP-14](../PP-14%20Implement%20STRING%20PPI%20data%20crawler/plan.md) · [PP-15](../PP-15%20Integrate%20UniProt%20ID%20mapping%20and%20Gene%20Ontology%20annotations/plan.md) · [PP-17](../PP-17%20/plan.md) · [PP-20](../PP-20%20/plan.md) · [PP-21](../PP-21%20/plan.md). These links describe the upstream/downstream contracts; coordinate changes rather than duplicating or redefining them.
 
-## 3. Implementation plan
+## 3. Step-by-step implementation and to-do
 
-1. Inspect the current repository structure and related modules before changing files.
-2. Confirm input/output contracts, configuration, source versions, and error cases.
-3. Implement the smallest cohesive module or pipeline for this ticket.
-4. Add structured logging, validation, and explicit handling for missing, invalid, and duplicate data where relevant.
-5. Add automated tests and a reproducible sample execution; update documentation and examples.
+### Step 1 — Define raw-zone layout and manifests
 
-## 4. Expected deliverables
+Standardize source/version/date partitions, immutable raw objects, and manifest metadata.
 
-- Implementation and configuration required by the stated scope.
-- Documented inputs, outputs, assumptions, and operational instructions.
-- Automated tests and representative test fixtures.
-- Clear error handling and logs sufficient to diagnose failures without exposing secrets.
-- A concise record of limitations and follow-up work, if any.
+**To-do**
+- [ ] Define directory/object naming convention per source and release
+- [ ] Define manifest schema with URI, checksum, size, retrieval time, and source parameters
+- [ ] Separate raw, validated, and rejected records
+
+### Step 2 — Build reusable validation framework
+
+Implement schema, required-field, type, range, and referential checks without silently dropping records.
+
+**To-do**
+- [ ] Add validators for structure metadata, PPI rows, ID mappings, and GO annotations
+- [ ] Classify errors as reject, quarantine, or warning
+- [ ] Produce row-level reason codes and aggregate quality reports
+
+### Step 3 — Implement integrity and idempotency
+
+Protect ingestion from duplicate downloads, partial files, and accidental source replacement.
+
+**To-do**
+- [ ] Verify checksums and atomic file writes
+- [ ] Detect duplicate source records using stable keys
+- [ ] Preserve source snapshots and version lineage
+- [ ] Make re-ingestion safe and repeatable
+
+### Step 4 — Test source-to-raw workflow
+
+Run all crawlers through common validation and publish quality summaries.
+
+**To-do**
+- [ ] Test malformed, missing, duplicate, and unexpected schema fields
+- [ ] Verify rejected records are inspectable and recoverable
+- [ ] Verify manifests reference exact raw objects
+- [ ] Publish validated datasets and quality report for PP-17
+
+## 4. Deliverables
+
+- Working crawler/validation capability within this ticket's scope.
+- Versioned raw/normalized output, manifests, and source provenance.
+- Automated tests, representative fixtures, and operational documentation.
 
 ## 5. Acceptance criteria
 
-- [ ] The implementation satisfies the objective and stays within the agreed scope.
-- [ ] Inputs, outputs, schemas, and configuration are documented.
-- [ ] Invalid, missing, duplicate, or ambiguous data is handled explicitly where applicable.
-- [ ] The result is reproducible on a representative sample.
-- [ ] Automated tests pass and relevant integration boundaries are verified.
-- [ ] Documentation is updated and no secrets or local-only artifacts are committed.
+- [ ] Every step to-do is complete.
+- [ ] Retrieval is reproducible, resumable, and idempotent where applicable.
+- [ ] Source version, parameters, checksums, and provenance are retained.
+- [ ] Invalid or ambiguous records are reported, not silently discarded.
+- [ ] Unit and integration tests pass; sample output is validated.
 
 ## 6. Testing strategy
 
-- **Unit tests:** core transformations/business rules, schema validation, boundary cases, and error handling.
-- **Integration tests:** interaction with the adjacent data store, service, graph/vector engine, or API used by this ticket.
-- **Regression checks:** verify stable identifiers, record counts, and output contracts on a fixed fixture.
-- **Manual verification:** follow the documented setup and execution steps from a clean environment.
+- **Unit:** adapters, parsers, validators, normalization, and error classification.
+- **Integration:** source API/storage and metadata database boundaries.
+- **Data quality:** counts, uniqueness, required fields, identifier coverage, and score ranges.
+- **Manual:** execute a small sample and a resumed run from documented instructions.
 
-## 7. Dependencies and constraints
+## 7. Cross-task handoff
 
-Parent Epic: **false**
-
-Coordinate with the parent Epic and upstream Tasks before changing shared schemas or interfaces. Do not assume that unavailable source fields or external service behavior exist; validate them against the actual source.
+- **Upstream:** PP-10 source contracts; PP-11 storage services; PP-12 metadata/config; PP-13–PP-15 crawlers.
+- **Consumers:** PP-13, PP-14, PP-15, PP-17, PP-20, PP-21
+- **Handoff rule:** publish schemas, manifests, source release, and known limitations; notify consumers if any contract changes.
 
 ## 8. Completion notes
 
-Record the implementation approach, test commands/results, generated artifacts, data/source versions, and any deviations from this plan when the ticket is completed.
+Record source versions, parameters, record counts, quality metrics, test commands/results, and deviations.
