@@ -5,7 +5,7 @@
 Thiết kế và triển khai schema PostgreSQL/PostGIS để lưu dữ liệu không gian nền của dự án 3D GIS Medical, bắt đầu với **một AOI mẫu khoảng 1 km² quanh chợ Bến Thành** và các building footprints OSM nằm trong AOI.
 
 Đầu vào đã được chuẩn bị ở KAN-6:
-- `hcm_boundary`: 1 Polygon, EPSG:4326.
+- `hcm_boundary`: 1 MultiPolygon, EPSG:4326.
 - `hcm_buildings`: 431 MultiPolygon features, EPSG:4326, geometry 2D.
 - Nguồn building: Geofabrik Vietnam OSM extract tải ngày 2026-11-12 UTC; không phải snapshot lịch sử.
 - `building_id` là định danh nguồn theo namespace OSM way/relation; không null và không trùng trong sample đã kiểm tra.
@@ -38,7 +38,7 @@ Schema cần hỗ trợ truy vấn khu vực, truy vấn danh sách/chi tiết c
 
 | Source layer | Geometry | SRID | Expected sample size | Ý nghĩa |
 |---|---|---:|---:|---|
-| `hcm_boundary` | Polygon | 4326 | 1 | AOI chữ nhật tự định nghĩa quanh chợ Bến Thành, không phải boundary hành chính |
+| `hcm_boundary` | MultiPolygon | 4326 | 1 | AOI chữ nhật tự định nghĩa quanh chợ Bến Thành, không phải boundary hành chính |
 | `hcm_buildings` | MultiPolygon | 4326 | 431 | Building footprints 2D đã clip theo AOI |
 
 AOI bounds (longitude, latitude):
@@ -86,10 +86,10 @@ Lưu vùng nghiên cứu/AOI. Không đặt tên hoặc mô tả bảng theo ngh
 
 | Column | Suggested type | Constraint / Purpose |
 |---|---|---|
-| id | BIGINT identity hoặc UUID | Primary key nội bộ |
+| id | UUID | Primary key nội bộ, default `gen_random_uuid()` |
 | code | VARCHAR(64) | NOT NULL, UNIQUE; ví dụ mã AOI ổn định |
 | name | VARCHAR(255) | NOT NULL; tên khu vực nghiên cứu |
-| boundary | geometry(Polygon, 4326) | NOT NULL; khớp layer `hcm_boundary` |
+| boundary | geometry(MultiPolygon, 4326) | NOT NULL; khớp layer `hcm_boundary` |
 | boundary_method | VARCHAR(64) | NOT NULL; ví dụ `local_aoi` |
 | source_reference | VARCHAR(128) | Nullable; tham chiếu nguồn/vị trí AOI |
 | created_at | TIMESTAMPTZ | NOT NULL |
@@ -101,19 +101,19 @@ Lưu footprint và metadata OSM thực sự có trong KAN-6.
 
 | Column | Suggested type | Constraint / Purpose |
 |---|---|---|
-| id | BIGINT identity hoặc UUID | Primary key nội bộ |
+| id | UUID | Primary key nội bộ, default `gen_random_uuid()` |
 | external_id | VARCHAR(128) | NOT NULL, UNIQUE; map từ `building_id` |
 | osm_type | VARCHAR(16) | NOT NULL; `way` hoặc `relation` |
 | osm_id | BIGINT | Nullable; map từ source nếu là relation |
 | osm_way_id | BIGINT | Nullable; map từ source nếu là closed way |
-| region_id | BIGINT/UUID | NOT NULL, FK đến regions trong sample này |
+| region_id | UUID | NOT NULL, FK đến regions trong sample này |
 | name | VARCHAR(255) | Nullable; OSM `name` |
 | building_type | VARCHAR(64) | Nullable; map từ OSM `building` |
 | footprint | geometry(MultiPolygon, 4326) | NOT NULL; footprint 2D |
 | created_at | TIMESTAMPTZ | NOT NULL |
 | updated_at | TIMESTAMPTZ | NOT NULL |
 
-**Quyết định cần chốt ở Step 1:** kiểu khóa nội bộ (BIGINT identity hay UUID) và kiểu dữ liệu OSM IDs sau khi kiểm tra giá trị thực tế. `external_id` phải giữ nguyên namespace `way/` hoặc `relation/`; không chỉ lưu số ID vì hai namespace khác nhau.
+**Quyết định cần chốt ở Step 1:** kiểu khóa nội bộ (UUID) và kiểu dữ liệu OSM IDs sau khi kiểm tra giá trị thực tế. `external_id` phải giữ nguyên namespace `way/` hoặc `relation/`; không chỉ lưu số ID vì hai namespace khác nhau.
 
 Nếu sau này có nguồn height/floors đáng tin cậy, có thể bổ sung ở migration riêng. Không thêm các cột không có dữ liệu vào scope hiện tại chỉ để dự phòng.
 
@@ -127,9 +127,9 @@ Nếu sau này có nguồn height/floors đáng tin cậy, có thể bổ sung �
 - [ ] Xác nhận 1 Polygon boundary và 431 MultiPolygon buildings.
 - [ ] Xác nhận SRID 4326 và geometry 2D.
 - [ ] Chốt mapping source fields sang database columns.
-- [ ] Chốt BIGINT identity hay UUID cho primary key nội bộ.
-- [ ] Chốt kiểu lưu `osm_id`/`osm_way_id` sau khi kiểm tra dữ liệu thực tế.
-- [ ] Chốt geometry(Polygon,4326) cho AOI và geometry(MultiPolygon,4326) cho footprints, hoặc ghi lại lý do nếu chọn CRS lưu trữ khác.
+- [ ] Chốt UUID cho primary key nội bộ.
+- [ ] Chốt kiểu lưu `osm_id`/`osm_way_id` là BIGINT sau khi xác nhận các giá trị nguồn là chuỗi số.
+- [ ] Chốt geometry(MultiPolygon,4326) cho AOI và geometry(MultiPolygon,4326) cho footprints, hoặc ghi lại lý do nếu chọn CRS lưu trữ khác.
 - [ ] Chốt quan hệ region/building và cách xử lý building không gắn được region.
 - [ ] Ghi rõ AOI là polygon nghiên cứu tự định nghĩa, không phải đơn vị hành chính.
 
@@ -152,7 +152,7 @@ Kiểm tra cấu hình database hiện có trong repository và môi trường D
 
 Thiết kế schema tối thiểu cho hai lớp dữ liệu nền.
 
-- [ ] Tạo bảng `regions` với boundary Polygon SRID đã chốt.
+- [ ] Tạo bảng `regions` với boundary MultiPolygon SRID đã chốt.
 - [ ] Tạo bảng `buildings` với footprint MultiPolygon SRID đã chốt.
 - [ ] Khai báo primary key nội bộ.
 - [ ] Khai báo unique constraint cho `regions.code` và `buildings.external_id`.
@@ -179,11 +179,11 @@ Thiết kế schema tối thiểu cho hai lớp dữ liệu nền.
 
 Sử dụng migration mechanism đang có trong repository. Nếu chưa có, chọn công cụ phù hợp với backend Rust hiện tại và thống nhất cách chạy local/Docker.
 
-- [ ] Tạo migration bật PostGIS (nếu quyền môi trường cho phép).
+- [ ] Tạo migration bật PostGIS; database container sử dụng image PostGIS tương thích PostgreSQL 16.
 - [ ] Tạo migration bảng `regions`.
 - [ ] Tạo migration bảng `buildings`.
 - [ ] Tạo constraints và indexes.
-- [ ] Có migration down/rollback nếu công cụ hỗ trợ.
+- [ ] SQLx embedded migrations trong repository hiện không khai báo convention down migration; rollback sẽ được ghi rõ bằng migration bù khi cần, không sửa migration đã áp dụng.
 - [ ] Kiểm tra migration chạy trên database rỗng.
 - [ ] Kiểm tra migration không phá vỡ cấu hình hiện có.
 
@@ -219,7 +219,7 @@ Sử dụng migration mechanism đang có trong repository. Nếu chưa có, ch�
 
 - [ ] PostGIS extension được bật trong database mục tiêu.
 - [ ] Có bảng `regions` và `buildings` theo data contract KAN-6.
-- [ ] Geometry types khớp: AOI Polygon, building MultiPolygon.
+- [ ] Geometry types khớp: AOI MultiPolygon, building MultiPolygon.
 - [ ] SRID được chốt rõ ràng và nhất quán; mặc định giữ 4326 nếu không có lý do kỹ thuật khác.
 - [ ] Giữ được source OSM IDs và `external_id` có namespace.
 - [ ] Foreign key, unique và NOT NULL constraints hoạt động.
@@ -257,4 +257,4 @@ docs(db): document GIS schema and KAN-14 import mapping
 
 KAN-13 hoàn thành khi database có thể được dựng mới bằng migration, lưu AOI và building geometry với type/SRID chính xác, đảm bảo source identifiers, quan hệ/constraints và spatial indexes, đồng thời có tài liệu mapping để KAN-14 import 1 AOI cùng 431 building features một cách nhất quán.
 
-**Trạng thái:** READY TO IMPLEMENT. Đầu vào KAN-6 đã có dữ liệu thực tế và đã qua kiểm tra trực quan QGIS; các quyết định kỹ thuật còn lại (PK type, migration tool, CRS storage convention) cần được xác nhận từ repository ở Step 1/2.
+**Trạng thái:** IMPLEMENTING. Đã xác minh SQLx embedded migrations, PostgreSQL 16 trong Docker Compose, và data contract thực tế. Quyết định: UUID internal PK; OSM numeric IDs là BIGINT; cả AOI và building footprint là MultiPolygon SRID 4326. Lưu ý quan trọng: metadata cũ mô tả AOI là Polygon nhưng GeoJSON bàn giao thực tế là MultiPolygon; schema phải theo dữ liệu thực tế.
