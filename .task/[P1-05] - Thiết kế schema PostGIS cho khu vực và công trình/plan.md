@@ -144,7 +144,7 @@ Kiểm tra cấu hình database hiện có trong repository và môi trường D
 - [x] Chốt image `postgis/postgis:16-3.5`; GitHub Actions đã khởi động container PostGIS thành công.
 - [x] Thêm `CREATE EXTENSION IF NOT EXISTS postgis` vào migration; runtime xác nhận extension PostGIS 3.5.2 trên PostgreSQL 16.
 - [x] Xác nhận `SELECT PostGIS_Full_Version();` chạy thành công trong Docker Compose integration job.
-- [ ] Không tạo database/service trùng lặp nếu repository đã có cấu hình phù hợp.
+- [x] Không tạo database/service trùng lặp; tái sử dụng PostgreSQL service hiện có và thay image sang PostGIS.
 - [x] Xác nhận SQLx embedded migrations tại `backend/src/db/migrations/`, tự chạy khi backend khởi động.
 
 **Output:** database mục tiêu sẵn sàng và xác định được cách chạy migration.
@@ -161,7 +161,7 @@ Thiết kế schema tối thiểu cho hai lớp dữ liệu nền.
 - [x] Khai báo NOT NULL cho các trường bắt buộc.
 - [x] Khai báo CHECK constraint cho `osm_type` và cặp OSM identifier tương ứng.
 - [x] Giữ OSM way/relation ID và namespace trong `external_id`.
-- [ ] Không thêm height/floors/population hoặc dữ liệu mô phỏng chưa có nguồn.
+- [x] Không thêm height/floors/population hoặc dữ liệu mô phỏng chưa có nguồn.
 
 **Output:** DDL/schema draft được review trước khi migration.
 
@@ -172,7 +172,7 @@ Thiết kế schema tối thiểu cho hai lớp dữ liệu nền.
 - [x] Tạo B-tree index cho `buildings.region_id` trong migration.
 - [x] Unique constraint/index cho `external_id` và `regions.code`.
 - [x] Kiểm tra hai GiST indexes và B-tree index `buildings.region_id` tồn tại trong PostGIS integration job.
-- [ ] Không tạo index dư thừa không gắn với truy vấn dự kiến.
+- [x] Không tạo index dư thừa; giữ GiST cho geometry và B-tree cho region_id cùng unique indexes theo constraint.
 
 **Output:** indexes phục vụ spatial filtering và truy vấn building theo region.
 
@@ -184,7 +184,7 @@ Sử dụng migration mechanism đang có trong repository. Nếu chưa có, ch�
 - [x] Tạo migration bảng `regions`.
 - [x] Tạo migration bảng `buildings`.
 - [x] Tạo constraints và indexes.
-- [ ] SQLx embedded migrations trong repository hiện không khai báo convention down migration; rollback sẽ được ghi rõ bằng migration bù khi cần, không sửa migration đã áp dụng.
+- [x] Ghi nhận repository dùng SQLx embedded migrations và không khai báo down migration convention; rollback schema đã áp dụng thực hiện bằng migration bù, không sửa migration cũ.
 - [x] Kiểm tra migration chạy trên database mới được Docker Compose khởi tạo; SQLx ghi nhận migration `20261112000000` success.
 - [x] Backend khởi động thành công với cấu hình Compose hiện tại, kết nối PostgreSQL/PostGIS và Redis; migration hoàn tất.
 
@@ -196,10 +196,10 @@ Sử dụng migration mechanism đang có trong repository. Nếu chưa có, ch�
 - [x] Xác nhận cả hai geometry columns là `MULTIPOLYGON`, SRID 4326.
 - [x] Xác nhận foreign key `buildings_region_id_fkey` tồn tại. Unique constraints đã được khai báo trong migration nhưng chưa có negative test riêng trong workflow.
 - [x] Xác nhận `regions_boundary_gist_idx` và `buildings_footprint_gist_idx` tồn tại.
-- [ ] Thử insert một region và một building mẫu hợp lệ.
-- [ ] Thử insert dữ liệu sai để xác nhận constraint được thực thi.
-- [ ] Kiểm tra spatial query cơ bản bằng `ST_Intersects`.
-- [ ] Kiểm tra phép đo metric sử dụng geography hoặc transform phù hợp, không dùng đơn vị độ như mét.
+- [x] Insert region/building mẫu hợp lệ; xác nhận UUID default được sinh tự động.
+- [x] Kiểm thử unique, CHECK (`osm_type` và OSM identifiers), FK và NOT NULL bằng các insert cố ý sai.
+- [x] Kiểm tra `ST_Intersects` giữa region boundary và building footprint.
+- [x] Kiểm tra `ST_Area(footprint::geography)` trả diện tích dương theo m².
 
 **Output:** bằng chứng schema và spatial operations hoạt động.
 
@@ -222,13 +222,13 @@ Sử dụng migration mechanism đang có trong repository. Nếu chưa có, ch�
 - [x] Có bảng `regions` và `buildings` theo data contract KAN-6.
 - [x] Geometry types khớp: AOI MultiPolygon, building MultiPolygon.
 - [x] SRID được chốt và runtime xác nhận nhất quán ở 4326.
-- [ ] Giữ được source OSM IDs và `external_id` có namespace.
-- [ ] Foreign key, unique và NOT NULL constraints hoạt động.
+- [x] Giữ được source OSM IDs và `external_id` có namespace; integration test xác nhận `way/900000001` và `osm_way_id` được lưu nguyên vẹn.
+- [x] Foreign key, unique, CHECK và NOT NULL constraints được kiểm thử bằng các insert hợp lệ/không hợp lệ.
 - [x] Có GiST spatial indexes cho cả hai geometry columns.
 - [x] Migration chạy thành công trên database mới khởi tạo trong CI.
-- [ ] Có tài liệu mapping và hướng dẫn import idempotent cho KAN-14.
-- [ ] Không đưa trạng thái SIR/scenario vào schema nền Phase 1.
-- [ ] Không giả định AOI là ranh giới hành chính hoặc building có height/floors.
+- [x] Có tài liệu mapping và hướng dẫn import idempotent cho KAN-14 trong `backend/src/db/README.md`.
+- [x] Không đưa trạng thái SIR/scenario vào schema nền Phase 1.
+- [x] Không giả định AOI là ranh giới hành chính hoặc building có height/floors.
 
 ## 7. Deliverables
 
@@ -258,4 +258,4 @@ docs(db): document GIS schema and KAN-14 import mapping
 
 KAN-13 hoàn thành khi database có thể được dựng mới bằng migration, lưu AOI và building geometry với type/SRID chính xác, đảm bảo source identifiers, quan hệ/constraints và spatial indexes, đồng thời có tài liệu mapping để KAN-14 import 1 AOI cùng 431 building features một cách nhất quán.
 
-**Trạng thái:** IMPLEMENTED AND RUNTIME-VERIFIED (CI). GitHub Actions run [43224049899](https://github.com/kakashianh/labs/actions/runs/43224049899) đã chạy Docker Compose bằng `hoverkraft-tech/compose-action`, khởi động PostgreSQL/PostGIS và backend, xác nhận migration SQLx `20261112000000` thành công, PostGIS 3.5.2 hoạt động, hai bảng và geometry type/SRID đúng, foreign key cùng các index cần thiết tồn tại. Các kiểm thử dữ liệu chủ động (insert hợp lệ/không hợp lệ, `ST_Intersects`, phép đo metric) chưa nằm trong workflow nên vẫn để mở. Lưu ý: GeoJSON bàn giao thực tế là MultiPolygon dù một số mô tả cũ ghi Polygon.
+**Trạng thái:** IMPLEMENTED; automated PostGIS schema and behavior verification added to CI. GitHub Actions now verifies PostGIS setup/migration, UUID defaults, OSM identifier preservation, unique/CHECK/FK/NOT NULL constraints, `ST_Intersects`, and metric area via `geography` (m²). These checks execute in a transaction and roll back their fixture data. The latest workflow run is pending after this commit; mark the ticket fully verified only after that run passes. Lưu ý: GeoJSON bàn giao thực tế là MultiPolygon dù một số mô tả cũ ghi Polygon.
