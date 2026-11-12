@@ -87,6 +87,7 @@ Không tự tạo `height`, `building_levels`, dân số hoặc thuộc tính m�
 
 ### Step 4 – Extract, clip and normalize
 
+- [x] Xây dựng `scripts/gis/prepare_osm_data.sh` để tải PBF khi thiếu, chuẩn hóa boundary, trích xuất `building=*`, clip và xuất GeoJSON RFC 7946 / EPSG:4326 (đã có code; chưa xác nhận chạy thành công).
 - [ ] Chạy `scripts/gis/prepare_osm_data.sh`.
 - [ ] Chỉ lấy feature có tag `building IS NOT NULL`.
 - [ ] Clip theo boundary TP.HCM đã xác minh.
@@ -105,6 +106,7 @@ Không tự tạo `height`, `building_levels`, dân số hoặc thuộc tính m�
 
 ### Step 6 – Document and handoff
 
+- [x] Tạo hướng dẫn nguồn boundary/PBF trong `data/sample/source/README.md` và hướng dẫn chạy pipeline trong `scripts/gis/README.md` (hướng dẫn đã có; chưa kiểm chứng end-to-end trên môi trường sạch).
 - [ ] Hoàn thiện `metadata.md` bằng thông tin thực tế sau khi chạy pipeline.
 - [ ] Hoàn thiện `data_dictionary.md` nếu cấu trúc thực tế có khác data contract.
 - [ ] Hoàn thiện `data_quality_report.md`, gồm số feature, lỗi, cách xử lý và hạn chế.
@@ -147,11 +149,11 @@ Các GeoJSON đầu ra chỉ được commit sau khi pipeline đã chạy và d�
 
 ## 7. Deliverables
 
-1. `hcm_boundary.geojson` và `hcm_buildings.geojson` sau khi chạy pipeline thành công.
-2. Hướng dẫn tải boundary/PBF và tái tạo dữ liệu.
-3. Metadata nguồn, phạm vi, CRS, giấy phép và checksum.
-4. Data dictionary và báo cáo chất lượng.
-5. Script xử lý có thể chạy lại.
+1. [ ] `hcm_boundary.geojson` và `hcm_buildings.geojson` sau khi chạy pipeline thành công.
+2. [x] Hướng dẫn tải boundary/PBF và tái tạo dữ liệu (đã có README; cần kiểm chứng quy trình thực tế).
+3. [ ] Metadata nguồn, phạm vi, CRS, giấy phép và checksum được điền bằng thông tin thực tế.
+4. [ ] Data dictionary và báo cáo chất lượng được đối chiếu với dữ liệu đầu ra thực tế.
+5. [x] Script xử lý đã được xây dựng; [ ] chạy thử thành công và xác nhận có thể tái tạo.
 
 ## 8. Suggested commit sequence
 
@@ -166,4 +168,4 @@ data(gis): add validated HCMC GeoJSON sample
 
 KAN-6 chỉ hoàn thành khi boundary TP.HCM đã được xác minh, bộ building footprints thật từ OSM đã được trích xuất/clip/chuẩn hóa, kết quả đọc lại được bằng công cụ GIS, chất lượng và giới hạn được báo cáo, và KAN-13 có đủ thông tin để thiết kế schema PostGIS.
 
-**Trạng thái hiện tại:** tài liệu và pipeline được chuẩn bị trong nhánh này; dữ liệu GeoJSON và các số liệu chất lượng vẫn pending cho đến khi boundary OSM được xác minh và pipeline chạy trên dữ liệu nguồn.
+**Trạng thái hiện tại sau rà soát source:** đã có script xử lý, README hướng dẫn, data dictionary và các template metadata/quality report. Chưa thấy boundary input, Vietnam PBF hoặc hai GeoJSON đầu ra trong nhánh; `data_quality_report.md` vẫn ghi `NOT RUN`. Vì vậy, các bước xác minh boundary, tải/kiểm tra PBF, chạy pipeline, QA bằng GDAL/QGIS và hoàn thiện metadata/quality report vẫn pending. Lưu ý cần đồng bộ `data/sample/README.md` (đang mô tả GitHub Actions, preset `old-hcmc` và relation ID `1973756`) với quy trình trong plan/script (boundary xác minh thủ công); chưa tìm thấy workflow tương ứng trong các đường dẫn workflow đã kiểm tra.
