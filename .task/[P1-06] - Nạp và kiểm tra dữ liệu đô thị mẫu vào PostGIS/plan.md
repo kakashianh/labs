@@ -64,7 +64,7 @@ Các index chính:
 - Kiểm tra dữ liệu GeoJSON đầu vào từ KAN-6.
 - Xây dựng mapping nguồn – đích.
 - Import regions và buildings.
-- Chuyển đổi Polygon thành MultiPolygon khi cần.
+- Chuẩn hóa geometry sang MultiPolygon khi cần; boundary input hiện tại đã là MultiPolygon.
 - Gán `region_id` cho buildings.
 - Đảm bảo import có thể chạy lại.
 - Kiểm tra số lượng, thuộc tính, geometry, CRS và foreign key.
@@ -150,7 +150,7 @@ Mục tiêu: xác định chính xác dữ liệu nguồn và mapping sang schem
 - [ ] Lấy `region_id` từ region đã được import thông qua `regions.code`.
 - [ ] Xác nhận boundary nguồn là MultiPolygon; dùng `ST_Multi` để bảo đảm geometry tương thích schema đích.
 - [ ] Không thay đổi schema chỉ để phù hợp với geometry nguồn.
-- [ ] Giữ nguyên các trường nullable như `name` và `building`.
+- [ ] Giữ nguyên các thuộc tính nguồn nullable như `name` và `building`; map `building` vào `buildings.building_type`.
 - [ ] Không tự suy luận height, floors, population hoặc epidemiology.
 
 ### Step 3 – Pre-import Data Validation
@@ -207,7 +207,7 @@ Mục tiêu: xác nhận dữ liệu trong PostGIS khớp với dữ liệu ngu�
 - [ ] Kiểm tra `external_id` không duplicate.
 - [ ] Kiểm tra namespace `way/` và `relation/`.
 - [ ] Đối chiếu `osm_type`, `osm_id`, `osm_way_id` với nguồn.
-- [ ] Đối chiếu một số thuộc tính `name`, `building`.
+- [ ] Đối chiếu một số thuộc tính nguồn `name`, `building` với `buildings.name`, `buildings.building_type`.
 
 **Geometry validation**
 - [ ] Kiểm tra geometry không null.
@@ -271,7 +271,7 @@ KAN-14 sử dụng mô hình **automation-first, human-reviewed**: máy thực h
 - [ ] Xác nhận snapshot dự kiến: 1 region và 431 buildings.
 - [ ] Xác nhận region code ổn định sẽ dùng để upsert.
 - [ ] Review mapping `building_id` → `external_id`, OSM attributes và geometry.
-- [ ] Xác nhận quy tắc chuyển boundary Polygon → MultiPolygon.
+- [ ] Xác nhận boundary MultiPolygon và quy tắc chuẩn hóa geometry tương thích schema.
 - [ ] Chỉ bắt đầu import khi mapping và nguồn dữ liệu được chấp thuận.
 
 **Evidence:** mapping checklist được đánh dấu approved hoặc ghi nhận trong báo cáo KAN-14.
