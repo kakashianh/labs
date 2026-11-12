@@ -2,50 +2,83 @@
 
 ## 1. Objective
 
-Explore groups of proteins associated with disease-relevant annotations or network context.
+Explore whether protein features and PPI context reveal coherent groups associated with curated disease annotations.
 
-## 2. Context and scope
+## 2. Scope and dependencies
 
-Define disease-related input labels/features; select clustering method and distance; calculate cluster summaries; document exploratory rather than causal interpretation.
+PP-20 protein master; PP-29 graph features; PP-33 fused features; PP-34 annotations/labels.
 
-Parent Epic: **PP-7**. Inspect the current repository and upstream contracts before implementation. Keep the ticket focused on its stated deliverable and coordinate changes to shared schemas with dependent modules.
+Related plans: [PP-20](../PP-20%20Generate%20protein%20master%20and%20PPI%20Parquet%20datasets/plan.md) · [PP-29](../PP-29%20Implement%20PPI%20network%20analytics%20and%20community%20detection/plan.md) · [PP-33](../PP-33%20Integrate%20structure%2C%20sequence%20and%20PPI%20features/plan.md) · [PP-34](../PP-34%20Prepare%20multi-label%20protein%20function%20prediction%20dataset/plan.md) · [PP-36](../PP-36%20Implement%20combined%20feature%20and%20graph-based%20prediction/plan.md) · [PP-38](../PP-38%20Evaluate%20models%20and%20analyze%20prediction%20performance/plan.md) · [PP-39](../PP-39%20Implement%20protein%20search%20and%20detail%20REST%20APIs/plan.md). These plans define the data/API handoffs; preserve their identifiers, versions, and error semantics.
 
-## 3. Implementation plan
+## 3. Step-by-step implementation and to-do
 
-1. Inspect existing code, data contracts, configuration, and related tests before changing files.
-2. Confirm inputs, outputs, source/model versions, identifiers, and error cases.
-3. Implement the smallest cohesive module or pipeline for this ticket.
-4. Add validation, structured logging, and explicit handling for missing, invalid, duplicate, or ambiguous records where applicable.
-5. Add automated tests and a reproducible sample execution; update documentation and examples.
+### Step 1 — Define disease association data and research question
 
-## 4. Expected deliverables
+Clarify whether clustering is exploratory or disease-label-informed; do not present clusters as causal disease mechanisms.
 
-- Implementation and configuration required by the stated scope.
-- Documented inputs, outputs, assumptions, and operational instructions.
-- Automated tests and representative fixtures.
-- Diagnostic logs and explicit error handling without exposing secrets.
-- Notes on limitations and deferred work, if any.
+**To-do**
+- [ ] Identify approved disease annotation source and licensing
+- [ ] Define disease association fields and evidence quality
+- [ ] Choose unsupervised versus semi-supervised analysis scope
+- [ ] Define leakage safeguards if disease labels are used for evaluation
+
+### Step 2 — Prepare clustering feature matrix
+
+Select protein feature groups and handle scale, missing modalities, and outliers.
+
+**To-do**
+- [ ] Join selected PP-33 features and PP-29 graph descriptors
+- [ ] Define scaling and dimensionality reduction fitted on analysis cohort
+- [ ] Record missingness and protein coverage
+- [ ] Freeze feature version and analysis cohort
+
+### Step 3 — Implement and compare clustering methods
+
+Run suitable algorithms and evaluate cluster structure without overclaiming biological meaning.
+
+**To-do**
+- [ ] Implement baseline methods such as K-means and/or hierarchical clustering
+- [ ] Evaluate density-based method if cluster shapes warrant it
+- [ ] Tune parameters using unsupervised criteria and stability checks
+- [ ] Save cluster assignments and model parameters
+
+### Step 4 — Interpret and publish findings
+
+Compare clusters with independent disease annotations and document uncertainty.
+
+**To-do**
+- [ ] Calculate silhouette/stability and cluster-size diagnostics
+- [ ] Enrich clusters with disease/GO terms using independent annotations
+- [ ] Identify representative proteins and network neighborhoods
+- [ ] Publish exploratory report and limitations for PP-38
+
+## 4. Deliverables
+
+- Working analysis/API capability and documented contract.
+- Reproducible outputs, representative examples, and version/provenance metadata.
+- Automated tests, operational guidance, and known limitations.
 
 ## 5. Acceptance criteria
 
-- [ ] The implementation satisfies the objective and remains within ticket scope.
-- [ ] Inputs, outputs, schemas, and configuration are documented.
-- [ ] Invalid, missing, duplicate, or ambiguous data is handled explicitly.
-- [ ] The result is reproducible on a representative sample.
-- [ ] Unit and relevant integration tests pass.
-- [ ] Documentation is updated and no secrets or local-only artifacts are committed.
+- [ ] All step-level to-dos are complete.
+- [ ] Inputs, outputs, score semantics, and version metadata are documented.
+- [ ] Invalid, missing, and unavailable data/backends are handled explicitly.
+- [ ] Resource limits and observability are in place where applicable.
+- [ ] Unit and integration tests pass on representative fixtures.
 
 ## 6. Testing strategy
 
-- **Unit tests:** core logic, transformations, schema validation, edge cases, and error handling.
-- **Integration tests:** the relevant adjacent pipeline, data store, graph/vector service, or API boundary.
-- **Regression checks:** stable identifiers, expected record counts, and output-contract compatibility.
-- **Manual verification:** execute the documented workflow from a clean environment.
+- **Unit:** business rules, validation, mapping, and error handling.
+- **Integration:** relevant database, graph, vector, model, and REST boundaries.
+- **Quality:** reproducibility, referential integrity, metric correctness, and provenance.
+- **Performance:** query latency, response size, and bounded resource use.
 
-## 7. Dependencies and constraints
+## 7. Cross-task handoff
 
-Use outputs from upstream tickets in **PP-7**. Do not assume unavailable source fields or external service behavior; validate them against actual source data and document any assumptions.
+- **Upstream:** PP-20 protein master; PP-29 graph features; PP-33 fused features; PP-34 annotations/labels.
+- **Consumers / coordination:** PP-20, PP-29, PP-33, PP-34, PP-36, PP-38, PP-39
+- **Contract rule:** publish API/schema versions, sample requests/responses, evaluation or quality results, and limitations. Coordinate breaking changes with all linked plans.
 
 ## 8. Completion notes
 
-Record implementation decisions, test commands/results, generated artifacts, data/source versions, and deviations from this plan when the ticket is completed.
+Record data/model/backend versions, commands, test results, sample outputs, and deviations.
