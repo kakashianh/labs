@@ -2,50 +2,83 @@
 
 ## 1. Objective
 
-Use fused protein features and PPI graph context to improve function prediction.
+Improve protein function prediction by combining multimodal feature vectors with PPI graph context.
 
-## 2. Context and scope
+## 2. Scope and dependencies
 
-Implement a justified feature/graph model; define neighborhood aggregation and leakage controls; compare with baseline under identical splits.
+PP-33 fused features; PP-34 frozen labels/splits; PP-35 baselines; PP-28 graph queries; PP-29 graph metrics.
 
-Parent Epic: **PP-7**. Inspect the current repository and upstream contracts before implementation. Keep the ticket focused on its stated deliverable and coordinate changes to shared schemas with dependent modules.
+Related plans: [PP-28](../PP-28%20Implement%20graph%20query%20and%20neighborhood%20services/plan.md) · [PP-29](../PP-29%20Implement%20PPI%20network%20analytics%20and%20community%20detection/plan.md) · [PP-33](../PP-33%20Integrate%20structure%2C%20sequence%20and%20PPI%20features/plan.md) · [PP-34](../PP-34%20Prepare%20multi-label%20protein%20function%20prediction%20dataset/plan.md) · [PP-35](../PP-35%20Implement%20baseline%20protein%20function%20classification%20models/plan.md) · [PP-38](../PP-38%20Evaluate%20models%20and%20analyze%20prediction%20performance/plan.md). Preserve the shared protein accession, feature schema, annotation policy, and frozen split contract across these plans.
 
-## 3. Implementation plan
+## 3. Step-by-step implementation and to-do
 
-1. Inspect existing code, data contracts, configuration, and related tests before changing files.
-2. Confirm inputs, outputs, source/model versions, identifiers, and error cases.
-3. Implement the smallest cohesive module or pipeline for this ticket.
-4. Add validation, structured logging, and explicit handling for missing, invalid, duplicate, or ambiguous records where applicable.
-5. Add automated tests and a reproducible sample execution; update documentation and examples.
+### Step 1 — Choose graph-aware model strategy
 
-## 4. Expected deliverables
+Compare a feature-plus-network baseline with an explicit graph neural model only if graph/data volume justifies it.
 
-- Implementation and configuration required by the stated scope.
-- Documented inputs, outputs, assumptions, and operational instructions.
-- Automated tests and representative fixtures.
-- Diagnostic logs and explicit error handling without exposing secrets.
-- Notes on limitations and deferred work, if any.
+**To-do**
+- [ ] Define baseline graph feature augmentation approach
+- [ ] Select GNN architecture only with a clear message-passing design
+- [ ] Define neighbor sampling and graph split leakage controls
+- [ ] Keep feature-only PP-35 benchmark as control
+
+### Step 2 — Build graph-feature training inputs
+
+Align nodes, edges, features, and labels using canonical accession and frozen splits.
+
+**To-do**
+- [ ] Map graph vertex IDs to canonical protein accessions
+- [ ] Construct adjacency/edge weights from PP-19/PP-27 graph version
+- [ ] Attach PP-33 features and PP-34 labels
+- [ ] Ensure test labels are not used in training neighborhoods/targets
+
+### Step 3 — Train and tune combined model
+
+Train with reproducible configuration and validation-only tuning.
+
+**To-do**
+- [ ] Implement model training and checkpointing
+- [ ] Tune learning rate, depth, hidden dimension, and sampling on validation set
+- [ ] Add class imbalance handling and early stopping
+- [ ] Save model, graph snapshot, feature schema, and config
+
+### Step 4 — Compare with baseline and publish
+
+Evaluate against PP-35 using identical data splits and metrics.
+
+**To-do**
+- [ ] Run PP-35 baseline and graph-aware model on same test manifest
+- [ ] Report micro/macro and per-label metrics
+- [ ] Analyze gains, regressions, and graph coverage effects
+- [ ] Publish inference contract and artifacts for PP-38/PP-39
+
+## 4. Deliverables
+
+- Reproducible dataset/model pipeline and versioned artifacts.
+- Model/data cards describing scope, assumptions, limitations, and provenance.
+- Automated tests and evaluation report on a frozen dataset split.
 
 ## 5. Acceptance criteria
 
-- [ ] The implementation satisfies the objective and remains within ticket scope.
-- [ ] Inputs, outputs, schemas, and configuration are documented.
-- [ ] Invalid, missing, duplicate, or ambiguous data is handled explicitly.
-- [ ] The result is reproducible on a representative sample.
-- [ ] Unit and relevant integration tests pass.
-- [ ] Documentation is updated and no secrets or local-only artifacts are committed.
+- [ ] All step-level to-dos are complete.
+- [ ] Canonical protein IDs and feature/label versions are consistent.
+- [ ] Data leakage is prevented and preprocessing is fitted on training data only.
+- [ ] Evaluation uses the same frozen splits and metrics for fair comparison.
+- [ ] Model artifacts can be reloaded for inference and tests pass.
 
 ## 6. Testing strategy
 
-- **Unit tests:** core logic, transformations, schema validation, edge cases, and error handling.
-- **Integration tests:** the relevant adjacent pipeline, data store, graph/vector service, or API boundary.
-- **Regression checks:** stable identifiers, expected record counts, and output-contract compatibility.
-- **Manual verification:** execute the documented workflow from a clean environment.
+- **Unit:** label encoding, split logic, feature mapping, model input/output, and metrics.
+- **Integration:** dataset loader, graph/feature stores, and model serialization.
+- **ML validation:** leakage checks, class imbalance, per-label performance, calibration/threshold checks.
+- **Reproducibility:** rerun with fixed seeds and record software/model/data versions.
 
-## 7. Dependencies and constraints
+## 7. Cross-task handoff
 
-Use outputs from upstream tickets in **PP-7**. Do not assume unavailable source fields or external service behavior; validate them against actual source data and document any assumptions.
+- **Upstream:** PP-33 fused features; PP-34 frozen labels/splits; PP-35 baselines; PP-28 graph queries; PP-29 graph metrics.
+- **Consumers / coordination:** PP-28, PP-29, PP-33, PP-34, PP-35, PP-38
+- **Contract rule:** publish frozen split IDs, label dictionary, feature schema, model version, inference signature, and evaluation results. Any target/feature changes require synchronized updates to linked plans.
 
 ## 8. Completion notes
 
-Record implementation decisions, test commands/results, generated artifacts, data/source versions, and deviations from this plan when the ticket is completed.
+Record dataset/split version, label policy, feature version, model/config, metrics, artifact URI, and deviations.
