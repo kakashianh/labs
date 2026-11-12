@@ -1,19 +1,17 @@
 # KAN-6 – Dataset metadata
 
-> Status: template. Runtime values must be populated from the successful workflow artifact; do not invent relation versions, dates, checksums, or feature counts.
+> Status: template. Runtime values must be populated from a successful workflow run; do not invent checksums or feature counts.
 
 ## Study area
 
 | Property | Value |
 |---|---|
-| Name | Thành phố Hồ Chí Minh, Việt Nam (địa giới trước 01/07/2025) |
-| Boundary source | OpenStreetMap historical administrative relation |
-| OSM relation ID | 1973756 |
-| Historical database cutoff | 2025-06-30T23:59:59Z |
-| Boundary relation version | Pending workflow run |
-| Boundary version timestamp | Pending workflow run |
-| Boundary retrieval endpoint | Pending workflow run |
-| Geometry | MultiPolygon expected; confirm from generated file |
+| Name | Ben Thanh Market sample area, District 1, Ho Chi Minh City |
+| Area | Approximately 1 km² (about 1 km × 1 km) |
+| Center | 10.77257° N, 106.69802° E |
+| WGS 84 bounds | 106.693378–106.702662° E, 10.768079–10.777061° N |
+| Boundary method | Locally defined rectangular AOI; not an administrative boundary |
+| Center reference | https://www.openstreetmap.org/way/39514795 |
 | Output file | `data/sample/processed/hcm_boundary.geojson` |
 
 ## Building footprints
@@ -26,19 +24,17 @@
 | Source file | `data/sample/source/vietnam-latest.osm.pbf` (not committed) |
 | File size | Pending workflow run |
 | SHA-256 | Pending workflow run |
-| Source CRS | Inspect PBF metadata; do not assume |
 | Output CRS | EPSG:4326, GeoJSON RFC 7946 |
 | Selection | OSM features with `building IS NOT NULL` |
-| Spatial filter | Clip to the historical HCMC boundary |
+| Spatial filter | Clip to Ben Thanh sample AOI |
 | Temporal meaning | Latest Geofabrik snapshot at workflow execution; not historical building state |
 | Geometry | MultiPolygon, 2D |
 | Output file | `data/sample/processed/hcm_buildings.geojson` |
 
 ## Coordinate reference system
 
-- Source CRS: pending inspection of boundary and PBF using GDAL/OGR.
-- Output CRS: WGS 84 longitude/latitude (EPSG:4326), emitted as RFC 7946 GeoJSON.
-- Any reprojection must be performed by GDAL using the CRS declared by the source. Never use CRS assignment as a substitute for coordinate transformation.
+- AOI and output: WGS 84 longitude/latitude (EPSG:4326).
+- For area/distance analysis, reproject to a suitable local projected CRS or use geodesic calculations.
 
 ## Attribute contract
 
@@ -46,7 +42,7 @@ See [data_dictionary.md](./data_dictionary.md).
 
 ## License and attribution
 
-OpenStreetMap contributors, © OpenStreetMap contributors, data available under ODbL. Include attribution in reports and downstream product credits. Source URLs, retrieval date, and checksums must identify the exact snapshots used.
+OpenStreetMap contributors, © OpenStreetMap contributors, data available under ODbL. Include attribution in reports and downstream product credits. Source URLs, retrieval date, and checksums identify the exact source snapshot.
 
 - Copyright: https://www.openstreetmap.org/copyright
 - Geofabrik: https://download.geofabrik.de/asia/vietnam.html
@@ -57,11 +53,10 @@ OpenStreetMap contributors, © OpenStreetMap contributors, data available under 
 |---|---|
 | Script | `scripts/gis/prepare_osm_data.sh` |
 | Workflow | `.github/workflows/kan-6-prepare-osm.yml` |
-| Boundary cutoff | 2025-06-30T23:59:59Z |
-| Boundary version / timestamp | Pending |
-| Overpass endpoint | Pending |
+| AOI coordinates | Fixed bounds documented above |
 | GDAL version | Pending |
-| Boundary input checksum | Pending |
+| AOI input checksum | Pending |
 | PBF checksum | Pending |
 | Execution date | Pending |
-| Output feature counts | Pending; populate from actual run |
+| Boundary/building feature counts | Pending; populate from actual run |
+| Output checksums | Pending |
