@@ -1,13 +1,15 @@
 # KAN-6 – Data quality report
 
 > Status: NOT RUN. This report must be completed from the actual generated files. Do not replace pending values with estimates.
+>
+> Temporal scope: boundary is the historical OSM state at `2025-06-30T23:59:59Z` (UTC), relation `1973756`. Building footprints are from the Geofabrik Vietnam snapshot downloaded during the workflow run; they are not historical building records from June 2025.
 
 ## Input inventory
 
 | Check | Result |
 |---|---|
-| HCMC boundary source and relation ID | Pending |
-| Boundary geometry / feature count | Pending |
+| HCMC boundary source and relation ID | OSM relation 1973756; historical cutoff 2025-06-30T23:59:59Z; run verification pending |
+| Boundary geometry / feature count | Pending workflow run |
 | Vietnam PBF retrieval date and SHA-256 | Pending |
 | GDAL version | Pending |
 | Source CRS and extent | Pending |
@@ -38,6 +40,11 @@
 - [ ] No obvious clipping artifacts or widespread geometry distortion.
 - [ ] Representative central and peripheral areas inspected.
 - [ ] Any gaps or uneven OSM coverage documented.
+
+## Temporal interpretation
+
+- The administrative boundary represents the OSM database state at 2025-06-30T23:59:59Z.
+- Building footprints represent the Geofabrik Vietnam extract downloaded at workflow execution time, clipped to the historical boundary. Do not describe these footprints as a June 2025 building snapshot.
 
 ## Known limitations
 
