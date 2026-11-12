@@ -10,7 +10,7 @@ Translate the platform flow into modules with one-way dependencies. This task de
 
 **Upstream dependencies:** PP-9 provides the repository conventions.
 
-**Related plans:** `PP-11` · `PP-12` · `PP-13–PP-42`. Use the links below to keep contracts aligned; update this plan if an upstream interface changes.
+**Related plans:** [PP-9](../PP-9%20Initialize%20repository%20and%20Python%20development%20environment/plan.md) · [PP-11](../PP-11%20Configure%20Docker%20Compose%20infrastructure/plan.md) · [PP-12](../PP-12%20Design%20metadata%20database%20schema%20and%20application%20configuration/plan.md) · [PP-17](../PP-17%20Build%20Spark%20ingestion%20pipeline/plan.md) · [PP-20](../PP-20%20Generate%20protein%20master%20and%20PPI%20Parquet%20datasets/plan.md) · [PP-26](../PP-26%20Design%20JanusGraph%20protein%20interaction%20schema/plan.md) · [PP-30](../PP-30%20Design%20protein%20embedding%20generation%20pipeline/plan.md) · [PP-34](../PP-34%20Prepare%20multi-label%20protein%20function%20prediction%20dataset/plan.md) · [PP-39](../PP-39%20Implement%20protein%20search%20and%20detail%20REST%20APIs/plan.md) · [PP-41](../PP-41%20Build%20protein%203D%20and%20PPI%20visualization%20dashboard/plan.md). Keep the contracts and dependency direction consistent with these linked tasks.
 
 ## 3. Step-by-step implementation and to-do
 
