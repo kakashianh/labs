@@ -2,103 +2,138 @@
 
 ## 1. Objective
 
-Thiết kế và triển khai schema PostgreSQL/PostGIS để lưu trữ dữ liệu không gian nền của dự án 3D GIS Medical, tập trung vào ranh giới khu vực và footprint công trình.
+Thiết kế và triển khai schema PostgreSQL/PostGIS để lưu dữ liệu không gian nền của dự án 3D GIS Medical, bắt đầu với **một AOI mẫu khoảng 1 km² quanh chợ Bến Thành** và các building footprints OSM nằm trong AOI.
 
-Schema cần hỗ trợ truy vấn khu vực, truy vấn danh sách/chi tiết công trình ở các ticket API tiếp theo và có khả năng mở rộng cho dữ liệu mô phỏng ở các phase sau mà không đưa logic mô phỏng vào schema nền.
+Đầu vào đã được chuẩn bị ở KAN-6:
+- `hcm_boundary`: 1 Polygon, EPSG:4326.
+- `hcm_buildings`: 431 MultiPolygon features, EPSG:4326, geometry 2D.
+- Nguồn building: Geofabrik Vietnam OSM extract tải ngày 2026-11-12 UTC; không phải snapshot lịch sử.
+- `building_id` là định danh nguồn theo namespace OSM way/relation; không null và không trùng trong sample đã kiểm tra.
 
-**Expected result:**
-- PostgreSQL và PostGIS được sử dụng đúng trong database của dự án.
-- Có migration tạo bảng khu vực và công trình.
-- Geometry columns có kiểu hình học và SRID được xác định từ dữ liệu KAN-6.
-- Có khóa, ràng buộc và spatial index cần thiết.
-- Schema được tài liệu hóa để KAN-14 có thể import dữ liệu.
+Schema cần hỗ trợ truy vấn khu vực, truy vấn danh sách/chi tiết công trình và import lặp an toàn ở KAN-14. Chỉ thiết kế dữ liệu GIS nền; không đưa logic mô phỏng vào schema này.
 
 ## 2. Scope
 
 ### In scope
-- Xác định quan hệ giữa khu vực và công trình.
-- Thiết kế bảng lưu ranh giới khu vực.
-- Thiết kế bảng lưu footprint công trình.
-- Khai báo geometry type và SRID.
+- Xác định quan hệ giữa AOI/region và building.
+- Thiết kế bảng lưu AOI và footprint công trình.
+- Khai báo geometry type và SRID dựa trên dữ liệu KAN-6.
+- Lưu OSM source identifiers và các thuộc tính nguồn có thật.
 - Thiết lập primary key, foreign key, unique constraint và NOT NULL phù hợp.
-- Tạo spatial index và các index phục vụ truy vấn cơ bản.
-- Viết migration và kiểm tra schema.
+- Tạo spatial index và index phục vụ truy vấn cơ bản.
+- Tạo migration, kiểm tra schema và tài liệu mapping cho KAN-14.
 
 ### Out of scope
 - Chuẩn bị/làm sạch dữ liệu nguồn (KAN-6).
-- Import dữ liệu đô thị (KAN-14).
-- Xây dựng API Axum (KAN-15, KAN-7).
+- Import 431 features vào database (KAN-14).
+- Xây dựng API Axum (các ticket API).
 - Lưu trạng thái SIR theo công trình (Phase 2).
 - Lưu scenario, intervention hoặc lịch sử mô phỏng (Phase 3).
-- Thiết kế mô hình dữ liệu phòng/căn hộ hoặc agent-level.
+- Mô hình phòng/căn hộ, tầng, dân số, occupancy hoặc agent-level.
+- Tự suy diễn chiều cao/số tầng từ footprint.
 
-## 3. Technical Stack
+## 3. Verified input contract from KAN-6
 
-| Component | Technology | Purpose |
-|---|---|---|
-| Database | PostgreSQL | Lưu trữ dữ liệu quan hệ |
-| Spatial extension | PostGIS | Geometry và truy vấn không gian |
-| Migration | Công cụ migration đang dùng trong repository | Quản lý thay đổi schema |
-| Backend | Rust + Axum | Kết nối database ở các ticket API |
-| Spatial data | Geometry theo metadata KAN-6 | Lưu khu vực và footprint công trình |
+### 3.1 Layers
 
-Lưu ý:
-- Không tự chọn SRID khi chưa đối chiếu metadata dữ liệu KAN-6.
-- Geometry lưu trữ nên dùng CRS phù hợp với dữ liệu và các phép truy vấn dự kiến.
-- Nếu cần phục vụ CesiumJS, chuyển geometry sang WGS84/GeoJSON ở lớp truy vấn hoặc API; không thay đổi CRS lưu trữ chỉ để thuận tiện hiển thị.
+| Source layer | Geometry | SRID | Expected sample size | Ý nghĩa |
+|---|---|---:|---:|---|
+| `hcm_boundary` | Polygon | 4326 | 1 | AOI chữ nhật tự định nghĩa quanh chợ Bến Thành, không phải boundary hành chính |
+| `hcm_buildings` | MultiPolygon | 4326 | 431 | Building footprints 2D đã clip theo AOI |
+
+AOI bounds (longitude, latitude):
+- West: 106.693378
+- South: 10.768079
+- East: 106.702662
+- North: 10.777061
+
+AOI center: 10.77257° N, 106.69802° E.
+
+### 3.2 Building source fields
+
+| Source field | Logical type | Nullable | Ý nghĩa / mapping dự kiến |
+|---|---|---:|---|
+| `building_id` | string | No | External source key: `way/{osm_way_id}` hoặc `relation/{osm_id}` |
+| `osm_type` | string | No | `way` hoặc `relation` |
+| `osm_id` | integer/string theo driver | Yes | OSM relation ID nếu áp dụng |
+| `osm_way_id` | integer/string theo driver | Yes | OSM closed-way ID nếu áp dụng |
+| `name` | string | Yes | OSM `name` tag |
+| `building` | string | Yes | OSM `building` tag |
+| geometry | MultiPolygon 2D | No | Footprint công trình |
+
+Các trường height, levels, population, occupancy và epidemiological state **không có trong data contract hiện tại**. Không tạo giá trị giả hoặc bắt buộc các trường này trong schema nền.
+
+### 3.3 CRS strategy
+
+- GeoJSON đầu vào là RFC 7946 / WGS 84 (EPSG:4326), tọa độ longitude/latitude.
+- Phương án đơn giản cho KAN-13: lưu geometry theo SRID 4326 để giữ đúng CRS nguồn và tránh transform không cần thiết khi import.
+- Với phép đo diện tích/khoảng cách theo mét, sử dụng `geography` hoặc `ST_Transform` sang CRS chiếu phù hợp (ví dụ UTM zone 48N / EPSG:32648) trong truy vấn/processing.
+- Không dùng phép tính planar trực tiếp trên geometry EPSG:4326 để diễn giải kết quả theo mét.
+- Chốt chiến lược SRID và kiểu cột trong Step 1 trước khi viết migration. Nếu repository đã có convention CRS khác, phải ghi rõ transform và giữ SRID nguồn có thể truy vết.
 
 ## 4. Proposed Data Model
 
-Quan hệ chính:
+Quan hệ cho sample hiện tại:
 
 ```text
 regions (1) ─────────── (N) buildings
+  Ben Thanh AOI             431 OSM footprints
 ```
 
 ### Table: regions
 
-Lưu ranh giới các khu vực thuộc phạm vi nghiên cứu.
+Lưu vùng nghiên cứu/AOI. Không đặt tên hoặc mô tả bảng theo nghĩa ranh giới hành chính vì polygon hiện tại do dự án tự định nghĩa.
 
 | Column | Suggested type | Constraint / Purpose |
 |---|---|---|
-| id | BIGSERIAL hoặc UUID | Primary key |
-| code | VARCHAR | Mã khu vực, unique nếu có |
-| name | VARCHAR | Tên khu vực |
-| boundary | geometry(MultiPolygon, SRID) | Ranh giới khu vực |
-| created_at | TIMESTAMPTZ | Thời điểm tạo |
-| updated_at | TIMESTAMPTZ | Thời điểm cập nhật |
+| id | BIGINT identity hoặc UUID | Primary key nội bộ |
+| code | VARCHAR(64) | NOT NULL, UNIQUE; ví dụ mã AOI ổn định |
+| name | VARCHAR(255) | NOT NULL; tên khu vực nghiên cứu |
+| boundary | geometry(Polygon, 4326) | NOT NULL; khớp layer `hcm_boundary` |
+| boundary_method | VARCHAR(64) | NOT NULL; ví dụ `local_aoi` |
+| source_reference | VARCHAR(128) | Nullable; tham chiếu nguồn/vị trí AOI |
+| created_at | TIMESTAMPTZ | NOT NULL |
+| updated_at | TIMESTAMPTZ | NOT NULL |
 
 ### Table: buildings
 
-Lưu footprint và thông tin cơ bản của từng công trình.
+Lưu footprint và metadata OSM thực sự có trong KAN-6.
 
 | Column | Suggested type | Constraint / Purpose |
 |---|---|---|
-| id | BIGSERIAL hoặc UUID | Primary key |
-| external_id | VARCHAR | ID từ nguồn dữ liệu, unique khi có |
-| region_id | BIGINT/UUID | Foreign key đến regions |
-| name | VARCHAR, nullable | Tên công trình nếu có |
-| building_type | VARCHAR, nullable | Loại công trình nếu có |
-| height_m | DOUBLE PRECISION, nullable | Chiều cao nếu nguồn cung cấp |
-| floors | INTEGER, nullable | Số tầng nếu nguồn cung cấp |
-| footprint | geometry(MultiPolygon, SRID) | Footprint công trình |
-| created_at | TIMESTAMPTZ | Thời điểm tạo |
-| updated_at | TIMESTAMPTZ | Thời điểm cập nhật |
+| id | BIGINT identity hoặc UUID | Primary key nội bộ |
+| external_id | VARCHAR(128) | NOT NULL, UNIQUE; map từ `building_id` |
+| osm_type | VARCHAR(16) | NOT NULL; `way` hoặc `relation` |
+| osm_id | BIGINT | Nullable; map từ source nếu là relation |
+| osm_way_id | BIGINT | Nullable; map từ source nếu là closed way |
+| region_id | BIGINT/UUID | NOT NULL, FK đến regions trong sample này |
+| name | VARCHAR(255) | Nullable; OSM `name` |
+| building_type | VARCHAR(64) | Nullable; map từ OSM `building` |
+| footprint | geometry(MultiPolygon, 4326) | NOT NULL; footprint 2D |
+| created_at | TIMESTAMPTZ | NOT NULL |
+| updated_at | TIMESTAMPTZ | NOT NULL |
 
-Đây là mô hình đề xuất. Chốt kiểu ID, kiểu geometry và các cột thuộc tính theo dữ liệu thực tế từ KAN-6; không tạo thuộc tính giả hoặc bắt buộc các trường nguồn không cung cấp.
+**Quyết định cần chốt ở Step 1:** kiểu khóa nội bộ (BIGINT identity hay UUID) và kiểu dữ liệu OSM IDs sau khi kiểm tra giá trị thực tế. `external_id` phải giữ nguyên namespace `way/` hoặc `relation/`; không chỉ lưu số ID vì hai namespace khác nhau.
+
+Nếu sau này có nguồn height/floors đáng tin cậy, có thể bổ sung ở migration riêng. Không thêm các cột không có dữ liệu vào scope hiện tại chỉ để dự phòng.
 
 ## 5. Implementation Plan
 
-### Step 1 – Review Prepared GIS Data
+### Step 1 – Review Prepared GIS Data and Freeze Contract
 
-Đọc metadata và kết quả chuẩn hóa từ KAN-6 trước khi tạo schema.
+Đọc trực tiếp KAN-6 metadata, data dictionary, quality report và GeoJSON trước khi tạo schema.
 
-- [ ] Xác nhận danh sách lớp dữ liệu cần lưu.
-- [ ] Xác nhận geometry type thực tế của region và building.
-- [ ] Xác nhận SRID/CRS và đơn vị tọa độ.
-- [ ] Xác nhận thuộc tính có sẵn và kiểu dữ liệu.
-- [ ] Chốt chiến lược primary key và external ID.
-- [ ] Chốt quan hệ giữa regions và buildings.
+- [ ] Xác nhận file `hcm_boundary.geojson` và `hcm_buildings.geojson` đúng version bàn giao.
+- [ ] Xác nhận 1 Polygon boundary và 431 MultiPolygon buildings.
+- [ ] Xác nhận SRID 4326 và geometry 2D.
+- [ ] Chốt mapping source fields sang database columns.
+- [ ] Chốt BIGINT identity hay UUID cho primary key nội bộ.
+- [ ] Chốt kiểu lưu `osm_id`/`osm_way_id` sau khi kiểm tra dữ liệu thực tế.
+- [ ] Chốt geometry(Polygon,4326) cho AOI và geometry(MultiPolygon,4326) cho footprints, hoặc ghi lại lý do nếu chọn CRS lưu trữ khác.
+- [ ] Chốt quan hệ region/building và cách xử lý building không gắn được region.
+- [ ] Ghi rõ AOI là polygon nghiên cứu tự định nghĩa, không phải đơn vị hành chính.
+
+**Output:** data mapping và schema decision được chốt, đủ điều kiện triển khai migration.
 
 ### Step 2 – Verify PostgreSQL and PostGIS Setup
 
@@ -107,110 +142,119 @@ Kiểm tra cấu hình database hiện có trong repository và môi trường D
 - [ ] Kiểm tra PostgreSQL service/container hiện tại.
 - [ ] Kiểm tra phiên bản PostgreSQL và khả năng cài PostGIS.
 - [ ] Bật extension PostGIS trong database mục tiêu.
-- [ ] Xác nhận truy vấn `SELECT PostGIS_Full_Version();` chạy thành công.
+- [ ] Xác nhận `SELECT PostGIS_Full_Version();` chạy thành công.
 - [ ] Không tạo database/service trùng lặp nếu repository đã có cấu hình phù hợp.
+- [ ] Xác nhận migration tool và convention đang dùng trong repository.
+
+**Output:** database mục tiêu sẵn sàng và xác định được cách chạy migration.
 
 ### Step 3 – Design Tables and Constraints
 
 Thiết kế schema tối thiểu cho hai lớp dữ liệu nền.
 
-Yêu cầu:
-- Mỗi region có định danh ổn định.
-- Mỗi building có định danh nội bộ và có thể lưu external ID.
-- Building tham chiếu region bằng foreign key khi dữ liệu xác định được quan hệ.
-- Geometry column có geometry type và SRID rõ ràng.
-- Các trường bắt buộc được giới hạn ở dữ liệu thực sự cần thiết.
-- Có unique constraint phù hợp để tránh import trùng.
+- [ ] Tạo bảng `regions` với boundary Polygon SRID đã chốt.
+- [ ] Tạo bảng `buildings` với footprint MultiPolygon SRID đã chốt.
+- [ ] Khai báo primary key nội bộ.
+- [ ] Khai báo unique constraint cho `regions.code` và `buildings.external_id`.
+- [ ] Khai báo foreign key `buildings.region_id`.
+- [ ] Khai báo NOT NULL cho các trường bắt buộc.
+- [ ] Khai báo CHECK constraint cho `osm_type` nếu phù hợp.
+- [ ] Giữ OSM way/relation ID và namespace để truy vết nguồn.
+- [ ] Không thêm height/floors/population hoặc dữ liệu mô phỏng chưa có nguồn.
 
-- [ ] Chốt tên schema/table và naming convention.
-- [ ] Chốt primary key cho regions và buildings.
-- [ ] Khai báo foreign key buildings.region_id.
-- [ ] Khai báo geometry columns với type/SRID đã xác nhận.
-- [ ] Thêm NOT NULL, UNIQUE và CHECK constraint cần thiết.
-- [ ] Xác định cách xử lý building không gắn được region nếu có trường hợp này.
+**Output:** DDL/schema draft được review trước khi migration.
 
 ### Step 4 – Add Spatial and Query Indexes
 
-Tạo index phục vụ truy vấn theo không gian và quan hệ.
-
-- [ ] Tạo GiST index cho regions.boundary.
-- [ ] Tạo GiST index cho buildings.footprint.
-- [ ] Tạo B-tree index cho buildings.region_id.
-- [ ] Tạo unique index/constraint cho external_id nếu phù hợp.
+- [ ] Tạo GiST index cho `regions.boundary`.
+- [ ] Tạo GiST index cho `buildings.footprint`.
+- [ ] Tạo B-tree index cho `buildings.region_id`.
+- [ ] Unique constraint/index cho `external_id` và `regions.code`.
 - [ ] Kiểm tra index được tạo thành công.
-- [ ] Tránh tạo index dư thừa không gắn với truy vấn dự kiến.
+- [ ] Không tạo index dư thừa không gắn với truy vấn dự kiến.
+
+**Output:** indexes phục vụ spatial filtering và truy vấn building theo region.
 
 ### Step 5 – Implement Database Migration
 
-Sử dụng migration mechanism đang có trong repository. Nếu chưa có, chọn một công cụ migration phù hợp với backend Rust hiện tại và thống nhất cách chạy trong local/Docker.
+Sử dụng migration mechanism đang có trong repository. Nếu chưa có, chọn công cụ phù hợp với backend Rust hiện tại và thống nhất cách chạy local/Docker.
 
-Migration cần:
-- Bật PostGIS extension (nếu quyền môi trường cho phép).
-- Tạo bảng regions và buildings.
-- Tạo constraints và indexes.
-- Có hướng dẫn rollback hoặc migration down nếu công cụ hỗ trợ.
-
-- [ ] Tạo migration bật PostGIS.
-- [ ] Tạo migration bảng regions.
-- [ ] Tạo migration bảng buildings.
+- [ ] Tạo migration bật PostGIS (nếu quyền môi trường cho phép).
+- [ ] Tạo migration bảng `regions`.
+- [ ] Tạo migration bảng `buildings`.
 - [ ] Tạo constraints và indexes.
+- [ ] Có migration down/rollback nếu công cụ hỗ trợ.
 - [ ] Kiểm tra migration chạy trên database rỗng.
 - [ ] Kiểm tra migration không phá vỡ cấu hình hiện có.
 
+**Output:** schema có thể được dựng lại bằng migration.
+
 ### Step 6 – Verify Schema
 
-Kiểm tra schema bằng SQL và metadata catalog của PostGIS.
-
 - [ ] Xác nhận hai bảng tồn tại.
-- [ ] Xác nhận geometry type và SRID đúng với metadata KAN-6.
+- [ ] Xác nhận geometry type và SRID đúng data contract KAN-6.
 - [ ] Xác nhận foreign key và unique constraints hoạt động.
 - [ ] Xác nhận GiST indexes tồn tại.
 - [ ] Thử insert một region và một building mẫu hợp lệ.
 - [ ] Thử insert dữ liệu sai để xác nhận constraint được thực thi.
-- [ ] Xác nhận migration có thể chạy lại theo quy trình dự án.
+- [ ] Kiểm tra spatial query cơ bản bằng `ST_Intersects`.
+- [ ] Kiểm tra phép đo metric sử dụng geography hoặc transform phù hợp, không dùng đơn vị độ như mét.
 
-### Step 7 – Document Schema for Data Import
+**Output:** bằng chứng schema và spatial operations hoạt động.
 
-Ghi rõ mapping giữa dữ liệu chuẩn hóa từ KAN-6 và các cột database để KAN-14 thực hiện import thống nhất.
+### Step 7 – Document Schema and Handoff to KAN-14
 
 - [ ] Tạo tài liệu schema hoặc cập nhật tài liệu database hiện có.
 - [ ] Ghi mapping source field → database column.
-- [ ] Ghi quy tắc chuyển đổi CRS/geometry khi import.
-- [ ] Ghi cách tạo/giữ external_id.
+- [ ] Ghi geometry type, SRID và quy tắc transform.
+- [ ] Ghi cách tạo/giữ `external_id`.
+- [ ] Ghi quy tắc import idempotent/upsert dựa trên `external_id`.
+- [ ] Ghi thứ tự import: region trước, buildings sau để đáp ứng foreign key.
+- [ ] Ghi rõ nguồn OSM snapshot và caveat dữ liệu 2D.
 - [ ] Bàn giao hướng dẫn import cho KAN-14.
+
+**Output:** KAN-14 có thể import sample dataset mà không phải tự suy đoán schema hoặc mapping.
 
 ## 6. Acceptance Criteria
 
 - [ ] PostGIS extension được bật trong database mục tiêu.
-- [ ] Có bảng regions và buildings theo mô hình đã thống nhất.
-- [ ] Geometry type và SRID khớp với dữ liệu KAN-6.
-- [ ] Quan hệ khóa ngoại và các constraint cần thiết hoạt động.
-- [ ] Có spatial index cho geometry columns.
+- [ ] Có bảng `regions` và `buildings` theo data contract KAN-6.
+- [ ] Geometry types khớp: AOI Polygon, building MultiPolygon.
+- [ ] SRID được chốt rõ ràng và nhất quán; mặc định giữ 4326 nếu không có lý do kỹ thuật khác.
+- [ ] Giữ được source OSM IDs và `external_id` có namespace.
+- [ ] Foreign key, unique và NOT NULL constraints hoạt động.
+- [ ] Có GiST spatial indexes.
 - [ ] Migration chạy thành công trên database rỗng.
-- [ ] Có tài liệu mapping để import dữ liệu.
-- [ ] Không đưa trạng thái SIR/scenario vào schema nền của Phase 1.
+- [ ] Có tài liệu mapping và hướng dẫn import idempotent cho KAN-14.
+- [ ] Không đưa trạng thái SIR/scenario vào schema nền Phase 1.
+- [ ] Không giả định AOI là ranh giới hành chính hoặc building có height/floors.
 
 ## 7. Deliverables
 
-1. Migration tạo PostGIS extension, regions và buildings.
+1. Migration bật PostGIS và tạo `regions`, `buildings`.
 2. Schema PostgreSQL/PostGIS đã được kiểm tra.
 3. Spatial indexes và relational constraints.
-4. Tài liệu schema và mapping dữ liệu đầu vào.
+4. Tài liệu schema, CRS strategy và source-to-database mapping.
+5. Hướng dẫn import cho KAN-14.
 
 ## 8. Suggested Commit Sequence
 
 ```text
 chore(db): enable PostGIS extension
-
 feat(db): add regions and buildings schema
-
 perf(db): add spatial and relational indexes
-
-docs(db): document GIS schema and import mapping
+docs(db): document GIS schema and KAN-14 import mapping
 ```
 
-## 9. Final Definition of Done
+## 9. Dependencies and Handoff
 
-KAN-13 hoàn thành khi database có thể tạo mới từ migration, lưu được geometry của khu vực và công trình với SRID chính xác, đảm bảo quan hệ/constraint và có spatial index để các ticket API và import sử dụng.
+- **Input:** KAN-6 / P1-04 đã cung cấp GeoJSON và data contract.
+- **Consumer:** KAN-14 sẽ import dữ liệu vào schema này.
+- **Downstream:** các ticket API sử dụng schema region/building; phase sau mở rộng bảng mô phỏng riêng.
+- **Dependency note:** không cần chờ tái tạo độc lập trên môi trường sạch của KAN-6 để bắt đầu KAN-13; dùng đúng artifact/commit dataset đã được kiểm tra. Nếu KAN-6 thay đổi field hoặc CRS, phải cập nhật mapping trước khi merge migration.
 
-Schema này chỉ quản lý dữ liệu GIS nền; dữ liệu mô phỏng dịch tễ sẽ được thiết kế ở phase tương ứng.
+## 10. Final Definition of Done
+
+KAN-13 hoàn thành khi database có thể được dựng mới bằng migration, lưu AOI và building geometry với type/SRID chính xác, đảm bảo source identifiers, quan hệ/constraints và spatial indexes, đồng thời có tài liệu mapping để KAN-14 import 1 AOI cùng 431 building features một cách nhất quán.
+
+**Trạng thái:** READY TO IMPLEMENT. Đầu vào KAN-6 đã có dữ liệu thực tế và đã qua kiểm tra trực quan QGIS; các quyết định kỹ thuật còn lại (PK type, migration tool, CRS storage convention) cần được xác nhận từ repository ở Step 1/2.

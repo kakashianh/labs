@@ -12,6 +12,13 @@ frontend/.env
 # Docker
 postgres_data/
 
+# GIS source data and temporary processing artifacts
+data/sample/source/*.osm.pbf
+data/sample/source/*.osm
+data/sample/processed/*.tmp.geojson
+data/sample/processed/*.gpkg-wal
+data/sample/processed/*.gpkg-shm
+
 # OS / editor
 .DS_Store
 .vscode/*

@@ -1,0 +1,43 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Ben Thanh sample study area",
+        "area_note": "Approx. 1 km x 1 km AOI centered on Ben Thanh Market",
+        "center_lat": 10.77257,
+        "center_lon": 106.69802,
+        "boundary_method": "locally defined rectangular AOI; not an administrative boundary",
+        "source_reference": "https://www.openstreetmap.org/way/39514795"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              106.693378,
+              10.768079
+            ],
+            [
+              106.702662,
+              10.768079
+            ],
+            [
+              106.702662,
+              10.777061
+            ],
+            [
+              106.693378,
+              10.777061
+            ],
+            [
+              106.693378,
+              10.768079
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}
