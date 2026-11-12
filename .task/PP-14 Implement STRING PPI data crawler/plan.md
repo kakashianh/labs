@@ -8,7 +8,7 @@ Acquire high-confidence protein-protein interaction records with evidence and sc
 
 PP-10 shared protein/PPI contracts; PP-12 configuration; PP-16 raw data conventions.
 
-Related plans: [PP-12](../PP-12%20Design%20metadata%20database%20schema%20and%20application%20configuration/plan.md) · [PP-15](../PP-15%20Integrate%20UniProt%20ID%20mapping%20and%20Gene%20Ontology%20annotations/plan.md) · [PP-16](../PP-16%20Implement%20ingestion%20validation%20and%20raw%20data%20management/plan.md) · [PP-17](../PP-17%20/plan.md) · [PP-19](../PP-19%20/plan.md) · [PP-26](../PP-26%20/plan.md). These links describe the upstream/downstream contracts; coordinate changes rather than duplicating or redefining them.
+Related plans: [PP-12](../PP-12%20Design%20metadata%20database%20schema%20and%20application%20configuration/plan.md) · [PP-15](../PP-15%20Integrate%20UniProt%20ID%20mapping%20and%20Gene%20Ontology%20annotations/plan.md) · [PP-16](../PP-16%20Implement%20ingestion%20validation%20and%20raw%20data%20management/plan.md) · [PP-17](../PP-17%20Build%20Spark%20ingestion%20pipeline/plan.md) · [PP-19](../PP-19%20Clean%20and%20filter%20protein%20interaction%20datasets/plan.md) · [PP-26](../PP-26%20Design%20JanusGraph%20protein%20interaction%20schema/plan.md). Keep source versions, identifiers, and schemas consistent with these linked tasks.
 
 ## 3. Step-by-step implementation and to-do
 
