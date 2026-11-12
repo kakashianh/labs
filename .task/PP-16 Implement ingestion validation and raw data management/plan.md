@@ -8,7 +8,7 @@ Create a consistent raw-data landing and validation layer for all crawlers befor
 
 PP-10 source contracts; PP-11 storage services; PP-12 metadata/config; PP-13–PP-15 crawlers.
 
-Related plans: [PP-13](../PP-13%20Implement%20AlphaFold%20structure%20data%20crawler/plan.md) · [PP-14](../PP-14%20Implement%20STRING%20PPI%20data%20crawler/plan.md) · [PP-15](../PP-15%20Integrate%20UniProt%20ID%20mapping%20and%20Gene%20Ontology%20annotations/plan.md) · [PP-17](../PP-17%20/plan.md) · [PP-20](../PP-20%20/plan.md) · [PP-21](../PP-21%20/plan.md). These links describe the upstream/downstream contracts; coordinate changes rather than duplicating or redefining them.
+Related plans: [PP-13](../PP-13%20Implement%20AlphaFold%20structure%20data%20crawler/plan.md) · [PP-14](../PP-14%20Implement%20STRING%20PPI%20data%20crawler/plan.md) · [PP-15](../PP-15%20Integrate%20UniProt%20ID%20mapping%20and%20Gene%20Ontology%20annotations/plan.md) · [PP-17](../PP-17%20Build%20Spark%20ingestion%20pipeline/plan.md) · [PP-20](../PP-20%20Generate%20protein%20master%20and%20PPI%20Parquet%20datasets/plan.md) · [PP-21](../PP-21%20Implement%20PDB%2FmmCIF%20structure%20parser/plan.md). Keep source versions, identifiers, and schemas consistent with these linked tasks.
 
 ## 3. Step-by-step implementation and to-do
 
