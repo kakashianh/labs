@@ -2,50 +2,83 @@
 
 ## 1. Objective
 
-Create vector storage schemas and indexes for protein embeddings.
+Create versioned Milvus collections and indexes that store protein embeddings with metadata filters.
 
-## 2. Context and scope
+## 2. Scope and dependencies
 
-Define collection fields, vector dimensions, primary keys, metric type, index/search parameters, consistency, and collection lifecycle.
+PP-30 embedding schema and generated vectors; PP-11 Milvus runtime; PP-10 identifier conventions.
 
-Parent Epic: **PP-6**. Inspect the current repository and upstream contracts before implementation. Keep the ticket focused on its stated deliverable and coordinate changes to shared schemas with dependent modules.
+Related plans: [PP-11](../PP-11%20Configure%20Docker%20Compose%20infrastructure/plan.md) · [PP-20](../PP-20%20Generate%20protein%20master%20and%20PPI%20Parquet%20datasets/plan.md) · [PP-30](../PP-30%20Design%20protein%20embedding%20generation%20pipeline/plan.md) · [PP-32](../PP-32%20Implement%20protein%20similarity%20search/plan.md) · [PP-33](../PP-33%20Integrate%20structure%2C%20sequence%20and%20PPI%20features/plan.md) · [PP-39](../PP-39%20Implement%20protein%20search%20and%20detail%20REST%20APIs/plan.md) · [PP-40](../PP-40%20Implement%20PPI%20exploration%20and%20similarity%20search%20APIs/plan.md). These links define the expected producer/consumer relationships for this feature.
 
-## 3. Implementation plan
+## 3. Step-by-step implementation and to-do
 
-1. Inspect existing code, data contracts, configuration, and related tests before changing files.
-2. Confirm inputs, outputs, source/model versions, identifiers, and error cases.
-3. Implement the smallest cohesive module or pipeline for this ticket.
-4. Add validation, structured logging, and explicit handling for missing, invalid, duplicate, or ambiguous records where applicable.
-5. Add automated tests and a reproducible sample execution; update documentation and examples.
+### Step 1 — Design collection and partition strategy
 
-## 4. Expected deliverables
+Choose collection separation by modality/model version and define metadata fields for filtering.
 
-- Implementation and configuration required by the stated scope.
-- Documented inputs, outputs, assumptions, and operational instructions.
-- Automated tests and representative fixtures.
-- Diagnostic logs and explicit error handling without exposing secrets.
-- Notes on limitations and deferred work, if any.
+**To-do**
+- [ ] Define collection naming/version policy
+- [ ] Define vector dimension, metric type, and scalar metadata fields
+- [ ] Decide partitioning strategy by model/modality/species if justified
+- [ ] Define index type and search parameter defaults
+
+### Step 2 — Implement collection lifecycle
+
+Create collections, indexes, and safe migration/rebuild procedures.
+
+**To-do**
+- [ ] Add idempotent collection bootstrap script
+- [ ] Configure index build parameters for expected corpus size
+- [ ] Add readiness and schema compatibility checks
+- [ ] Document drop/rebuild behavior and backup implications
+
+### Step 3 — Implement embedding ingestion
+
+Bulk-load PP-30 vectors with canonical IDs and provenance metadata.
+
+**To-do**
+- [ ] Validate vector dimensions before insert
+- [ ] Upsert using stable protein/modality/version keys
+- [ ] Batch inserts and track checkpoint/progress
+- [ ] Reconcile inserted counts with source manifest
+
+### Step 4 — Verify search readiness
+
+Run representative searches and tune recall/latency trade-offs.
+
+**To-do**
+- [ ] Test vector search for known proteins
+- [ ] Verify metadata filters and version isolation
+- [ ] Measure latency and recall on a fixed evaluation sample
+- [ ] Publish collection/index configuration for PP-32 and PP-33
+
+## 4. Deliverables
+
+- Tested implementation and versioned data/service contract.
+- Reproducible sample run and representative fixtures.
+- Configuration, provenance, monitoring, and operational documentation.
 
 ## 5. Acceptance criteria
 
-- [ ] The implementation satisfies the objective and remains within ticket scope.
-- [ ] Inputs, outputs, schemas, and configuration are documented.
-- [ ] Invalid, missing, duplicate, or ambiguous data is handled explicitly.
-- [ ] The result is reproducible on a representative sample.
-- [ ] Unit and relevant integration tests pass.
-- [ ] Documentation is updated and no secrets or local-only artifacts are committed.
+- [ ] All step-level to-dos are complete.
+- [ ] Identifiers and model/index versions are traceable.
+- [ ] Input validation, bounded resource use, and failure behavior are implemented.
+- [ ] Quality and performance are measured on a representative sample.
+- [ ] Unit and integration tests pass and consumers can use the documented contract.
 
 ## 6. Testing strategy
 
-- **Unit tests:** core logic, transformations, schema validation, edge cases, and error handling.
-- **Integration tests:** the relevant adjacent pipeline, data store, graph/vector service, or API boundary.
-- **Regression checks:** stable identifiers, expected record counts, and output-contract compatibility.
-- **Manual verification:** execute the documented workflow from a clean environment.
+- **Unit:** algorithms, transformations, schema checks, score semantics, and edge cases.
+- **Integration:** graph/vector infrastructure and metadata lookups.
+- **Quality:** reproducibility, coverage, dimensionality, ranking correctness, and provenance.
+- **Performance:** batch throughput, memory, index build time, and query latency as applicable.
 
-## 7. Dependencies and constraints
+## 7. Cross-task handoff
 
-Use outputs from upstream tickets in **PP-6**. Do not assume unavailable source fields or external service behavior; validate them against actual source data and document any assumptions.
+- **Upstream:** PP-30 embedding schema and generated vectors; PP-11 Milvus runtime; PP-10 identifier conventions.
+- **Consumers / coordination:** PP-11, PP-20, PP-30, PP-32, PP-33, PP-39, PP-40
+- **Contract rule:** publish schemas, versions, parameters, evaluation results, and limitations. Do not change embedding dimensions, score semantics, or graph feature definitions without coordinating with linked consumers.
 
 ## 8. Completion notes
 
-Record implementation decisions, test commands/results, generated artifacts, data/source versions, and deviations from this plan when the ticket is completed.
+Record model/data/index versions, parameters, artifact locations, quality/performance results, and deviations.
