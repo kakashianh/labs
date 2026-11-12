@@ -2,52 +2,83 @@
 
 ## 1. Objective
 
-Retrieve high-confidence protein-protein interaction records from STRING.
+Acquire high-confidence protein-protein interaction records with evidence and score provenance.
 
-## 2. Context and scope
+## 2. Scope, assumptions, and dependencies
 
-Configure organism scope and confidence threshold; fetch interaction records; preserve source identifiers, scores, and provenance; handle pagination and retries.
+PP-10 shared protein/PPI contracts; PP-12 configuration; PP-16 raw data conventions.
 
-This plan covers the implementation of **PP-14**. Keep changes within this ticket's scope and preserve the interfaces agreed with dependent modules.
+Related plans: [PP-12](../PP-12%20Design%20metadata%20database%20schema%20and%20application%20configuration/plan.md) · [PP-15](../PP-15%20Integrate%20UniProt%20ID%20mapping%20and%20Gene%20Ontology%20annotations/plan.md) · [PP-16](../PP-16%20Implement%20ingestion%20validation%20and%20raw%20data%20management/plan.md) · [PP-17](../PP-17%20/plan.md) · [PP-19](../PP-19%20/plan.md) · [PP-26](../PP-26%20/plan.md). These links describe the upstream/downstream contracts; coordinate changes rather than duplicating or redefining them.
 
-## 3. Implementation plan
+## 3. Step-by-step implementation and to-do
 
-1. Inspect the current repository structure and related modules before changing files.
-2. Confirm input/output contracts, configuration, source versions, and error cases.
-3. Implement the smallest cohesive module or pipeline for this ticket.
-4. Add structured logging, validation, and explicit handling for missing, invalid, and duplicate data where relevant.
-5. Add automated tests and a reproducible sample execution; update documentation and examples.
+### Step 1 — Define STRING query and confidence policy
 
-## 4. Expected deliverables
+Set organism to human (9606), pin STRING release, and define configurable confidence threshold (initial target >=700) and evidence policy.
 
-- Implementation and configuration required by the stated scope.
-- Documented inputs, outputs, assumptions, and operational instructions.
-- Automated tests and representative test fixtures.
-- Clear error handling and logs sufficient to diagnose failures without exposing secrets.
-- A concise record of limitations and follow-up work, if any.
+**To-do**
+- [ ] Record STRING release and API version
+- [ ] Configure organism and confidence cutoff
+- [ ] Decide whether to retain combined score and evidence-channel scores
+- [ ] Define identifier mapping behavior for STRING protein IDs
+
+### Step 2 — Implement interaction retrieval
+
+Retrieve interactions in batches and preserve original source identifiers and evidence.
+
+**To-do**
+- [ ] Implement batch query and pagination/partitioning
+- [ ] Capture endpoint parameters and retrieval metadata
+- [ ] Handle rate limits, transient errors, and partial batch failures
+- [ ] Support resumable retrieval
+
+### Step 3 — Normalize and persist raw interaction data
+
+Write immutable raw response/normalized landing records before downstream transformation.
+
+**To-do**
+- [ ] Preserve source STRING IDs for both endpoints
+- [ ] Store combined score and available evidence channels
+- [ ] Write deterministic partitioned files and manifest
+- [ ] Avoid collapsing duplicate evidence prematurely
+
+### Step 4 — Validate dataset handoff
+
+Check organism, scores, endpoint validity, and coverage before Spark processing.
+
+**To-do**
+- [ ] Test self-loop, duplicate, missing-ID, and out-of-range score cases
+- [ ] Report counts by confidence range
+- [ ] Verify representative IDs can be mapped in PP-15
+- [ ] Publish schema and manifest for PP-17/PP-19
+
+## 4. Deliverables
+
+- Working crawler/validation capability within this ticket's scope.
+- Versioned raw/normalized output, manifests, and source provenance.
+- Automated tests, representative fixtures, and operational documentation.
 
 ## 5. Acceptance criteria
 
-- [ ] The implementation satisfies the objective and stays within the agreed scope.
-- [ ] Inputs, outputs, schemas, and configuration are documented.
-- [ ] Invalid, missing, duplicate, or ambiguous data is handled explicitly where applicable.
-- [ ] The result is reproducible on a representative sample.
-- [ ] Automated tests pass and relevant integration boundaries are verified.
-- [ ] Documentation is updated and no secrets or local-only artifacts are committed.
+- [ ] Every step to-do is complete.
+- [ ] Retrieval is reproducible, resumable, and idempotent where applicable.
+- [ ] Source version, parameters, checksums, and provenance are retained.
+- [ ] Invalid or ambiguous records are reported, not silently discarded.
+- [ ] Unit and integration tests pass; sample output is validated.
 
 ## 6. Testing strategy
 
-- **Unit tests:** core transformations/business rules, schema validation, boundary cases, and error handling.
-- **Integration tests:** interaction with the adjacent data store, service, graph/vector engine, or API used by this ticket.
-- **Regression checks:** verify stable identifiers, record counts, and output contracts on a fixed fixture.
-- **Manual verification:** follow the documented setup and execution steps from a clean environment.
+- **Unit:** adapters, parsers, validators, normalization, and error classification.
+- **Integration:** source API/storage and metadata database boundaries.
+- **Data quality:** counts, uniqueness, required fields, identifier coverage, and score ranges.
+- **Manual:** execute a small sample and a resumed run from documented instructions.
 
-## 7. Dependencies and constraints
+## 7. Cross-task handoff
 
-Parent Epic: **false**
-
-Coordinate with the parent Epic and upstream Tasks before changing shared schemas or interfaces. Do not assume that unavailable source fields or external service behavior exist; validate them against the actual source.
+- **Upstream:** PP-10 shared protein/PPI contracts; PP-12 configuration; PP-16 raw data conventions.
+- **Consumers:** PP-12, PP-15, PP-16, PP-17, PP-19, PP-26
+- **Handoff rule:** publish schemas, manifests, source release, and known limitations; notify consumers if any contract changes.
 
 ## 8. Completion notes
 
-Record the implementation approach, test commands/results, generated artifacts, data/source versions, and any deviations from this plan when the ticket is completed.
+Record source versions, parameters, record counts, quality metrics, test commands/results, and deviations.
