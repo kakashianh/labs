@@ -72,7 +72,7 @@ BEGIN
     ) THEN
         RAISE EXCEPTION 'A building does not intersect its assigned region boundary.';
     END IF;
-END
+END;
 $kan14_verify$;
 
 SELECT

@@ -95,7 +95,7 @@ BEGIN
     ) THEN
         RAISE EXCEPTION 'At least one building footprint does not intersect the approved AOI.';
     END IF;
-END
+END;
 $kan14_preflight$;
 
 SELECT
