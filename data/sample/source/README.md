@@ -1,24 +1,17 @@
-# OSM source data – HCMC
+# OSM source data – Ben Thanh sample area
 
 This directory stores reproducible source inputs for KAN-6.
 
-## 1. Historical city boundary
+## 1. Study-area boundary
 
-The approved study boundary is OpenStreetMap relation `1973756`, reconstructed from the OSM database state at **`2025-06-30T23:59:59Z`**.
+The approved study area is an approximately 1 km × 1 km rectangular area centered on Ben Thanh Market.
 
-The GitHub Actions workflow ``.github/workflows/kan-6-prepare-osm.yml`` retrieves the historical relation using Overpass attic data and writes `hcm_boundary.geojson`. It records the resolved relation version, version timestamp, Overpass endpoint, and boundary checksum in the artifact.
+- Center: 10.77257° N, 106.69802° E.
+- WGS 84 bounds: west 106.693378, south 10.768079, east 106.702662, north 10.777061.
+- Boundary method: locally defined rectangular area of interest (AOI), not an administrative boundary.
+- Center reference: [OpenStreetMap way 39514795](https://www.openstreetmap.org/way/39514795).
 
-For manual retrieval, use Overpass Turbo with this query:
-
-```overpassql
-[out:json][timeout:180][date:"2025-06-30T23:59:59Z"];
-relation(1973756);
-out meta;
->;
-out skel qt;
-```
-
-Convert the returned OSM JSON to a GeoJSON feature for relation 1973756, preserving its tags and geometry. Do not query the current relation without the `date` setting: its geometry may have changed since the historical cutoff. Verify `boundary=administrative`, `admin_level=4`, relation identity, and the city-level extent. Record the relation version and timestamp.
+The GitHub Actions workflow creates `hcm_boundary.geojson` from these fixed coordinates. No historical administrative relation or Overpass attic query is required.
 
 ## 2. Vietnam OSM extract
 
@@ -30,7 +23,7 @@ The workflow and local processing script use the Geofabrik Vietnam PBF:
 
 Record retrieval date, file size, and SHA-256 in generated metadata. Geofabrik's `latest` URL is mutable, so the checksum identifies the exact source snapshot used.
 
-**Temporal distinction:** only the administrative boundary is historical at the agreed cutoff. The downloaded building data is the latest Vietnam extract available when the workflow runs, spatially clipped to the historical boundary.
+**Temporal distinction:** the AOI is a fixed sample polygon. Building data comes from the latest Vietnam extract available when the workflow runs; it is not a historical building snapshot.
 
 ## 3. License and attribution
 
