@@ -17,7 +17,7 @@ This folder contains reproducible source references and outputs for the historic
 4. A successful run uploads artifact `kan-6-hcmc-old-osm-data`.
 5. Download the artifact from the completed run. It contains GeoJSON layers, checksums, boundary provenance, generated metadata, and an automated quality summary.
 
-The workflow resolves relation 1973756 from historical OSM state at the agreed cutoff, verifies its administrative tags and approximate geographic extent, downloads the Geofabrik Vietnam PBF, clips it with Osmium, and processes buildings with GDAL/OGR.
+The workflow resolves relation 1973756 from historical OSM state at the agreed cutoff, verifies its administrative tags and approximate geographic extent, downloads the Geofabrik Vietnam PBF, clips it with Osmium, and processes buildings with GDAL/OGR. After validation, it commits the source boundary, processed GeoJSON layers, and lightweight metadata/quality summary to the selected branch when each file is at most 50 MiB. Larger outputs remain available in the workflow artifact instead.
 
 > GitHub only allows manually dispatching a workflow when its workflow file is present on the repository's default branch. If this workflow exists only on the task branch and does not appear in Actions, it must first be reviewed and merged to the default branch; then select this task branch as the run ref. Do not merge the entire task branch unless intended.
 
@@ -28,4 +28,4 @@ The workflow resolves relation 1973756 from historical OSM state at the agreed c
 - Attribution: © OpenStreetMap contributors, ODbL.
 - OSM is community-maintained and may be incomplete; automated QA does not replace visual inspection in QGIS.
 
-Do not commit the large source PBF or temporary clipped PBF to Git. Generated GeoJSON is delivered as a workflow artifact for KAN-13/KAN-14; commit it only if the repository's data-size and licensing policy explicitly permits it.
+Do not commit the large source PBF or temporary clipped PBF to Git. The workflow commits validated boundary/building GeoJSON and lightweight provenance when each file is at most 50 MiB; otherwise it preserves the complete output in the workflow artifact for KAN-13/KAN-14.
