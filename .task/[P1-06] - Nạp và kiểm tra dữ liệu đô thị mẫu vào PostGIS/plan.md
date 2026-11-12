@@ -259,7 +259,77 @@ Mục tiêu: chứng minh quy trình có thể tái tạo.
 - [ ] Ghi lại kết quả validation.
 - [ ] Ghi lại các giới hạn của dataset và những vấn đề còn tồn tại.
 
-## 6. Acceptance Criteria
+## 6. Human-in-the-loop (HITL) and Approval Gates
+
+KAN-14 sử dụng mô hình **automation-first, human-reviewed**: máy thực hiện import và các kiểm tra có thể tự động hóa; con người chỉ review các quyết định ảnh hưởng đến tính đúng đắn của dữ liệu và xác nhận chất lượng ở các checkpoint. Không yêu cầu kiểm tra thủ công từng building trong 431 features.
+
+### Gate 1 – Approve Input and Mapping (Before Import)
+
+**Thời điểm:** sau Step 2 và trước Step 4.
+
+- [ ] Người review xác nhận đúng hai file đầu vào từ KAN-6.
+- [ ] Xác nhận snapshot dự kiến: 1 region và 431 buildings.
+- [ ] Xác nhận region code ổn định sẽ dùng để upsert.
+- [ ] Review mapping `building_id` → `external_id`, OSM attributes và geometry.
+- [ ] Xác nhận quy tắc chuyển boundary Polygon → MultiPolygon.
+- [ ] Chỉ bắt đầu import khi mapping và nguồn dữ liệu được chấp thuận.
+
+**Evidence:** mapping checklist được đánh dấu approved hoặc ghi nhận trong báo cáo KAN-14.
+
+### Gate 2 – Review Validation Exceptions
+
+**Thời điểm:** sau Step 3 và bất cứ khi nào post-import validation ở Step 5 phát hiện bất thường.
+
+- [ ] Tự động tạo danh sách/report các feature null, empty, invalid, duplicate hoặc sai CRS/extent.
+- [ ] Người review kiểm tra các exception và quyết định một trong các hướng: sửa ở nguồn/quy trình chuẩn hóa, loại khỏi lần import với lý do rõ ràng, hoặc dừng import để điều tra.
+- [ ] Mọi quyết định loại trừ hoặc sửa dữ liệu phải được ghi nhận cùng feature ID và lý do.
+- [ ] Không tự động sửa geometry, drop record hoặc bỏ qua lỗi mà không có policy được duyệt.
+- [ ] Sau khi xử lý, chạy lại pre-validation trước khi tiếp tục.
+
+**Evidence:** validation report và exception disposition (resolved / approved exclusion / blocked).
+
+### Gate 3 – Visual QA in QGIS
+
+**Thời điểm:** sau Step 5, trước khi chấp nhận kết quả cuối cùng.
+
+- [ ] Mở boundary và buildings từ PostGIS trong QGIS.
+- [ ] Kiểm tra vị trí AOI có đúng khu vực mẫu quanh chợ Bến Thành.
+- [ ] Kiểm tra footprint buildings có hiển thị đúng hình dạng và không bị lệch vị trí.
+- [ ] Kiểm tra các outlier rõ rệt: công trình nằm xa AOI, geometry bất thường hoặc vùng trống bất ngờ.
+- [ ] Đối chiếu trực quan với GeoJSON nguồn KAN-6 khi cần.
+- [ ] Người review ghi nhận kết quả: pass hoặc issue cần điều tra.
+
+**Evidence:** kết quả checklist QA; lưu screenshot QGIS nếu repository/project yêu cầu bằng chứng trực quan.
+
+### Gate 4 – Final Acceptance
+
+**Thời điểm:** sau Step 6 và Step 7.
+
+- [ ] Người review xác nhận count và mọi chênh lệch so với snapshot KAN-6 đã được giải thích.
+- [ ] Xác nhận geometry, SRID, FK và unique constraints đạt yêu cầu.
+- [ ] Xác nhận spatial query cơ bản cho kết quả hợp lý.
+- [ ] Xác nhận re-import không tạo duplicate hoặc làm mất dữ liệu ngoài chính sách đã duyệt.
+- [ ] Chấp thuận hoàn thành KAN-14 hoặc trả lại các mục chưa đạt để xử lý.
+
+**Evidence:** validation report cuối cùng và trạng thái final acceptance.
+
+### Responsibility Boundary
+
+| Activity | Automation | Human |
+|---|---|---|
+| Đọc GeoJSON, đếm feature, kiểm tra schema | Execute | Review kết quả bất thường |
+| Field mapping và region code | Chuẩn bị mapping | Approve trước import |
+| Null/duplicate/CRS/geometry checks | Execute | Quyết định cách xử lý exception |
+| Import/upsert/transaction/logging | Execute | Không thao tác thủ công từng record |
+| SQL validation và spatial query | Execute | Review kết quả và sai lệch |
+| QGIS visual QA | Hỗ trợ hiển thị | Xác nhận trực quan |
+| Final acceptance | Tổng hợp evidence | Approve/reject |
+
+**Stop conditions:** không import khi chưa qua Gate 1; dừng xử lý tự động khi có exception chưa có quyết định ở Gate 2; không đánh dấu KAN-14 Done khi Gate 3 hoặc Gate 4 chưa được chấp thuận.
+
+---
+
+## 7. Acceptance Criteria
 
 - [ ] PostGIS database đã có region và building data.
 - [ ] Import đúng hai file đầu vào KAN-6.
@@ -276,7 +346,7 @@ Mục tiêu: chứng minh quy trình có thể tái tạo.
 - [ ] Không có credentials hoặc secret trong source control.
 - [ ] Không tự suy luận height, floors, population hoặc epidemiology.
 
-## 7. Deliverables
+## 8. Deliverables
 
 1. Region và building data đã được nạp vào PostGIS.
 2. Script/command hoặc hướng dẫn import có thể tái sử dụng.
@@ -285,7 +355,7 @@ Mục tiêu: chứng minh quy trình có thể tái tạo.
 5. Kết quả kiểm tra spatial query và index.
 6. Tài liệu hướng dẫn re-import và các giới hạn dữ liệu.
 
-## 8. Suggested Commit Sequence
+## 9. Suggested Commit Sequence
 
 ```text
 chore(data): prepare GIS import configuration
@@ -299,7 +369,7 @@ test(data): validate imported GIS records and spatial queries
 docs(data): document sample dataset import procedure
 ```
 
-## 9. Final Definition of Done
+## 10. Final Definition of Done
 
 KAN-14 hoàn thành khi:
 - Dữ liệu từ KAN-6 được import vào schema KAN-13.
