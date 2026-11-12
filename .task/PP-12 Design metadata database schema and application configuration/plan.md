@@ -10,7 +10,7 @@ Keep large raw structures, Parquet files, and embeddings out of relational metad
 
 **Upstream dependencies:** PP-10 defines schemas; PP-11 provides local database services.
 
-**Related plans:** `PP-13–PP-16` · `PP-17–PP-20` · `PP-39–PP-42`. Use the links below to keep contracts aligned; update this plan if an upstream interface changes.
+**Related plans:** [PP-10](../PP-10%20Design%20project%20architecture%20and%20module%20structure/plan.md) · [PP-11](../PP-11%20Configure%20Docker%20Compose%20infrastructure/plan.md) · [PP-13](../PP-13%20Implement%20AlphaFold%20structure%20data%20crawler/plan.md) · [PP-16](../PP-16%20Implement%20ingestion%20validation%20and%20raw%20data%20management/plan.md) · [PP-17](../PP-17%20Build%20Spark%20ingestion%20pipeline/plan.md) · [PP-20](../PP-20%20Generate%20protein%20master%20and%20PPI%20Parquet%20datasets/plan.md) · [PP-39](../PP-39%20Implement%20protein%20search%20and%20detail%20REST%20APIs/plan.md) · [PP-42](../PP-42%20Integrate%20prediction%20results%20and%20perform%20end-to-end%20testing/plan.md). Keep the contracts and dependency direction consistent with these linked tasks.
 
 ## 3. Step-by-step implementation and to-do
 
