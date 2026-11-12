@@ -154,9 +154,156 @@ jobs:
             END IF;
           END $schema$;
 
+          -- Exercise real inserts, constraints and spatial operations in a
+          -- transaction so the integration database remains clean.
+          BEGIN;
+
+          DO $behavior$
+          DECLARE
+            region_uuid UUID;
+            building_uuid UUID;
+            intersects_result BOOLEAN;
+            area_m2 DOUBLE PRECISION;
+          BEGIN
+            INSERT INTO regions (
+              code, name, boundary_method, boundary
+            ) VALUES (
+              'ci-kan13-aoi',
+              'KAN-13 CI test AOI',
+              'local_aoi',
+              ST_GeomFromText(
+                'MULTIPOLYGON(((106.69 10.76, 106.71 10.76, 106.71 10.78, 106.69 10.78, 106.69 10.76)))',
+                4326
+              )
+            )
+            RETURNING id INTO region_uuid;
+
+            IF region_uuid IS NULL THEN
+              RAISE EXCEPTION 'regions.id UUID default was not generated';
+            END IF;
+
+            INSERT INTO buildings (
+              external_id, osm_type, osm_way_id, region_id, building_type, footprint
+            ) VALUES (
+              'way/900000001',
+              'way',
+              900000001,
+              region_uuid,
+              'yes',
+              ST_GeomFromText(
+                'MULTIPOLYGON(((106.695 10.765, 106.696 10.765, 106.696 10.766, 106.695 10.766, 106.695 10.765)))',
+                4326
+              )
+            )
+            RETURNING id INTO building_uuid;
+
+            IF building_uuid IS NULL THEN
+              RAISE EXCEPTION 'buildings.id UUID default was not generated';
+            END IF;
+
+            IF (SELECT external_id FROM buildings WHERE id = building_uuid) <> 'way/900000001'
+              OR (SELECT osm_way_id FROM buildings WHERE id = building_uuid) <> 900000001 THEN
+              RAISE EXCEPTION 'OSM source identifier was not preserved';
+            END IF;
+
+            SELECT ST_Intersects(r.boundary, b.footprint)
+              INTO intersects_result
+            FROM regions r
+            JOIN buildings b ON b.region_id = r.id
+            WHERE r.id = region_uuid AND b.id = building_uuid;
+
+            IF intersects_result IS DISTINCT FROM TRUE THEN
+              RAISE EXCEPTION 'ST_Intersects did not detect the building inside its region';
+            END IF;
+
+            SELECT ST_Area(footprint::geography)
+              INTO area_m2
+            FROM buildings
+            WHERE id = building_uuid;
+
+            IF area_m2 IS NULL OR area_m2 <= 0 THEN
+              RAISE EXCEPTION 'Geography area in square meters must be positive';
+            END IF;
+
+            -- Unique region code.
+            BEGIN
+              INSERT INTO regions (code, name, boundary_method, boundary)
+              SELECT code, 'duplicate', 'local_aoi', boundary
+              FROM regions WHERE id = region_uuid;
+              RAISE EXCEPTION 'Expected duplicate regions.code to be rejected';
+            EXCEPTION WHEN unique_violation THEN
+              NULL;
+            END;
+
+            -- Unique building external_id.
+            BEGIN
+              INSERT INTO buildings (
+                external_id, osm_type, osm_way_id, region_id, footprint
+              )
+              SELECT external_id, osm_type, osm_way_id, region_id, footprint
+              FROM buildings WHERE id = building_uuid;
+              RAISE EXCEPTION 'Expected duplicate buildings.external_id to be rejected';
+            EXCEPTION WHEN unique_violation THEN
+              NULL;
+            END;
+
+            -- CHECK: osm_type must be way or relation.
+            BEGIN
+              INSERT INTO buildings (
+                external_id, osm_type, osm_way_id, region_id, footprint
+              )
+              SELECT 'invalid/type', 'node', 900000002, region_uuid, footprint
+              FROM buildings WHERE id = building_uuid;
+              RAISE EXCEPTION 'Expected invalid osm_type to be rejected';
+            EXCEPTION WHEN check_violation THEN
+              NULL;
+            END;
+
+            -- CHECK: way requires osm_way_id and forbids osm_id.
+            BEGIN
+              INSERT INTO buildings (
+                external_id, osm_type, osm_id, osm_way_id, region_id, footprint
+              )
+              SELECT 'way/mismatched', 'way', 900000003, NULL, region_uuid, footprint
+              FROM buildings WHERE id = building_uuid;
+              RAISE EXCEPTION 'Expected mismatched OSM identifiers to be rejected';
+            EXCEPTION WHEN check_violation THEN
+              NULL;
+            END;
+
+            -- FK: region must exist.
+            BEGIN
+              INSERT INTO buildings (
+                external_id, osm_type, osm_way_id, region_id, footprint
+              )
+              SELECT 'way/orphan', 'way', 900000004,
+                     '00000000-0000-0000-0000-000000000001'::UUID, footprint
+              FROM buildings WHERE id = building_uuid;
+              RAISE EXCEPTION 'Expected invalid region_id to be rejected';
+            EXCEPTION WHEN foreign_key_violation THEN
+              NULL;
+            END;
+
+            -- NOT NULL: external_id is required.
+            BEGIN
+              INSERT INTO buildings (
+                external_id, osm_type, osm_way_id, region_id, footprint
+              )
+              SELECT NULL, 'way', 900000005, region_uuid, footprint
+              FROM buildings WHERE id = building_uuid;
+              RAISE EXCEPTION 'Expected NULL external_id to be rejected';
+            EXCEPTION WHEN not_null_violation THEN
+              NULL;
+            END;
+
+            RAISE NOTICE 'KAN-13 behavior checks passed: UUID defaults, OSM identifiers, unique/CHECK/FK/NOT NULL constraints, ST_Intersects and geography area (m²).';
+          END $behavior$;
+
+          ROLLBACK;
+
           SELECT PostGIS_Full_Version();
           SELECT version, success FROM _sqlx_migrations ORDER BY version;
-          SELECT 'PostGIS schema verification passed' AS result;
+          SELECT 'PostGIS schema and behavior verification passed' AS result;
           SQL
 
       - name: Print backend logs on failure
