@@ -1,31 +1,31 @@
 # KAN-6 sample GIS data
 
-This folder contains reproducible source references and outputs for the historical TP.HCM 2D OSM dataset.
+This folder contains reproducible source references and outputs for a compact urban GIS sample around Ben Thanh Market, District 1, Ho Chi Minh City.
 
-## Agreed study boundary
+## Agreed study area
 
-- Boundary: OSM administrative relation `1973756` (Ho Chi Minh City before the 2025-07-01 administrative change).
-- Historical cutoff: `2025-06-30T23:59:59Z`.
-- The workflow queries Overpass attic data at that exact timestamp. It must not use the current relation geometry as a substitute.
-- The building footprints come from the Geofabrik Vietnam extract downloaded at workflow execution time, then are clipped to the historical boundary. **The buildings are not a historical snapshot as of June 2025.**
+- Area: approximately **1 km² (about 1 km × 1 km)** centered on Ben Thanh Market.
+- Center: 10.77257° N, 106.69802° E.
+- AOI bounds (WGS 84): 106.693378–106.702662° E, 10.768079–10.777061° N.
+- Boundary: a locally defined rectangular polygon for the coursework sample, **not an administrative boundary**.
+- Center reference: OpenStreetMap way [39514795](https://www.openstreetmap.org/way/39514795).
+- Building footprints: Geofabrik Vietnam OSM extract downloaded when the workflow runs and clipped to this AOI. They are current-at-download, not a historical building snapshot.
 
 ## Run in GitHub Actions
 
 1. Open the repository and select branch `task/p1-04-gis-data-model-sample-data`.
-2. Open **Actions** and select **KAN-6 - Prepare HCMC OSM sample data**.
-3. Select **Run workflow**, confirm `old-hcmc`, and start the run.
-4. A successful run uploads artifact `kan-6-hcmc-old-osm-data`.
-5. Download the artifact from the completed run. It contains GeoJSON layers, checksums, boundary provenance, generated metadata, and an automated quality summary.
+2. Open **Actions** and select **KAN-6 - Prepare Ben Thanh sample GIS data**.
+3. Select **Run workflow**, confirm `ben-thanh-1km2`, and start the run.
+4. A successful run uploads artifact `kan-6-ben-thanh-osm-data`.
+5. Download the artifact. It contains the AOI, processed GeoJSON layers, checksums, provenance, generated metadata, and automated quality summary.
 
-The workflow resolves relation 1973756 from historical OSM state at the agreed cutoff, verifies its administrative tags and approximate geographic extent, downloads the Geofabrik Vietnam PBF, clips it with Osmium, and processes buildings with GDAL/OGR. After validation, it commits the source boundary, processed GeoJSON layers, and lightweight metadata/quality summary to the selected branch when each file is at most 50 MiB. Larger outputs remain available in the workflow artifact instead.
-
-> The repository's current default branch is `task/p1-04-gis-data-model-sample-data`, so this workflow is already on the default branch and should be available under Actions. If it does not appear, refresh the Actions page and verify that Actions are enabled for the repository.
+The workflow creates the AOI polygon, downloads the Geofabrik Vietnam PBF, clips it with Osmium, and processes OSM building footprints with GDAL/OGR. After validation, it commits the source boundary, processed GeoJSON layers, and lightweight metadata/quality summary when each file is at most 50 MiB. Larger outputs remain in the workflow artifact.
 
 ## Data and licensing notes
 
 - Output format: GeoJSON RFC 7946 / WGS 84 longitude-latitude (EPSG:4326).
 - Building layer contains 2D OSM building footprints only. Height, floors, population, occupancy, and epidemiological attributes are not inferred.
 - Attribution: © OpenStreetMap contributors, ODbL.
-- OSM is community-maintained and may be incomplete; automated QA does not replace visual inspection in QGIS.
+- OSM coverage may be incomplete; automated QA does not replace visual inspection in QGIS.
 
-Do not commit the large source PBF or temporary clipped PBF to Git. The workflow commits validated boundary/building GeoJSON and lightweight provenance when each file is at most 50 MiB; otherwise it preserves the complete output in the workflow artifact for KAN-13/KAN-14.
+Do not commit the large source PBF or temporary clipped PBF to Git.
