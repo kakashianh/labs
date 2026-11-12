@@ -8,6 +8,7 @@ CREATE TABLE regions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     code VARCHAR(64) NOT NULL UNIQUE,
     name VARCHAR(255) NOT NULL,
+    description TEXT,
     boundary_method VARCHAR(64) NOT NULL,
     source_reference TEXT,
     boundary geometry(MultiPolygon, 4326) NOT NULL,
