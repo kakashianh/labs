@@ -89,6 +89,7 @@ Lưu vùng nghiên cứu/AOI. Không đặt tên hoặc mô tả bảng theo ngh
 | id | UUID | Primary key nội bộ, default `gen_random_uuid()` |
 | code | VARCHAR(64) | NOT NULL, UNIQUE; ví dụ mã AOI ổn định |
 | name | VARCHAR(255) | NOT NULL; tên khu vực nghiên cứu |
+| description | TEXT | Nullable; map từ AOI `area_note` |
 | boundary | geometry(MultiPolygon, 4326) | NOT NULL; khớp layer `hcm_boundary` |
 | boundary_method | VARCHAR(64) | NOT NULL; ví dụ `local_aoi` |
 | source_reference | VARCHAR(128) | Nullable; tham chiếu nguồn/vị trí AOI |
@@ -107,8 +108,8 @@ Lưu footprint và metadata OSM thực sự có trong KAN-6.
 | osm_id | BIGINT | Nullable; map từ source nếu là relation |
 | osm_way_id | BIGINT | Nullable; map từ source nếu là closed way |
 | region_id | UUID | NOT NULL, FK đến regions trong sample này |
-| name | VARCHAR(255) | Nullable; OSM `name` |
-| building_type | VARCHAR(64) | Nullable; map từ OSM `building` |
+| name | TEXT | Nullable; OSM `name` |
+| building_type | TEXT | Nullable; map từ OSM `building` |
 | footprint | geometry(MultiPolygon, 4326) | NOT NULL; footprint 2D |
 | created_at | TIMESTAMPTZ | NOT NULL |
 | updated_at | TIMESTAMPTZ | NOT NULL |
