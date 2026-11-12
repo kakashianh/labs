@@ -14,6 +14,20 @@ BEGIN
         RAISE EXCEPTION 'Imported region hcm-ben-thanh-1km2 was not found.';
     END IF;
 
+    IF EXISTS (
+        SELECT 1
+        FROM public.regions r
+        CROSS JOIN public.kan14_stage_regions s
+        WHERE r.id = v_region_id
+          AND (r.boundary IS NULL OR ST_IsEmpty(r.boundary)
+               OR NOT ST_IsValid(r.boundary)
+               OR ST_SRID(r.boundary) <> 4326
+               OR GeometryType(r.boundary) <> 'MULTIPOLYGON'
+               OR NOT ST_Equals(r.boundary, ST_Multi(s.geom)))
+    ) THEN
+        RAISE EXCEPTION 'Imported region boundary is invalid or differs from the staged source.';
+    END IF;
+
     SELECT COUNT(*) INTO v_expected FROM public.kan14_stage_buildings;
     SELECT COUNT(*) INTO v_actual
     FROM public.buildings

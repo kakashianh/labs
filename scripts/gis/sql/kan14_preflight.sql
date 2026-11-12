@@ -10,6 +10,31 @@ BEGIN
         RAISE EXCEPTION 'PostGIS extension is not enabled.';
     END IF;
 
+    IF NOT EXISTS (
+        SELECT 1 FROM geometry_columns
+        WHERE f_table_schema = 'public' AND f_table_name = 'regions'
+          AND f_geometry_column = 'boundary' AND type = 'MULTIPOLYGON' AND srid = 4326
+    ) OR NOT EXISTS (
+        SELECT 1 FROM geometry_columns
+        WHERE f_table_schema = 'public' AND f_table_name = 'buildings'
+          AND f_geometry_column = 'footprint' AND type = 'MULTIPOLYGON' AND srid = 4326
+    ) THEN
+        RAISE EXCEPTION 'KAN-13 geometry columns must be MultiPolygon / EPSG:4326.';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='regions_boundary_gist_idx')
+       OR NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='buildings_footprint_gist_idx')
+       OR NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='buildings_region_id_idx') THEN
+        RAISE EXCEPTION 'One or more KAN-13 spatial/region indexes are missing.';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema='public' AND table_name='buildings' AND column_name='building_type'
+    ) THEN
+        RAISE EXCEPTION 'KAN-13 target column buildings.building_type is missing.';
+    END IF;
+
     IF (SELECT COUNT(*) FROM public.kan14_stage_regions) <> 1 THEN
         RAISE EXCEPTION 'Expected exactly one staged region feature.';
     END IF;

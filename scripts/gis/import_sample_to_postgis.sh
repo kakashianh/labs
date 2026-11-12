@@ -2,6 +2,7 @@
 set -Eeuo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$ROOT_DIR"
 BOUNDARY_FILE="$ROOT_DIR/data/sample/processed/hcm_boundary.geojson"
 BUILDINGS_FILE="$ROOT_DIR/data/sample/processed/hcm_buildings.geojson"
 PREFLIGHT_SQL="$ROOT_DIR/scripts/gis/sql/kan14_preflight.sql"
