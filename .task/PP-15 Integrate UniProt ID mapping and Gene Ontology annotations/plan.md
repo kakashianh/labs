@@ -8,7 +8,7 @@ Resolve external protein identifiers to canonical UniProt accessions and collect
 
 PP-10 canonical protein/annotation contracts; PP-12 configuration; PP-14 STRING IDs.
 
-Related plans: [PP-13](../PP-13%20Implement%20AlphaFold%20structure%20data%20crawler/plan.md) · [PP-14](../PP-14%20Implement%20STRING%20PPI%20data%20crawler/plan.md) · [PP-16](../PP-16%20Implement%20ingestion%20validation%20and%20raw%20data%20management/plan.md) · [PP-18](../PP-18%20/plan.md) · [PP-20](../PP-20%20/plan.md) · [PP-34](../PP-34%20/plan.md). These links describe the upstream/downstream contracts; coordinate changes rather than duplicating or redefining them.
+Related plans: [PP-13](../PP-13%20Implement%20AlphaFold%20structure%20data%20crawler/plan.md) · [PP-14](../PP-14%20Implement%20STRING%20PPI%20data%20crawler/plan.md) · [PP-16](../PP-16%20Implement%20ingestion%20validation%20and%20raw%20data%20management/plan.md) · [PP-18](../PP-18%20Normalize%20protein%20identifiers%20and%20integrate%20biological%20datasets/plan.md) · [PP-20](../PP-20%20Generate%20protein%20master%20and%20PPI%20Parquet%20datasets/plan.md) · [PP-34](../PP-34%20Prepare%20multi-label%20protein%20function%20prediction%20dataset/plan.md). Keep source versions, identifiers, and schemas consistent with these linked tasks.
 
 ## 3. Step-by-step implementation and to-do
 
