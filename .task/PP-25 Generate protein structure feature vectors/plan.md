@@ -2,50 +2,83 @@
 
 ## 1. Objective
 
-Convert validated structural descriptors into model-ready protein representations.
+Assemble validated structural descriptors into fixed, versioned protein-level feature vectors for downstream fusion and ML.
 
-## 2. Context and scope
+## 2. Scope and dependencies
 
-Aggregate residue features using documented pooling/statistics; normalize where appropriate; define vector schema, missing-value policy, and protein-to-vector mapping.
+PP-23 geometry features; PP-24 secondary structure/confidence; PP-22 residue coordinates; PP-20 protein master.
 
-Parent Epic: **PP-4**. Inspect the current repository and upstream contracts before implementation. Keep the ticket focused on its stated deliverable and coordinate changes to shared schemas with dependent modules.
+Related plans: [PP-20](../PP-20%20Generate%20protein%20master%20and%20PPI%20Parquet%20datasets/plan.md) · [PP-22](../PP-22%20Extract%20protein%20residues%20and%20atomic%20coordinates/plan.md) · [PP-23](../PP-23%20Calculate%20geometric%20and%20structural%20features/plan.md) · [PP-24](../PP-24%20Extract%20secondary%20structure%20and%20confidence%20metrics/plan.md) · [PP-30](../PP-30%20Design%20protein%20embedding%20generation%20pipeline/plan.md) · [PP-33](../PP-33%20Integrate%20structure%2C%20sequence%20and%20PPI%20features/plan.md) · [PP-34](../PP-34%20Prepare%20multi-label%20protein%20function%20prediction%20dataset/plan.md) · [PP-35](../PP-35%20undefined/plan.md). Keep graph identifiers, schema version, query semantics, and vector feature versions consistent across these tasks.
 
-## 3. Implementation plan
+## 3. Step-by-step implementation and to-do
 
-1. Inspect existing code, data contracts, configuration, and related tests before changing files.
-2. Confirm inputs, outputs, source/model versions, identifiers, and error cases.
-3. Implement the smallest cohesive module or pipeline for this ticket.
-4. Add validation, structured logging, and explicit handling for missing, invalid, duplicate, or ambiguous records where applicable.
-5. Add automated tests and a reproducible sample execution; update documentation and examples.
+### Step 1 — Define vector schema and feature groups
 
-## 4. Expected deliverables
+Specify ordered feature names, numeric types, scaling policy, masks, and versioning.
 
-- Implementation and configuration required by the stated scope.
-- Documented inputs, outputs, assumptions, and operational instructions.
-- Automated tests and representative fixtures.
-- Diagnostic logs and explicit error handling without exposing secrets.
-- Notes on limitations and deferred work, if any.
+**To-do**
+- [ ] Create a feature registry with stable ordered names
+- [ ] Define aggregation and missing-value/imputation policy
+- [ ] Separate raw descriptors from normalized model-ready vectors
+- [ ] Include source structure/version and coverage fields
+
+### Step 2 — Assemble and normalize vectors
+
+Join feature groups by canonical accession and structure version, then normalize only with fitted parameters.
+
+**To-do**
+- [ ] Join PP-23 and PP-24 outputs to protein master
+- [ ] Validate feature completeness and duplicate structures
+- [ ] Fit normalization parameters on training data only where relevant
+- [ ] Persist preprocessing parameters alongside vector version
+
+### Step 3 — Add quality and consistency checks
+
+Detect invalid values, unexpected dimensionality, and feature drift.
+
+**To-do**
+- [ ] Check vector length, finite values, and schema hash
+- [ ] Report missingness and outlier distributions
+- [ ] Verify stable feature order across runs
+- [ ] Test behavior when a protein has no usable structure
+
+### Step 4 — Publish feature dataset
+
+Write vectors and metadata in a format consumable by Milvus/ML tasks.
+
+**To-do**
+- [ ] Export Parquet/NumPy-compatible representation and manifest
+- [ ] Provide read API/helper and sample records
+- [ ] Document vector dimension and feature dictionary
+- [ ] Hand off contract to PP-30, PP-33, and PP-34
+
+## 4. Deliverables
+
+- Versioned graph schema/service/import implementation for this ticket.
+- Reproducible load/query examples and automated tests.
+- Documentation of IDs, properties, query limits, and operational behavior.
 
 ## 5. Acceptance criteria
 
-- [ ] The implementation satisfies the objective and remains within ticket scope.
-- [ ] Inputs, outputs, schemas, and configuration are documented.
-- [ ] Invalid, missing, duplicate, or ambiguous data is handled explicitly.
-- [ ] The result is reproducible on a representative sample.
-- [ ] Unit and relevant integration tests pass.
-- [ ] Documentation is updated and no secrets or local-only artifacts are committed.
+- [ ] All step-level to-dos are complete.
+- [ ] Canonical protein accession remains the stable cross-system identifier.
+- [ ] Imports/queries are bounded, observable, and safe to rerun where applicable.
+- [ ] Graph data reconciles with the source dataset version.
+- [ ] Unit and integration tests pass against a representative graph.
 
 ## 6. Testing strategy
 
-- **Unit tests:** core logic, transformations, schema validation, edge cases, and error handling.
-- **Integration tests:** the relevant adjacent pipeline, data store, graph/vector service, or API boundary.
-- **Regression checks:** stable identifiers, expected record counts, and output-contract compatibility.
-- **Manual verification:** execute the documented workflow from a clean environment.
+- **Unit:** mapping, traversal construction, pagination, validation, and error handling.
+- **Integration:** JanusGraph schema, import, and query operations.
+- **Reconciliation:** vertex/edge counts, endpoint integrity, duplicate checks, and source lineage.
+- **Performance:** measure batch throughput and query latency at representative graph size.
 
-## 7. Dependencies and constraints
+## 7. Cross-task handoff
 
-Use outputs from upstream tickets in **PP-4**. Do not assume unavailable source fields or external service behavior; validate them against actual source data and document any assumptions.
+- **Upstream:** PP-23 geometry features; PP-24 secondary structure/confidence; PP-22 residue coordinates; PP-20 protein master.
+- **Consumers / coordination:** PP-20, PP-22, PP-23, PP-24, PP-30, PP-33, PP-34, PP-35
+- **Contract rule:** publish graph schema version, key semantics, traversal contract, load/query metrics, and limitations. Coordinate schema changes with every consumer.
 
 ## 8. Completion notes
 
-Record implementation decisions, test commands/results, generated artifacts, data/source versions, and deviations from this plan when the ticket is completed.
+Record graph backend/version, source dataset version, load counts, query examples, test results, and deviations.
