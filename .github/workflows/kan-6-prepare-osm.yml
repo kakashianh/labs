@@ -70,7 +70,7 @@ jobs:
               "geometry": {"type": "Polygon", "coordinates": [ring]}
           }
           Path("data/sample/source/hcm_boundary.geojson").write_text(
-              json.dumps({"type": "FeatureCollection", "features": [feature]}, ensure_ascii=False, indent=2) + "\\n",
+              json.dumps({"type": "FeatureCollection", "features": [feature]}, ensure_ascii=False, indent=2) + "\n",
               encoding="utf-8"
           )
           PY
