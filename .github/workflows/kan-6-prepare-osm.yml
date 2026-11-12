@@ -1,15 +1,15 @@
-name: KAN-6 - Prepare HCMC OSM sample data
+name: KAN-6 - Prepare Ben Thanh sample GIS data
 
 on:
   workflow_dispatch:
     inputs:
       confirm_scope:
-        description: "Confirm the historical HCMC boundary (before 2025-07-01)"
+        description: "Confirm the approximately 1 km² Ben Thanh Market study area"
         required: true
         type: choice
         options:
-          - old-hcmc
-        default: old-hcmc
+          - ben-thanh-1km2
+        default: ben-thanh-1km2
 
 permissions:
   contents: write
@@ -38,129 +38,69 @@ jobs:
           echo "OSmium: $(osmium --version)"
           echo "Node: $(node --version)"
 
-      - name: Resolve and verify historical HCMC boundary
+      - name: Create and verify 1 km² Ben Thanh study area
         shell: bash
         run: |
           set -Eeuo pipefail
-          [[ "${{ inputs.confirm_scope }}" == "old-hcmc" ]] || { echo "Unexpected study area selection"; exit 1; }
+          [[ "${{ inputs.confirm_scope }}" == "ben-thanh-1km2" ]] || { echo "Unexpected study area selection"; exit 1; }
           mkdir -p data/sample/source data/sample/processed build/kan-6
-          # OSM relation 1973756 is the pre-merger Ho Chi Minh City administrative
-          # boundary (admin_level=4). Pinning the relation prevents a geocoder
-          # from silently returning the post-2025 expanded city.
-          # Reconstruct the relation exactly as it existed at the agreed historical cutoff.
-          # Keep this timestamp explicit: querying the current relation would silently
-          # change the study area after administrative-boundary edits.
-          BOUNDARY_AS_OF='2025-06-30T23:59:59Z'
-          QUERY="[out:json][timeout:180][date:\"${BOUNDARY_AS_OF}\"];relation(1973756);out meta;>;out skel qt;"
-          # Overpass instances may reject or throttle GitHub-hosted runners.
-          # Try independent public instances and identify this workflow clearly.
-          OVERPASS_ENDPOINTS=(
-            "https://overpass.kumi.systems/api/interpreter"
-            "https://overpass-api.de/api/interpreter"
-            "https://overpass.private.coffee/api/interpreter"
-          )
-          BOUNDARY_FETCHED=false
-          for endpoint in "${OVERPASS_ENDPOINTS[@]}"; do
-            echo "Requesting OSM relation 1973756 from $endpoint"
-            if curl --fail --show-error --silent --location \
-              --retry 2 --retry-all-errors --retry-delay 5 \
-              --connect-timeout 20 --max-time 240 \
-              --user-agent "KAN-6-GIS-Data-Preparation/1.0 (GitHub Actions; OpenStreetMap data workflow)" \
-              --header "Accept: application/json" \
-              --get "$endpoint" \
-              --data-urlencode "data=$QUERY" \
-              --output build/kan-6/hcm_relation.osm.json; then
-              if jq -e 'any(.elements[]?; .type == "relation" and .id == 1973756)' \
-                build/kan-6/hcm_relation.osm.json >/dev/null; then
-                BOUNDARY_FETCHED=true
-                echo "Successfully fetched relation 1973756 from $endpoint"
-                break
-              fi
-              echo "::warning::Endpoint returned a response without relation 1973756: $endpoint"
-            else
-              echo "::warning::Overpass request failed: $endpoint"
-            fi
-            rm -f build/kan-6/hcm_relation.osm.json
-          done
-          if [[ "$BOUNDARY_FETCHED" != "true" ]]; then
-            echo "::error::Could not fetch OSM relation 1973756 from any configured Overpass endpoint."
-            exit 1
-          fi
-          jq -e '
-            any(.elements[]; .type == "relation" and .id == 1973756
-              and .tags.boundary == "administrative"
-              and .tags.admin_level == "4"
-              and ((.tags.name // "") | test("Ho Chi Minh|Hồ Chí Minh"; "i")))
-          ' build/kan-6/hcm_relation.osm.json >/dev/null
-          node - <<'NODE'
-          const fs = require("fs");
-          const convert = require("osmtogeojson");
-          const osm = JSON.parse(fs.readFileSync("build/kan-6/hcm_relation.osm.json", "utf8"));
-          const geo = convert(osm);
-          const features = (geo.features || []).filter(f =>
-            f.id === "relation/1973756" ||
-            (f.properties?.type === "relation" && String(f.properties?.id) === "1973756")
-          );
-          if (features.length !== 1 || !features[0].geometry) {
-            throw new Error("Could not resolve exactly one polygon for OSM relation 1973756");
-          }
-          const geometryType = features[0].geometry.type;
-          if (!["Polygon", "MultiPolygon"].includes(geometryType)) {
-            throw new Error("Unexpected boundary geometry: " + geometryType);
-          }
-          fs.writeFileSync("data/sample/source/hcm_boundary.geojson",
-            JSON.stringify({type:"FeatureCollection", features}, null, 2) + "\n");
-          NODE
-          ogrinfo -ro -so data/sample/source/hcm_boundary.geojson
-          # Guard against accidentally receiving the expanded post-2025 HCMC area.
-          # Read coordinates from GeoJSON directly; ogrinfo summary output does not
-          # consistently include an Extent line across GDAL versions.
+          # Approximate 1 km x 1 km square centered on Ben Thanh Market.
+          # Center coordinates are sourced from OpenStreetMap feature way/39514795.
+          # Bounds use ~500 m in each direction at latitude 10.77257 N.
           python3 - <<'PY'
           import json
-          from numbers import Real
+          from pathlib import Path
 
-          with open("data/sample/source/hcm_boundary.geojson", encoding="utf-8") as f:
-              document = json.load(f)
-
-          coordinates = []
-          def collect(value):
-              if isinstance(value, list):
-                  if len(value) >= 2 and isinstance(value[0], Real) and isinstance(value[1], Real):
-                      coordinates.append((float(value[0]), float(value[1])))
-                  else:
-                      for child in value:
-                          collect(child)
-
-          for feature in document.get("features", []):
-              geometry = feature.get("geometry") or {}
-              collect(geometry.get("coordinates", []))
-
-          if not coordinates:
-              raise SystemExit("Boundary GeoJSON contains no coordinate pairs")
-
-          xmin = min(point[0] for point in coordinates)
-          ymin = min(point[1] for point in coordinates)
-          xmax = max(point[0] for point in coordinates)
-          ymax = max(point[1] for point in coordinates)
-          print(f"Boundary extent: ({xmin}, {ymin}) - ({xmax}, {ymax})")
-
-          if not (106.2 < xmin < 106.8 and 106.5 < xmax < 107.2 and
-                  10.2 < ymin < 10.7 and 10.7 < ymax < 11.5):
-              raise SystemExit("Boundary extent is outside expected historical HCMC envelope; stopping.")
+          # WGS84 lon/lat bounds around Ben Thanh Market (106.69802 E, 10.77257 N).
+          west, south, east, north = 106.693378, 10.768079, 106.702662, 10.777061
+          ring = [
+              [west, south], [east, south], [east, north],
+              [west, north], [west, south]
+          ]
+          feature = {
+              "type": "Feature",
+              "properties": {
+                  "name": "Ben Thanh sample study area",
+                  "area_note": "Approx. 1 km x 1 km AOI centered on Ben Thanh Market",
+                  "center_lat": 10.77257,
+                  "center_lon": 106.69802,
+                  "boundary_method": "locally defined rectangular AOI; not an administrative boundary",
+                  "source_reference": "https://www.openstreetmap.org/way/39514795"
+              },
+              "geometry": {"type": "Polygon", "coordinates": [ring]}
+          }
+          Path("data/sample/source/hcm_boundary.geojson").write_text(
+              json.dumps({"type": "FeatureCollection", "features": [feature]}, ensure_ascii=False, indent=2) + "\\n",
+              encoding="utf-8"
+          )
           PY
-          BOUNDARY_VERSION="$(jq -r '.elements[] | select(.type == "relation" and .id == 1973756) | .version' build/kan-6/hcm_relation.osm.json)"
-          BOUNDARY_VERSION_TIMESTAMP="$(jq -r '.elements[] | select(.type == "relation" and .id == 1973756) | .timestamp' build/kan-6/hcm_relation.osm.json)"
-          printf 'Boundary relation: 1973756\nBoundary as-of UTC: %s\nBoundary version: %s\nBoundary version timestamp: %s\nOverpass endpoint: %s\n' \\
-            "$BOUNDARY_AS_OF" "$BOUNDARY_VERSION" "$BOUNDARY_VERSION_TIMESTAMP" "$endpoint" \\
-            > build/kan-6/boundary-provenance.txt
-          {
-            echo "BOUNDARY_AS_OF=$BOUNDARY_AS_OF"
-            echo "BOUNDARY_VERSION=$BOUNDARY_VERSION"
-            echo "BOUNDARY_VERSION_TIMESTAMP=$BOUNDARY_VERSION_TIMESTAMP"
-            echo "BOUNDARY_OVERPASS_ENDPOINT=$endpoint"
-          } >> "$GITHUB_ENV"
-          echo "Boundary source: OSM relation 1973756, historical state at $BOUNDARY_AS_OF (version $BOUNDARY_VERSION; version timestamp $BOUNDARY_VERSION_TIMESTAMP)" >> "$GITHUB_STEP_SUMMARY"
-          echo "Boundary tags verified: boundary=administrative, admin_level=4" >> "$GITHUB_STEP_SUMMARY"
+          ogrinfo -ro -so data/sample/source/hcm_boundary.geojson
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          doc = json.loads(Path("data/sample/source/hcm_boundary.geojson").read_text(encoding="utf-8"))
+          features = doc.get("features", [])
+          if len(features) != 1:
+              raise SystemExit("Expected exactly one AOI polygon")
+          geometry = features[0].get("geometry") or {}
+          if geometry.get("type") != "Polygon":
+              raise SystemExit("Study area must be a Polygon")
+          ring = geometry.get("coordinates", [[]])[0]
+          if len(ring) != 5 or ring[0] != ring[-1]:
+              raise SystemExit("AOI ring must be a closed rectangle")
+          xs = [p[0] for p in ring]
+          ys = [p[1] for p in ring]
+          xmin, xmax, ymin, ymax = min(xs), max(xs), min(ys), max(ys)
+          if not (106.68 < xmin < 106.70 and 106.70 < xmax < 106.72 and
+                  10.75 < ymin < 10.77 and 10.77 < ymax < 10.79):
+              raise SystemExit("AOI coordinates are outside the expected Ben Thanh vicinity")
+          print(f"Ben Thanh AOI extent: ({xmin}, {ymin}) - ({xmax}, {ymax})")
+          print("AOI size: approximately 1 km x 1 km; locally defined, not an administrative boundary.")
+          PY
+          sha256sum data/sample/source/hcm_boundary.geojson | tee build/kan-6/boundary.sha256
+          printf 'Study area: Ben Thanh Market 1 km² sample AOI\\nCenter: 10.77257, 106.69802\\nBoundary method: locally defined rectangle\\nSource reference: https://www.openstreetmap.org/way/39514795\\n' > build/kan-6/boundary-provenance.txt
+          echo "Study area: approximately 1 km² around Ben Thanh Market" >> "$GITHUB_STEP_SUMMARY"
+          echo "Boundary is a locally defined sample AOI, not a historical administrative boundary." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Download Geofabrik Vietnam extract
         run: |
@@ -174,7 +114,7 @@ jobs:
           echo "PBF_RETRIEVED_AT_UTC=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
           echo "PBF_SIZE_BYTES=$(stat -c '%s' data/sample/source/vietnam-latest.osm.pbf)" >> "$GITHUB_ENV"
 
-      - name: Clip Vietnam PBF to historical HCMC
+      - name: Clip Vietnam PBF to Ben Thanh 1 km² AOI
         run: |
           set -Eeuo pipefail
           osmium extract \
@@ -230,8 +170,8 @@ jobs:
           cat > data/sample/processed/quality-summary.md <<EOF
           # KAN-6 automated data quality summary
 
-          - Study area: historical Ho Chi Minh City boundary before 2025-07-01
-          - Boundary source: OpenStreetMap relation 1973756
+          - Study area: approximately 1 km² around Ben Thanh Market
+          - Boundary source: locally defined rectangular AOI centered on OSM way 39514795
           - Building source: Geofabrik Vietnam OSM extract
           - Boundary features: $BOUNDARY_COUNT
           - Building features: $BUILDING_COUNT
@@ -253,8 +193,8 @@ jobs:
           cat > data/sample/processed/metadata.md <<EOF
           # KAN-6 generated dataset metadata
 
-          - Study area: Ho Chi Minh City administrative boundary before 2025-07-01
-          - Boundary source: OpenStreetMap relation 1973756
+          - Study area: approximately 1 km² around Ben Thanh Market
+          - Boundary source: locally defined rectangular AOI centered on OSM way 39514795
           - Boundary as-of UTC: $BOUNDARY_AS_OF
           - Boundary relation version: $BOUNDARY_VERSION
           - Boundary relation version timestamp: $BOUNDARY_VERSION_TIMESTAMP
@@ -311,7 +251,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "No generated GIS files changed; no commit created."
           else
-            git commit -m "data(gis): add validated historical HCMC GeoJSON sample"
+            git commit -m "data(gis): add validated Ben Thanh GeoJSON sample"
             git push origin "HEAD:${GITHUB_REF_NAME}"
             echo "Committed validated GeoJSON and lightweight provenance to ${GITHUB_REF_NAME}."
           fi
@@ -343,7 +283,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: kan-6-hcmc-old-osm-data
+          name: kan-6-ben-thanh-osm-data
           path: build/kan-6/package/
           if-no-files-found: warn
           retention-days: 30
