@@ -1,18 +1,19 @@
 # KAN-6 – Dataset metadata
 
-> Status: preparation template. Fill the pending values only after retrieving and inspecting the actual OSM source files.
+> Status: template. Runtime values must be populated from the successful workflow artifact; do not invent relation versions, dates, checksums, or feature counts.
 
 ## Study area
 
 | Property | Value |
 |---|---|
-| Name | Thành phố Hồ Chí Minh, Việt Nam |
-| Boundary source | OpenStreetMap administrative relation |
-| OSM relation ID | Pending boundary verification |
-| Boundary name / admin_level | Pending boundary verification |
-| Retrieval date | Pending |
-| Overpass query / source URL | Pending |
-| Geometry | MultiPolygon expected; confirm from source |
+| Name | Thành phố Hồ Chí Minh, Việt Nam (địa giới trước 01/07/2025) |
+| Boundary source | OpenStreetMap historical administrative relation |
+| OSM relation ID | 1973756 |
+| Historical database cutoff | 2025-06-30T23:59:59Z |
+| Boundary relation version | Pending workflow run |
+| Boundary version timestamp | Pending workflow run |
+| Boundary retrieval endpoint | Pending workflow run |
+| Geometry | MultiPolygon expected; confirm from generated file |
 | Output file | `data/sample/processed/hcm_boundary.geojson` |
 
 ## Building footprints
@@ -21,13 +22,15 @@
 |---|---|
 | Source | OpenStreetMap via Geofabrik Vietnam extract |
 | Download URL | https://download.geofabrik.de/asia/vietnam-latest.osm.pbf |
-| Retrieval date | Pending |
+| Retrieval date | Pending workflow run |
 | Source file | `data/sample/source/vietnam-latest.osm.pbf` (not committed) |
-| SHA-256 | Pending |
+| File size | Pending workflow run |
+| SHA-256 | Pending workflow run |
 | Source CRS | Inspect PBF metadata; do not assume |
 | Output CRS | EPSG:4326, GeoJSON RFC 7946 |
 | Selection | OSM features with `building IS NOT NULL` |
-| Spatial filter | Clip to verified HCMC boundary |
+| Spatial filter | Clip to the historical HCMC boundary |
+| Temporal meaning | Latest Geofabrik snapshot at workflow execution; not historical building state |
 | Geometry | MultiPolygon, 2D |
 | Output file | `data/sample/processed/hcm_buildings.geojson` |
 
@@ -43,7 +46,7 @@ See [data_dictionary.md](./data_dictionary.md).
 
 ## License and attribution
 
-OpenStreetMap contributors, © OpenStreetMap contributors, data available under ODbL. Include attribution in reports and downstream product credits. Source URL, retrieval date, and checksum must identify the exact snapshot used.
+OpenStreetMap contributors, © OpenStreetMap contributors, data available under ODbL. Include attribution in reports and downstream product credits. Source URLs, retrieval date, and checksums must identify the exact snapshots used.
 
 - Copyright: https://www.openstreetmap.org/copyright
 - Geofabrik: https://download.geofabrik.de/asia/vietnam.html
@@ -53,6 +56,10 @@ OpenStreetMap contributors, © OpenStreetMap contributors, data available under 
 | Item | Value |
 |---|---|
 | Script | `scripts/gis/prepare_osm_data.sh` |
+| Workflow | `.github/workflows/kan-6-prepare-osm.yml` |
+| Boundary cutoff | 2025-06-30T23:59:59Z |
+| Boundary version / timestamp | Pending |
+| Overpass endpoint | Pending |
 | GDAL version | Pending |
 | Boundary input checksum | Pending |
 | PBF checksum | Pending |
