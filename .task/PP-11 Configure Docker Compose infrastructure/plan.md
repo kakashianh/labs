@@ -2,52 +2,84 @@
 
 ## 1. Objective
 
-Provide a repeatable local environment for platform dependencies.
+Provide a repeatable local environment for infrastructure services used by development and integration tests.
 
-## 2. Context and scope
+## 2. Scope and design context
 
-Define services, networks, volumes, health checks, environment variables, and startup order for selected infrastructure; document service ports and persistence.
+Containerize infrastructure only; application modules can be added after their interfaces and service requirements are agreed.
 
-This plan covers the implementation of **PP-11**. Keep changes within this ticket's scope and preserve the interfaces agreed with dependent modules.
+**Upstream dependencies:** PP-9 for project tooling; PP-10 for component boundaries; PP-12 for persistence configuration.
 
-## 3. Implementation plan
+**Related plans:** `PP-12` · `PP-14–PP-16` · `PP-26–PP-33` · `PP-39–PP-42`. Use the links below to keep contracts aligned; update this plan if an upstream interface changes.
 
-1. Inspect the current repository structure and related modules before changing files.
-2. Confirm input/output contracts, configuration, source versions, and error cases.
-3. Implement the smallest cohesive module or pipeline for this ticket.
-4. Add structured logging, validation, and explicit handling for missing, invalid, and duplicate data where relevant.
-5. Add automated tests and a reproducible sample execution; update documentation and examples.
+## 3. Step-by-step implementation and to-do
 
-## 4. Expected deliverables
+### Step 1 — Select local service topology
 
-- Implementation and configuration required by the stated scope.
-- Documented inputs, outputs, assumptions, and operational instructions.
-- Automated tests and representative test fixtures.
-- Clear error handling and logs sufficient to diagnose failures without exposing secrets.
-- A concise record of limitations and follow-up work, if any.
+Map required services and ports from architecture; keep optional heavyweight services behind profiles.
+
+**To-do**
+- [ ] List required services and local resource expectations
+- [ ] Define service names, networks, ports, volumes, and health checks
+- [ ] Separate core services from optional graph/vector services using profiles
+
+### Step 2 — Write Compose and service configuration
+
+Create Compose definitions and non-secret environment templates for databases and infrastructure.
+
+**To-do**
+- [ ] Add compose.yaml with pinned image tags
+- [ ] Configure persistent named volumes and isolated network
+- [ ] Add health checks and restart policies
+- [ ] Keep credentials in local env files and provide safe examples
+
+### Step 3 — Add lifecycle and readiness checks
+
+Ensure dependent applications can wait for services to become healthy rather than relying on startup order alone.
+
+**To-do**
+- [ ] Add documented up/down/logs/reset commands
+- [ ] Verify health checks for each service
+- [ ] Add readiness/dependency notes for local jobs
+- [ ] Document volume reset behavior and data-loss implications
+
+### Step 4 — Validate reproducibility
+
+Test a clean startup and shutdown, then document resource and troubleshooting guidance.
+
+**To-do**
+- [ ] Start all core services from a clean checkout
+- [ ] Verify service health and connectivity
+- [ ] Verify persistent data survives container restart
+- [ ] Document ports, profiles, resource requirements, and troubleshooting
+
+## 4. Deliverables
+
+- Implementation/configuration and documentation within this ticket's scope.
+- Versioned interfaces and assumptions needed by dependent tasks.
+- Automated tests and reproducible verification instructions.
 
 ## 5. Acceptance criteria
 
-- [ ] The implementation satisfies the objective and stays within the agreed scope.
-- [ ] Inputs, outputs, schemas, and configuration are documented.
-- [ ] Invalid, missing, duplicate, or ambiguous data is handled explicitly where applicable.
-- [ ] The result is reproducible on a representative sample.
-- [ ] Automated tests pass and relevant integration boundaries are verified.
-- [ ] Documentation is updated and no secrets or local-only artifacts are committed.
+- [ ] All step to-dos are completed and reviewed.
+- [ ] Contracts, configuration, and operational assumptions are documented.
+- [ ] Failure cases are explicit; no credentials or generated large datasets are committed.
+- [ ] Tests pass from the documented local environment.
+- [ ] Downstream plans and interfaces remain consistent.
 
 ## 6. Testing strategy
 
-- **Unit tests:** core transformations/business rules, schema validation, boundary cases, and error handling.
-- **Integration tests:** interaction with the adjacent data store, service, graph/vector engine, or API used by this ticket.
-- **Regression checks:** verify stable identifiers, record counts, and output contracts on a fixed fixture.
-- **Manual verification:** follow the documented setup and execution steps from a clean environment.
+- **Unit:** validate core rules, configuration, schemas, and edge cases.
+- **Integration:** verify the relevant infrastructure or module boundary.
+- **Regression:** preserve stable IDs and contracts with fixed fixtures.
+- **Manual:** follow the documented clean-checkout workflow.
 
-## 7. Dependencies and constraints
+## 7. Cross-task links
 
-Parent Epic: **false**
-
-Coordinate with the parent Epic and upstream Tasks before changing shared schemas or interfaces. Do not assume that unavailable source fields or external service behavior exist; validate them against the actual source.
+- **Upstream:** PP-9 for project tooling; PP-10 for component boundaries; PP-12 for persistence configuration.
+- **Downstream / coordination:** PP-12, PP-14–PP-16, PP-26–PP-33, PP-39–PP-42
+- **Rule:** consume upstream outputs as defined; do not silently redefine shared identifiers, schemas, or configuration. If a contract must change, update the owning plan and all affected consumers in the same change set.
 
 ## 8. Completion notes
 
-Record the implementation approach, test commands/results, generated artifacts, data/source versions, and any deviations from this plan when the ticket is completed.
+Record implementation decisions, commands and test results, artifacts produced, data/source versions, and deviations from this plan.
