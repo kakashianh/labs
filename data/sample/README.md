@@ -19,7 +19,7 @@ This folder contains reproducible source references and outputs for the historic
 
 The workflow resolves relation 1973756 from historical OSM state at the agreed cutoff, verifies its administrative tags and approximate geographic extent, downloads the Geofabrik Vietnam PBF, clips it with Osmium, and processes buildings with GDAL/OGR. After validation, it commits the source boundary, processed GeoJSON layers, and lightweight metadata/quality summary to the selected branch when each file is at most 50 MiB. Larger outputs remain available in the workflow artifact instead.
 
-> GitHub only allows manually dispatching a workflow when its workflow file is present on the repository's default branch. If this workflow exists only on the task branch and does not appear in Actions, it must first be reviewed and merged to the default branch; then select this task branch as the run ref. Do not merge the entire task branch unless intended.
+> The repository's current default branch is `task/p1-04-gis-data-model-sample-data`, so this workflow is already on the default branch and should be available under Actions. If it does not appear, refresh the Actions page and verify that Actions are enabled for the repository.
 
 ## Data and licensing notes
 
