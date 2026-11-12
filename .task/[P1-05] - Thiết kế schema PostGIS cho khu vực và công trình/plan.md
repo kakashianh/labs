@@ -194,7 +194,7 @@ Sử dụng migration mechanism đang có trong repository. Nếu chưa có, ch�
 
 - [x] Xác nhận hai bảng `regions` và `buildings` tồn tại.
 - [x] Xác nhận cả hai geometry columns là `MULTIPOLYGON`, SRID 4326.
-- [x] Xác nhận foreign key `buildings_region_id_fkey` tồn tại. Unique constraints đã được khai báo trong migration nhưng chưa có negative test riêng trong workflow.
+- [x] Xác nhận foreign key `buildings_region_id_fkey` tồn tại; negative tests xác nhận `regions.code` và `buildings.external_id` từ chối giá trị trùng.
 - [x] Xác nhận `regions_boundary_gist_idx` và `buildings_footprint_gist_idx` tồn tại.
 - [x] Insert region/building mẫu hợp lệ; xác nhận UUID default được sinh tự động.
 - [x] Kiểm thử unique, CHECK (`osm_type` và OSM identifiers), FK và NOT NULL bằng các insert cố ý sai.
@@ -258,4 +258,4 @@ docs(db): document GIS schema and KAN-14 import mapping
 
 KAN-13 hoàn thành khi database có thể được dựng mới bằng migration, lưu AOI và building geometry với type/SRID chính xác, đảm bảo source identifiers, quan hệ/constraints và spatial indexes, đồng thời có tài liệu mapping để KAN-14 import 1 AOI cùng 431 building features một cách nhất quán.
 
-**Trạng thái:** IMPLEMENTED; automated PostGIS schema and behavior verification added to CI. GitHub Actions now verifies PostGIS setup/migration, UUID defaults, OSM identifier preservation, unique/CHECK/FK/NOT NULL constraints, `ST_Intersects`, and metric area via `geography` (m²). These checks execute in a transaction and roll back their fixture data. The latest workflow run is pending after this commit; mark the ticket fully verified only after that run passes. Lưu ý: GeoJSON bàn giao thực tế là MultiPolygon dù một số mô tả cũ ghi Polygon.
+**Trạng thái:** COMPLETED – IMPLEMENTED AND CI-VERIFIED. GitHub Actions run [43226318031](https://github.com/kakashianh/labs/actions/runs/43226318031) passed both the backend format/lint/test/Docker build job and the Docker Compose + PostGIS integration job. Runtime verification confirms PostGIS 3.5.2 on PostgreSQL 16, successful SQLx migrations, UUID defaults, OSM identifier preservation, unique/CHECK/FK/NOT NULL enforcement, `ST_Intersects`, and metric area via `geography` (m²). Behavior checks run inside a transaction and roll back fixture data. All Step 6 verification items and acceptance criteria are now checked. Lưu ý: GeoJSON bàn giao thực tế là MultiPolygon dù một số mô tả cũ ghi Polygon.
