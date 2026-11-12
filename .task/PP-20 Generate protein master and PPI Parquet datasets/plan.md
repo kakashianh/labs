@@ -2,52 +2,83 @@
 
 ## 1. Objective
 
-Publish stable curated datasets for downstream feature and graph pipelines.
+Publish the curated canonical protein table and graph-ready PPI table as versioned Parquet datasets.
 
-## 2. Context and scope
+## 2. Scope and dependencies
 
-Build protein master and PPI edge outputs; define partitioning and schema version; write atomically where feasible; add dataset manifests and quality summaries.
+PP-18 integrated protein data; PP-19 cleaned PPI edges; PP-17 Spark orchestration; PP-12 metadata.
 
-This plan covers the implementation of **PP-20**. Keep changes within this ticket's scope and preserve the interfaces agreed with dependent modules.
+Related implementation plans: [PP-17](../PP-17%20Build%20Spark%20ingestion%20pipeline/plan.md) · [PP-18](../PP-18%20Normalize%20protein%20identifiers%20and%20integrate%20biological%20datasets/plan.md) · [PP-19](../PP-19%20Clean%20and%20filter%20protein%20interaction%20datasets/plan.md) · [PP-21](../PP-21%20Implement%20PDB%2FmmCIF%20structure%20parser/plan.md) · [PP-26](../PP-26%20Design%20JanusGraph%20protein%20interaction%20schema/plan.md) · [PP-27](../PP-27%20Import%20protein%20vertices%20and%20PPI%20edges/plan.md) · [PP-30](../PP-30%20Design%20protein%20embedding%20generation%20pipeline/plan.md) · [PP-34](../PP-34%20Prepare%20multi-label%20protein%20function%20prediction%20dataset/plan.md). These are explicit handoff points; align schemas and versions rather than creating parallel definitions.
 
-## 3. Implementation plan
+## 3. Step-by-step implementation and to-do
 
-1. Inspect the current repository structure and related modules before changing files.
-2. Confirm input/output contracts, configuration, source versions, and error cases.
-3. Implement the smallest cohesive module or pipeline for this ticket.
-4. Add structured logging, validation, and explicit handling for missing, invalid, and duplicate data where relevant.
-5. Add automated tests and a reproducible sample execution; update documentation and examples.
+### Step 1 — Define curated dataset schemas
 
-## 4. Expected deliverables
+Freeze column names, types, nullability, partition keys, and dataset versioning rules.
 
-- Implementation and configuration required by the stated scope.
-- Documented inputs, outputs, assumptions, and operational instructions.
-- Automated tests and representative test fixtures.
-- Clear error handling and logs sufficient to diagnose failures without exposing secrets.
-- A concise record of limitations and follow-up work, if any.
+**To-do**
+- [ ] Define protein master schema and stable primary key
+- [ ] Define PPI edge schema and stable edge key
+- [ ] Include source/run lineage and quality flags
+- [ ] Document schema evolution policy
+
+### Step 2 — Implement Parquet writers
+
+Write compressed, partitioned datasets with atomic publish semantics.
+
+**To-do**
+- [ ] Write protein master to versioned Parquet location
+- [ ] Write PPI edges to versioned Parquet location
+- [ ] Select partitioning based on access patterns and avoid tiny files
+- [ ] Publish manifest only after successful output validation
+
+### Step 3 — Add dataset validation and catalog metadata
+
+Validate schemas, counts, relationships, and artifact checksums before marking a run complete.
+
+**To-do**
+- [ ] Check unique protein and edge keys
+- [ ] Check every PPI endpoint exists in protein master
+- [ ] Check non-null required fields and score ranges
+- [ ] Record dataset version, source versions, counts, and checksums
+
+### Step 4 — Prepare downstream handoff
+
+Provide stable sample queries and dataset references to structural, graph, embedding, and ML tasks.
+
+**To-do**
+- [ ] Add sample PySpark/Parquet read examples
+- [ ] Document refresh and rollback procedure
+- [ ] Publish representative fixture dataset
+- [ ] Notify PP-21, PP-26, PP-30, and PP-34 of schema freeze
+
+## 4. Deliverables
+
+- Tested implementation and reproducible job/output for this ticket.
+- Versioned schemas, artifacts, and provenance metadata.
+- Documentation and downstream handoff notes.
 
 ## 5. Acceptance criteria
 
-- [ ] The implementation satisfies the objective and stays within the agreed scope.
-- [ ] Inputs, outputs, schemas, and configuration are documented.
-- [ ] Invalid, missing, duplicate, or ambiguous data is handled explicitly where applicable.
-- [ ] The result is reproducible on a representative sample.
-- [ ] Automated tests pass and relevant integration boundaries are verified.
-- [ ] Documentation is updated and no secrets or local-only artifacts are committed.
+- [ ] All step-level to-dos are complete.
+- [ ] Output is deterministic for a fixed input snapshot and configuration.
+- [ ] Data quality, schema, and lineage checks pass.
+- [ ] Failure and invalid-data behavior is explicit and observable.
+- [ ] Unit, integration, and representative data tests pass.
 
 ## 6. Testing strategy
 
-- **Unit tests:** core transformations/business rules, schema validation, boundary cases, and error handling.
-- **Integration tests:** interaction with the adjacent data store, service, graph/vector engine, or API used by this ticket.
-- **Regression checks:** verify stable identifiers, record counts, and output contracts on a fixed fixture.
-- **Manual verification:** follow the documented setup and execution steps from a clean environment.
+- **Unit:** transformations, joins, filters, schema rules, and edge cases.
+- **Integration:** Spark and relevant storage/database boundaries.
+- **Data regression:** stable counts, uniqueness, referential integrity, and fixed-sample comparisons.
+- **Performance:** inspect partitioning, shuffle, skew, and memory on representative volume.
 
-## 7. Dependencies and constraints
+## 7. Cross-task handoff
 
-Parent Epic: **false**
-
-Coordinate with the parent Epic and upstream Tasks before changing shared schemas or interfaces. Do not assume that unavailable source fields or external service behavior exist; validate them against the actual source.
+- **Upstream:** PP-18 integrated protein data; PP-19 cleaned PPI edges; PP-17 Spark orchestration; PP-12 metadata.
+- **Consumers / coordination:** PP-17, PP-18, PP-19, PP-21, PP-26, PP-27, PP-30, PP-34
+- **Contract rule:** publish schema, sample records, dataset/run version, quality report, and known limitations. Coordinate any breaking change with every linked consumer.
 
 ## 8. Completion notes
 
-Record the implementation approach, test commands/results, generated artifacts, data/source versions, and any deviations from this plan when the ticket is completed.
+Record job parameters, source versions, output URIs, row counts, quality metrics, test results, and deviations.
