@@ -98,7 +98,13 @@ jobs:
           print("AOI size: approximately 1 km x 1 km; locally defined, not an administrative boundary.")
           PY
           sha256sum data/sample/source/hcm_boundary.geojson | tee build/kan-6/boundary.sha256
-          printf 'Study area: Ben Thanh Market 1 km² sample AOI\\nCenter: 10.77257, 106.69802\\nBoundary method: locally defined rectangle\\nSource reference: https://www.openstreetmap.org/way/39514795\\n' > build/kan-6/boundary-provenance.txt
+          cat > build/kan-6/boundary-provenance.txt <<'EOF'
+          Study area: Ben Thanh Market approximately 1 km² sample AOI
+          Center: 10.77257, 106.69802
+          Boundary method: locally defined rectangle
+          Source reference: https://www.openstreetmap.org/way/39514795
+          CRS: WGS 84 longitude/latitude (EPSG:4326)
+          EOF
           echo "Study area: approximately 1 km² around Ben Thanh Market" >> "$GITHUB_STEP_SUMMARY"
           echo "Boundary is a locally defined sample AOI, not a historical administrative boundary." >> "$GITHUB_STEP_SUMMARY"
 
@@ -195,10 +201,10 @@ jobs:
 
           - Study area: approximately 1 km² around Ben Thanh Market
           - Boundary source: locally defined rectangular AOI centered on OSM way 39514795
-          - Boundary as-of UTC: $BOUNDARY_AS_OF
-          - Boundary relation version: $BOUNDARY_VERSION
-          - Boundary relation version timestamp: $BOUNDARY_VERSION_TIMESTAMP
-          - Overpass endpoint: $BOUNDARY_OVERPASS_ENDPOINT
+          - Boundary method: locally defined rectangular AOI
+          - AOI center: 10.77257 N, 106.69802 E
+          - AOI extent: 106.693378–106.702662 E, 10.768079–10.777061 N
+          - Boundary provenance: see boundary-provenance.txt
           - Boundary input SHA-256: $(sha256sum data/sample/source/hcm_boundary.geojson | cut -d ' ' -f 1)
           - Building source: Geofabrik Vietnam latest extract
           - Building PBF URL: https://download.geofabrik.de/asia/vietnam-latest.osm.pbf
@@ -211,9 +217,9 @@ jobs:
           - Output checksums: see output.sha256 in this artifact
           - License: © OpenStreetMap contributors, ODbL
 
-          The boundary is reconstructed from historical OSM state at the specified cutoff.
-          Building footprints are from the downloaded Geofabrik snapshot and clipped to
-          that historical boundary; they are not a historical building snapshot.
+          The study boundary is a locally defined approximately 1 km² rectangle centered on Ben Thanh Market.
+          Building footprints are from the downloaded Geofabrik Vietnam snapshot and clipped to this AOI.
+          Buildings represent the latest available snapshot at workflow execution, not historical building data.
           EOF
           echo "Null building IDs: $NULL_IDS; duplicate ID groups: $DUPLICATE_IDS"
 
@@ -270,10 +276,10 @@ jobs:
           cat > build/kan-6/package/README.md <<'EOF'
           # KAN-6 HCMC OSM data artifact
 
-          Study area: historical Ho Chi Minh City boundary before 2025-07-01.
-          Boundary: OSM administrative relation 1973756, historical database state at 2025-06-30T23:59:59Z.
-          Buildings: 2D OSM building footprints from the downloaded Geofabrik snapshot, clipped to the historical boundary.
-          Boundary version and retrieval endpoint are recorded in boundary-provenance.txt.
+          Study area: approximately 1 km² around Ben Thanh Market, District 1.
+          Boundary: locally defined rectangular AOI centered at 10.77257 N, 106.69802 E.
+          Buildings: 2D OSM building footprints from the downloaded Geofabrik Vietnam snapshot, clipped to the AOI.
+          Boundary coordinates, method and source reference are recorded in boundary-provenance.txt.
           CRS: GeoJSON RFC 7946 / WGS 84 longitude-latitude (EPSG:4326).
           Attribution: © OpenStreetMap contributors, ODbL.
           This artifact is a reproducible snapshot; consult quality-summary.md and checksums.
