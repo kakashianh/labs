@@ -150,7 +150,7 @@ jobs:
           PY
           BOUNDARY_VERSION="$(jq -r '.elements[] | select(.type == "relation" and .id == 1973756) | .version' build/kan-6/hcm_relation.osm.json)"
           BOUNDARY_VERSION_TIMESTAMP="$(jq -r '.elements[] | select(.type == "relation" and .id == 1973756) | .timestamp' build/kan-6/hcm_relation.osm.json)"
-          printf 'Boundary relation: 1973756\\nBoundary as-of UTC: %s\\nBoundary version: %s\\nBoundary version timestamp: %s\\nOverpass endpoint: %s\\n' \\
+          printf 'Boundary relation: 1973756\nBoundary as-of UTC: %s\nBoundary version: %s\nBoundary version timestamp: %s\nOverpass endpoint: %s\n' \\
             "$BOUNDARY_AS_OF" "$BOUNDARY_VERSION" "$BOUNDARY_VERSION_TIMESTAMP" "$endpoint" \\
             > build/kan-6/boundary-provenance.txt
           echo "Boundary source: OSM relation 1973756, historical state at $BOUNDARY_AS_OF (version $BOUNDARY_VERSION; version timestamp $BOUNDARY_VERSION_TIMESTAMP)" >> "$GITHUB_STEP_SUMMARY"
@@ -242,6 +242,29 @@ jobs:
           population, occupancy, or epidemiological attributes.
           EOF
           cat data/sample/processed/quality-summary.md >> "$GITHUB_STEP_SUMMARY"
+          cat > data/sample/processed/metadata.md <<EOF
+          # KAN-6 generated dataset metadata
+
+          - Study area: Ho Chi Minh City administrative boundary before 2025-07-01
+          - Boundary source: OpenStreetMap relation 1973756
+          - Boundary as-of UTC: $BOUNDARY_AS_OF
+          - Boundary relation version: $BOUNDARY_VERSION
+          - Boundary relation version timestamp: $BOUNDARY_VERSION_TIMESTAMP
+          - Overpass endpoint: $endpoint
+          - Boundary input SHA-256: $(sha256sum data/sample/source/hcm_boundary.geojson | cut -d ' ' -f 1)
+          - Building source: Geofabrik Vietnam latest extract
+          - Building PBF URL: https://download.geofabrik.de/asia/vietnam-latest.osm.pbf
+          - Building PBF SHA-256: $(cut -d ' ' -f 1 build/kan-6/pbf.sha256)
+          - GDAL: $(ogr2ogr --version)
+          - Boundary features: $BOUNDARY_COUNT
+          - Building features: $BUILDING_COUNT
+          - Output checksums: see output.sha256 in this artifact
+          - License: © OpenStreetMap contributors, ODbL
+
+          The boundary is reconstructed from historical OSM state at the specified cutoff.
+          Building footprints are from the downloaded Geofabrik snapshot and clipped to
+          that historical boundary; they are not a historical building snapshot.
+          EOF
           echo "Null building IDs: $NULL_IDS; duplicate ID groups: $DUPLICATE_IDS"
 
       - name: Package data and provenance
@@ -251,6 +274,7 @@ jobs:
           cp -f data/sample/source/hcm_boundary.geojson build/kan-6/package/ 2>/dev/null || true
           cp -f data/sample/processed/*.geojson build/kan-6/package/ 2>/dev/null || true
           cp -f data/sample/processed/quality-summary.md build/kan-6/package/ 2>/dev/null || true
+          cp -f data/sample/processed/metadata.md build/kan-6/package/ 2>/dev/null || true
           cp -f build/kan-6/*.sha256 build/kan-6/package/ 2>/dev/null || true
           cp -f build/kan-6/*inspection.txt build/kan-6/package/ 2>/dev/null || true
           cp -f build/kan-6/boundary-provenance.txt build/kan-6/package/ 2>/dev/null || true
