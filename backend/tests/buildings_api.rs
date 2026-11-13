@@ -70,6 +70,18 @@ async fn buildings_api_works_against_real_postgis() {
     assert_eq!(empty_json["data"].as_array().unwrap().len(), 0);
     assert_eq!(empty_json["pagination"]["total"], 1);
 
+    let docs_response = app.clone().oneshot(
+        Request::builder()
+            .uri("/api-docs/openapi.json")
+            .body(Body::empty())
+            .expect("build OpenAPI request"),
+    ).await.expect("call OpenAPI route");
+    assert_eq!(docs_response.status(), StatusCode::OK);
+    let docs_body = axum::body::to_bytes(docs_response.into_body(), 1024 * 1024)
+        .await.expect("read OpenAPI body");
+    let docs_json: Value = serde_json::from_slice(&docs_body).expect("valid OpenAPI JSON");
+    assert!(docs_json["paths"]["/api/v1/buildings"]["get"].is_object());
+
     let invalid_response = app.oneshot(
         Request::builder().uri("/api/v1/buildings?region_id=not-a-uuid")
             .body(Body::empty()).expect("build invalid request"),
