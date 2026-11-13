@@ -230,7 +230,7 @@ Dùng cùng crate/test harness và PostGIS image pin cụ thể theo KAN-15. Kh�
 - [ ] Tạo database/schema và chạy migrations của ứng dụng.
 - [ ] Seed fixture deterministic: tối thiểu 2 regions, 3 buildings, nullable attributes và MultiPolygon SRID 4326.
 - [ ] Test region list có dữ liệu, ordering code ASC và field contract.
-- [ ] Test region list rỗng -> HTTP 200, data [].
+- [x] Test region list rỗng -> HTTP 200, data [].
 - [ ] Test region detail tồn tại, invalid UUID -> 400, UUID không tồn tại -> 404.
 - [ ] Test building detail tồn tại, invalid UUID -> 400, UUID không tồn tại -> 404.
 - [ ] Test nullable fields và GeoJSON MultiPolygon type/coordinates.
