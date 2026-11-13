@@ -1,5 +1,7 @@
 //! Database helpers.
 
+pub mod buildings;
+
 use sqlx::PgPool;
 
 /// Run embedded SQLx migrations.
