@@ -37,6 +37,25 @@ async fn region_and_building_detail_apis_work_against_postgis() {
         .expect("connect DB");
     db::run_migrations(&pool).await.expect("run migrations");
 
+    // An empty database is a valid state for the region collection endpoint.
+    let app = router(AppState::new(pool.clone()));
+    let empty_list = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/regions")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(empty_list.status(), StatusCode::OK);
+    let body = axum::body::to_bytes(empty_list.into_body(), 1024 * 1024)
+        .await
+        .unwrap();
+    let json: Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(json["data"].as_array().unwrap().len(), 0);
+
     let region_id: uuid::Uuid = sqlx::query_scalar(
         r#"INSERT INTO public.regions (code,name,description,boundary_method,source_reference,boundary)
         VALUES ('A-REGION','Region A',NULL,'fixture',NULL,
@@ -65,7 +84,6 @@ async fn region_and_building_detail_apis_work_against_postgis() {
     .await
     .expect("insert building");
 
-    let app = router(AppState::new(pool.clone()));
     let list = app
         .clone()
         .oneshot(
