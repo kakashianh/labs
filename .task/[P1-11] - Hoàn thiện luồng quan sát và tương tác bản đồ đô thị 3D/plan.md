@@ -2,7 +2,7 @@
 
 ## 1. Objective
 
-Tích hợp và kiểm thử end-to-end các thành phần bản đồ đã được triển khai ở KAN-16 và KAN-17, đảm bảo người dùng có thể mở bản đồ, quan sát công trình từ PostGIS, điều hướng, chọn công trình và xem thông tin chi tiết một cách nhất quán.
+Tích hợp và kiểm thử end-to-end các thành phần bản đồ đã được triển khai ở P1-09 và P1-10, đảm bảo người dùng có thể mở bản đồ, quan sát công trình từ PostGIS, điều hướng, chọn công trình và xem thông tin chi tiết một cách nhất quán.
 
 Đây là task tích hợp và hoàn thiện luồng sử dụng, không phải task triển khai lại các API hoặc component đã có.
 
@@ -16,7 +16,7 @@ Tích hợp và kiểm thử end-to-end các thành phần bản đồ đã đư
 ## 2. Scope
 
 ### In scope
-- Rà soát kết quả KAN-16 và KAN-17.
+- Rà soát kết quả P1-09 và P1-10.
 - Tích hợp data loading, Cesium rendering, selection và detail panel.
 - Kiểm tra luồng tải dữ liệu từ Backend đến Frontend.
 - Chuẩn hóa trạng thái loading, empty, error và selected.
@@ -26,8 +26,8 @@ Tích hợp và kiểm thử end-to-end các thành phần bản đồ đã đư
 - Sửa lỗi tích hợp phát hiện trong phạm vi luồng bản đồ.
 
 ### Out of scope
-- Viết lại API KAN-15/KAN-7.
-- Xây dựng lại Cesium data source hoặc BuildingInfoPanel nếu đã hoàn thành ở KAN-16/KAN-17.
+- Viết lại API P1-07/P1-08.
+- Xây dựng lại Cesium data source hoặc BuildingInfoPanel nếu đã hoàn thành ở P1-09/P1-10.
 - Thêm chức năng chỉnh sửa dữ liệu GIS.
 - Mô phỏng SIR.
 - Hiển thị trạng thái dịch tễ hoặc hotspot.
@@ -81,11 +81,11 @@ Show Information Panel
 
 ## 5. Implementation Plan
 
-### Step 1 – Review Outputs from KAN-16 and KAN-17
+### Step 1 – Review Outputs from P1-09 and P1-10
 
-- [ ] Kiểm tra data loading flow và API client của KAN-16.
+- [ ] Kiểm tra data loading flow và API client của P1-09.
 - [ ] Kiểm tra Cesium data source và building entity IDs.
-- [ ] Kiểm tra selection state và click handler của KAN-17.
+- [ ] Kiểm tra selection state và click handler của P1-10.
 - [ ] Kiểm tra BuildingInfoPanel và detail API integration.
 - [ ] Xác nhận route/API response thực tế giữa Frontend và Backend.
 - [ ] Ghi nhận các vấn đề tích hợp trước khi chỉnh sửa.
@@ -187,7 +187,7 @@ Tạo checklist có thể chạy lại theo môi trường local.
 ## 7. Deliverables
 
 1. Luồng bản đồ end-to-end được tích hợp.
-2. Các lỗi tích hợp trong phạm vi KAN-16/KAN-17 được xử lý.
+2. Các lỗi tích hợp trong phạm vi P1-09/P1-10 được xử lý.
 3. Integration tests hoặc E2E checklist.
 4. Kết quả kiểm thử trên bộ dữ liệu đô thị mẫu.
 5. Tài liệu chạy và kiểm tra luồng bản đồ.
@@ -211,3 +211,55 @@ docs(map): document end-to-end map verification
 KAN-8 hoàn thành khi toàn bộ luồng mở bản đồ → tải công trình → điều hướng → chọn công trình → xem chi tiết → đổi lựa chọn/bỏ chọn hoạt động nhất quán trên bộ dữ liệu đô thị mẫu, các trạng thái lỗi được xử lý và có kết quả kiểm thử tích hợp có thể đối chiếu.
 
 Ticket này đóng gói và xác nhận chất lượng luồng bản đồ Phase 1; không mở rộng sang mô phỏng SIR hoặc phân tích dịch tễ.
+
+
+---
+
+## 10. API and frontend integration contract (2026-11-13)
+
+This ticket is the integration/acceptance layer for P1-09 and P1-10. It must validate their outputs rather than implement a second version of their responsibilities.
+
+### Backend endpoints
+
+| Purpose | Endpoint | Contract |
+|---|---|---|
+| Region list | `GET /api/v1/regions` | `{ data: RegionListItem[] }`; each item has UUID `id`, `code`, `name`, nullable `description` |
+| Region detail | `GET /api/v1/regions/{region_id}` | `{ data: RegionDetail }`; includes GeoJSON Geometry boundary |
+| Building list | `GET /api/v1/buildings` | `{ data: BuildingDto[], pagination: { page, page_size, total, total_pages } }` |
+| Building detail | `GET /api/v1/buildings/{building_id}` | `{ data: BuildingDetail }`; detail lookup by UUID |
+
+Building list query parameters:
+- `page`: default 1, positive integer.
+- `page_size`: default 100, positive integer, maximum 500.
+- `region_id`: optional UUID filter.
+- Empty collection is valid: `data: []` and `pagination.total_pages: 0`.
+
+Each building list/detail DTO contains `id` (UUID), `region_id` (UUID), `external_id`, nullable `name`, nullable `building_type`, and `geometry` as a GeoJSON Geometry. The current dataset contains 431 buildings, but this is a dataset snapshot, **not** a fixed application constant.
+
+### Data-loading and Cesium rules
+
+- Follow P1-09's pagination aggregation: request pages until `page >= pagination.total_pages`; do not assume one page or hard-code 431.
+- The API returns Geometry objects, not GeoJSON Features or a FeatureCollection. The P1-09 adapter must create Features and a FeatureCollection (or perform an equivalent explicit Cesium mapping).
+- Preserve `building.id` UUID as the stable Cesium entity key and as the detail API path parameter. Do not substitute `external_id`, entity index or display name.
+- Do not make N+1 detail requests. The list payload is sufficient for initial map rendering; fetch detail only after a user selects a building.
+- Geometry uses GeoJSON coordinate order and the API currently exposes MultiPolygon geometries in EPSG:4326; validate placement against the known study-area extent rather than silently swapping coordinates.
+- Region list does not contain boundary geometry; request region detail only if the map workflow actually needs the boundary.
+
+### Ownership boundaries
+
+- **P1-09:** API client/list loading, pagination, GeoJSON-to-Cesium mapping, initial building rendering and stable entity identity.
+- **P1-10:** camera/interaction polish, selected UUID state, detail API request, information panel and selected-entity highlight.
+- **P1-11:** end-to-end verification, state consistency, error-path validation and fixes for integration defects. Do not duplicate the features owned by P1-09/P1-10.
+
+### Additional integration acceptance checks
+
+- [ ] Test more than one page using mocked pagination, even if the current 431-building snapshot fits in a single page at `page_size=500`.
+- [ ] Test empty list and final partial page.
+- [ ] Assert every rendered entity retains the source UUID and correct `region_id`.
+- [ ] Assert selecting an entity calls the detail endpoint with its UUID and unwraps `response.data`.
+- [ ] Assert null `name`/`building_type` do not crash or produce misleading content.
+- [ ] Assert a failed list request is not represented as a successful empty dataset.
+- [ ] Assert stale detail responses cannot replace the currently selected building.
+- [ ] Assert camera interaction remains available while the information panel is open.
+
+**Prerequisite status:** P1-07 and P1-08 APIs are merged; P1-09 plan has been aligned to those contracts. P1-11 implementation must still verify the actual frontend behavior and record test evidence; this documentation update does not mark P1-09, P1-10 or P1-11 implementation as complete.
