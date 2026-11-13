@@ -147,7 +147,7 @@ Yêu cầu:
 - [x] Implement pagination và ordering ổn định bằng unique key (id) để tránh record nhảy trang do thứ tự không xác định.
 - [x] Chuyển geometry sang GeoJSON.
 - [x] Implement query đếm tổng record theo filter.
-- [ ] Xử lý trường hợp geometry null/không hợp lệ theo quy tắc dữ liệu đã thống nhất.
+- [x] Xác nhận `buildings.footprint` là `NOT NULL` và kiểu `geometry(MultiPolygon, 4326)` theo migration KAN-13; trường hợp NULL bị database constraint chặn. Tính hợp lệ topology của geometry thuộc bước kiểm tra dữ liệu đầu vào KAN-14, không phát sinh nullable DTO ở API.
 - [x] Tránh N+1 query khi lấy danh sách.
 
 ### Step 4 – Implement Axum Handler and Route
@@ -204,7 +204,7 @@ Mở rộng workflow Rust CI hiện có nếu có; tránh tạo workflow trùng 
 - [x] Job Integration: chạy Integration Tests với Testcontainers + PostGIS.
 - [x] Chạy Unit Test và Integration Test trong hai job riêng; toàn bộ test target của KAN-15 đều được thực thi.
 - [x] CI không cần Supabase credential, không chạy migration/seed trên project thật và không ghi secret vào log.
-- [ ] Xác nhận CI xanh trên Pull Request/branch trước nghiệm thu KAN-15.
+- [x] Xác nhận toàn bộ CI checks trên Pull Request #10 chạy thành công (Unit/Clippy/format, Testcontainers PostGIS, Docker build và PostGIS Compose integration; theo xác nhận của người dùng).
 
 ### Step 6 – Add OpenAPI Documentation and Verify API
 
@@ -243,9 +243,15 @@ Tạo OpenAPI specification làm API contract chính thức cho KAN-15; không c
 - [x] Có Unit Tests cho validation, pagination, OpenAPI contract và error mapping; không phụ thuộc database.
 - [x] Có Integration Tests chạy PostgreSQL 17/PostGIS thật bằng Testcontainers, bao phủ repository và Axum HTTP route.
 - [x] GitHub Actions chạy xanh Unit + Integration Tests; Integration Test không dùng Supabase credentials.
-- [ ] Có OpenAPI 3.0.3 JSON version-controlled, được expose qua API và kiểm tra tính hợp lệ/những thành phần contract chính bằng Unit Test; Swagger UI truy cập được tại /docs.
+- [x] Có OpenAPI 3.0.3 JSON version-controlled, được expose qua API và kiểm tra tính hợp lệ/những thành phần contract chính bằng Unit Test; Swagger UI truy cập được tại /docs.
 
-## 6. Deliverables
+## 6. Deferred follow-ups (không chặn nghiệm thu API)
+
+- Kiểm thử fault-injection riêng cho nhánh `AppError::Database` chưa được bổ sung; hiện nhánh Database và Internal cùng trả HTTP 500 với thông điệp generic, không serialize chi tiết SQL/credentials. Có thể bổ sung khi Backend có test harness để mô phỏng DB unavailable.
+- Xác minh truy vấn bằng đúng least-privilege runtime role chưa thực hiện vì role/credential triển khai chưa được chốt. Thực hiện ở task cấu hình deployment/security; không dùng Supabase secret trong CI.
+- `backend/Cargo.lock` chưa được cập nhật cùng dependency `testcontainers` trong diff hiện tại. Nên regenerate/commit lockfile và bật `--locked` trong CI ở một commit follow-up để pin dependency graph. Đây là cải thiện tính tái lập build, không ảnh hưởng kết quả CI hiện tại.
+
+## 7. Deliverables
 
 1. Endpoint truy vấn danh sách công trình.
 2. Repository/query và DTO liên quan.
@@ -255,7 +261,7 @@ Tạo OpenAPI specification làm API contract chính thức cho KAN-15; không c
 6. GitHub Actions CI cho format, lint, Unit Tests và Integration Tests.
 7. OpenAPI specification và Swagger UI (nếu phù hợp), kèm ví dụ request/response.
 
-## 7. Suggested Commit Sequence
+## 8. Suggested Commit Sequence
 
 ~~~text
 feat(api): define building list response contract
@@ -273,7 +279,7 @@ ci(api): run Rust unit and integration tests
 docs(api): publish OpenAPI spec and Swagger UI
 ~~~
 
-## 8. Final Definition of Done
+## 9. Final Definition of Done
 
 KAN-15 hoàn thành khi Frontend có thể gọi API để lấy danh sách công trình theo trang và theo khu vực, nhận thuộc tính cùng geometry thống nhất; Unit Tests và Integration Tests (PostgreSQL/PostGIS qua Testcontainers) chạy xanh trên CI; OpenAPI contract phản ánh chính xác implementation.
 
