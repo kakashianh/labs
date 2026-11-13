@@ -128,6 +128,49 @@ async fn buildings_api_works_against_real_postgis() {
     assert_eq!(unfiltered_json["data"].as_array().unwrap().len(), 3);
     assert_eq!(unfiltered_json["pagination"]["total"], 3);
 
+    let first_page_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri(format!(
+                    "/api/v1/buildings?region_id={region_a}&page=1&page_size=1"
+                ))
+                .body(Body::empty())
+                .expect("build first-page request"),
+        )
+        .await
+        .expect("call first-page route");
+    let second_page_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri(format!(
+                    "/api/v1/buildings?region_id={region_a}&page=2&page_size=1"
+                ))
+                .body(Body::empty())
+                .expect("build second-page request"),
+        )
+        .await
+        .expect("call second-page route");
+    let first_page_body = axum::body::to_bytes(first_page_response.into_body(), 1024 * 1024)
+        .await
+        .expect("read first-page body");
+    let second_page_body = axum::body::to_bytes(second_page_response.into_body(), 1024 * 1024)
+        .await
+        .expect("read second-page body");
+    let first_page_json: Value =
+        serde_json::from_slice(&first_page_body).expect("valid first-page JSON");
+    let second_page_json: Value =
+        serde_json::from_slice(&second_page_body).expect("valid second-page JSON");
+    assert_eq!(first_page_json["pagination"]["total_pages"], 2);
+    assert_eq!(second_page_json["pagination"]["total_pages"], 2);
+    assert_eq!(first_page_json["data"].as_array().unwrap().len(), 1);
+    assert_eq!(second_page_json["data"].as_array().unwrap().len(), 1);
+    assert!(
+        first_page_json["data"][0]["id"].as_str().unwrap()
+            < second_page_json["data"][0]["id"].as_str().unwrap()
+    );
+
     let empty_response = app
         .clone()
         .oneshot(
