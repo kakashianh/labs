@@ -40,4 +40,4 @@ Run the PostGIS integration test (requires Docker):
 cargo test --test buildings_api -- --nocapture
 ```
 
-The integration test starts an isolated `postgis/postgis:16-3.4` container with Testcontainers, applies the backend SQLx migrations, seeds deterministic fixtures, and exercises the Axum HTTP route. It does not connect to Supabase and requires no Supabase secrets.
+The integration test starts an isolated `postgis/postgis:17-3.5` container with Testcontainers, applies the backend SQLx migrations, seeds deterministic fixtures, and exercises the Axum HTTP route. It does not connect to Supabase and requires no Supabase secrets.
