@@ -69,9 +69,16 @@ pub async fn list_buildings(
     let query = query.validate()?;
     let page_size = i64::try_from(query.page_size)
         .map_err(|_| AppError::BadRequest("page_size is out of range".into()))?;
+    let mut tx = state.db.begin().await?;
+    // Supabase installs PostGIS in the extensions schema; local Compose installs
+    // it in public. Resolve spatial functions in either supported schema.
+    sqlx::query("SET LOCAL search_path TO public, extensions")
+        .execute(&mut *tx)
+        .await?;
+
     let total: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM public.buildings b WHERE ($1::uuid IS NULL OR b.region_id = $1)",
-    ).bind(query.region_id).fetch_one(&state.db).await?;
+    ).bind(query.region_id).fetch_one(&mut *tx).await?;
 
     // PostGIS is installed in public in local Compose and extensions in Supabase.
     // Both schemas are normally in the backend role search_path; unqualified
@@ -86,7 +93,7 @@ pub async fn list_buildings(
         LIMIT $2 OFFSET $3
         "#,
     ).bind(query.region_id).bind(page_size).bind(query.offset)
-      .fetch_all(&state.db).await?;
+      .fetch_all(&mut *tx).await?;
 
     let mut data = Vec::with_capacity(rows.len());
     for row in rows {
@@ -99,6 +106,7 @@ pub async fn list_buildings(
             geometry: row.try_get("geometry")?,
         });
     }
+    tx.commit().await?;
     let total_pages = if total == 0 { 0 } else { (total as u64).div_ceil(query.page_size) };
     Ok(Json(BuildingListResponse {
         data,
