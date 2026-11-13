@@ -124,8 +124,7 @@ pub async fn list_buildings(
         .map_err(|_| AppError::BadRequest("page_size is out of range".into()))?;
 
     let (total, records) =
-        db::buildings::list_buildings(&state.db, query.region_id, page_size, query.offset)
-            .await?;
+        db::buildings::list_buildings(&state.db, query.region_id, page_size, query.offset).await?;
     let data = records
         .into_iter()
         .map(|record| BuildingDto {
