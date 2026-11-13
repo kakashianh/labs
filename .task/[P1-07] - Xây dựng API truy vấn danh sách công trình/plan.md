@@ -46,6 +46,22 @@ API cung cấp dữ liệu công trình theo định dạng ổn định, có ph
 
 Không đưa Python service/backend vào kiến trúc. Ưu tiên tái sử dụng cấu trúc config, database connection, error handling và response convention đã có trong Backend.
 
+### KAN-14 database contract (verified)
+
+Nguồn dữ liệu đích là Supabase PostgreSQL project đã được nạp và nghiệm thu ở KAN-14; không dùng lại GeoJSON làm runtime source.
+
+| Table/column | Verified definition | API implication |
+|---|---|---|
+| `public.buildings.id` | UUID primary key | Trả về dưới dạng string; dùng làm `building_id` trong API |
+| `region_id` | UUID FK tới `public.regions.id` | Filter bằng UUID, không dùng integer |
+| `external_id` | Unique, mã OSM ổn định | Có thể expose như mã nguồn ngoài; không thay thế `id` |
+| `name` | Nullable; 326/431 bản ghi đang NULL | DTO và UI phải chấp nhận null |
+| `building_type` | Thuộc tính phân loại được map từ GeoJSON `building` | Không tự đổi tên thành `usage` nếu không có mapping rõ ràng |
+| `footprint` | `geometry(MultiPolygon, 4326)` | Serialize thành GeoJSON MultiPolygon WGS84 |
+| OSM attributes | Các cột nguồn OSM đã lưu theo migration KAN-13 | Chỉ expose các trường thực sự cần cho UI |
+
+Snapshot hiện được nạp có 431 buildings và 1 region. Đây là baseline kiểm thử dữ liệu mẫu, không phải giới hạn cứng của API.
+
 ## 4. Implementation Plan
 
 ### Step 1 – Inspect Existing Backend and GIS Schema
@@ -60,6 +76,8 @@ Không đưa Python service/backend vào kiến trúc. Ưu tiên tái sử dụn
 - [ ] Không tự giả định các field như height, floors, usage nếu dataset không có.
 
 ### Step 2 – Define Building List API Contract
+
+**Schema-specific decisions:** `region_id` phải là UUID; `id` là UUID; `name` có thể null; geometry trả về phải là GeoJSON `MultiPolygon` với tọa độ longitude/latitude theo EPSG:4326. Response DTO không được ép `name` thành non-null.
 
 Thiết kế endpoint theo convention hiện có của project.
 
@@ -120,7 +138,7 @@ Yêu cầu:
 - Hỗ trợ filter region_id khi được truyền vào.
 - Pagination ổn định bằng LIMIT/OFFSET hoặc cơ chế phù hợp với repository hiện tại.
 - Có ORDER BY xác định để kết quả giữa các trang ổn định.
-- Serialize geometry sang GeoJSON bằng PostGIS hoặc mapping tương đương.
+- Serialize `footprint` sang GeoJSON bằng PostGIS (ví dụ `ST_AsGeoJSON(footprint)`) hoặc mapping tương đương. PostGIS extension của Supabase đang nằm trong schema `extensions`; kiểm tra `search_path`/schema qualification khi gọi spatial functions.
 - Tính tổng số record phù hợp với filter để trả pagination metadata.
 
 - [ ] Tạo repository/query cho danh sách buildings.
@@ -138,7 +156,7 @@ Tạo handler nhận query parameters, validate input và gọi repository.
 - [ ] Tạo request/query struct.
 - [ ] Validate page >= 1.
 - [ ] Validate page_size > 0 và không vượt giới hạn.
-- [ ] Validate region_id theo kiểu ID thực tế.
+- [ ] Validate `region_id` theo UUID (không nhận integer).
 - [ ] Tạo handler truy vấn danh sách công trình.
 - [ ] Đăng ký route GET /api/v1/buildings.
 - [ ] Trả response theo API contract đã chốt.
@@ -151,7 +169,9 @@ Kiểm thử cả logic query và HTTP endpoint.
 
 - [ ] Test danh sách công trình không truyền filter.
 - [ ] Test pagination và page_size boundary.
-- [ ] Test filter theo region_id hợp lệ.
+- [ ] Test filter theo UUID `region_id` hợp lệ.
+- [ ] Test `name = NULL` vẫn serialize response thành công.
+- [ ] Test geometry `MultiPolygon` EPSG:4326 được trả đúng GeoJSON.
 - [ ] Test region_id không tồn tại hoặc sai định dạng.
 - [ ] Test page/page_size không hợp lệ.
 - [ ] Test response geometry có GeoJSON hợp lệ.
@@ -168,6 +188,13 @@ Kiểm thử cả logic query và HTTP endpoint.
 - [ ] Chạy toàn bộ test liên quan.
 - [ ] Kiểm tra endpoint bằng HTTP client.
 - [ ] Xác nhận response đủ dữ liệu để KAN-16 tích hợp.
+
+### Database access and security
+
+- Backend kết nối Supabase bằng connection string/secret ở server-side environment; không đưa DB password/service-role key vào Frontend.
+- Các bảng `public.regions` và `public.buildings` đang bật RLS và chưa cấp quyền đọc rộng cho `anon`/`authenticated`. Không tắt RLS hoặc tạo policy public chỉ để API hoạt động.
+- Chọn role/credential Backend có quyền tối thiểu cần thiết; giữ secret ngoài source code và log.
+- [ ] Kiểm thử truy vấn qua đúng role mà Backend sẽ sử dụng.
 
 ## 5. Acceptance Criteria
 
