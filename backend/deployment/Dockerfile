@@ -11,6 +11,7 @@ RUN cargo build --release
 RUN rm -f target/release/deps/backend*
 
 # Build application
+COPY openapi ./openapi
 COPY src ./src
 RUN cargo build --release
 
