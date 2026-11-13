@@ -90,11 +90,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # docker-compose.yml references backend/.env. CI creates it from the
-      # committed example; Compose overrides DATABASE_URL for container networking.
-      - name: Prepare backend environment
-        run: cp backend/.env.example backend/.env
-
       - name: Start stack with Docker Compose Action
         uses: hoverkraft-tech/compose-action@b659c744ee9bed25aea2307c017ad849bd104433 # v3.2.0
         with:
