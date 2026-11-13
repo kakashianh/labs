@@ -47,6 +47,22 @@ Ticket này bổ sung các API tra cứu theo định danh, không trùng với 
 
 Tái sử dụng database pool, routing, DTO conventions và error handling đã có. Không tạo thêm Python backend/service.
 
+### KAN-14 database contract (verified)
+
+| Table/column | Verified definition | API implication |
+|---|---|---|
+| `public.regions.id` | UUID primary key | Path parameter `region_id` là UUID |
+| `public.regions.code` | Unique region code | Có thể dùng làm mã hiển thị/lookup phụ nếu API contract cần |
+| `public.regions.boundary` | `geometry(MultiPolygon, 4326)` | Serialize thành GeoJSON MultiPolygon EPSG:4326 |
+| `public.buildings.id` | UUID primary key | Path parameter `building_id` là UUID |
+| `public.buildings.region_id` | UUID FK tới `regions.id` | Trả region reference dưới dạng UUID |
+| `public.buildings.external_id` | Unique OSM external identifier | Giữ riêng với UUID nội bộ |
+| `public.buildings.name` | Nullable; 326/431 records hiện NULL | Detail DTO phải cho phép null |
+| `public.buildings.building_type` | Mapping từ thuộc tính GeoJSON `building` | Chỉ trả field có thật trong schema |
+| `public.buildings.footprint` | `geometry(MultiPolygon, 4326)` | Serialize thành GeoJSON MultiPolygon EPSG:4326 |
+
+Supabase target dùng PostgreSQL 17.11/PostGIS 3.3.7; extension PostGIS được cài trong schema `extensions`. Kiểm tra schema qualification/`search_path` khi gọi spatial functions.
+
 ## 4. API Contract
 
 Các endpoint đề xuất (điều chỉnh prefix nếu project đã có convention):
@@ -60,7 +76,7 @@ Các endpoint đề xuất (điều chỉnh prefix nếu project đã có conven
 Lưu ý:
 - GET /api/v1/buildings (danh sách có pagination/filter) thuộc KAN-15.
 - GET /api/v1/buildings/{building_id} là endpoint chi tiết riêng của ticket này.
-- Kiểu ID phải theo schema thực tế, không mặc định UUID nếu database không dùng UUID.
+- Theo schema KAN-14, `region_id` và `building_id` đều là UUID; validate UUID ở path parameter.
 
 Response region detail minh họa:
 
@@ -93,7 +109,11 @@ Response building detail minh họa:
 }
 ~~~
 
-Các field trong properties phải lấy từ schema/dataset thực tế. Không tự thêm height, floors, population hoặc thông tin không có nguồn dữ liệu.
+Các field trong properties phải lấy từ schema/dataset thực tế. `name` có thể NULL; geometry của region là `MultiPolygon` EPSG:4326 và geometry của building lấy từ `footprint` cũng là `MultiPolygon` EPSG:4326. Không tự thêm height, floors, population hoặc thông tin không có nguồn dữ liệu.
+
+### Database access and security
+
+Các bảng `public.regions` và `public.buildings` trên Supabase đang bật RLS, không có policy đọc rộng cho `anon`/`authenticated`. Backend phải dùng server-side database credential/role phù hợp; không tắt RLS hoặc expose service-role/database secret cho trình duyệt. Giữ credentials trong environment/secret manager.
 
 ## 5. Implementation Plan
 
@@ -101,8 +121,9 @@ Các field trong properties phải lấy từ schema/dataset thực tế. Không
 
 - [ ] Kiểm tra routes/handlers/repositories đã có trong Axum Backend.
 - [ ] Kiểm tra schema thực tế của regions và buildings.
-- [ ] Xác định kiểu ID và các thuộc tính cần trả về.
-- [ ] Xác định geometry type và SRID.
+- [ ] Xác nhận `regions.id` và `buildings.id` là UUID; `regions.code` và `buildings.external_id` là unique.
+- [ ] Xác định các thuộc tính cần trả về; `buildings.name` phải nullable.
+- [ ] Xác nhận `regions.boundary` và `buildings.footprint` là `MultiPolygon`, SRID 4326, 2D.
 - [ ] Kiểm tra quan hệ buildings.region_id.
 - [ ] Kiểm tra response/error conventions để tái sử dụng.
 
@@ -163,7 +184,9 @@ Truy vấn một công trình theo building ID.
 - [ ] Test region ID không tồn tại trả 404.
 - [ ] Test lấy building detail tồn tại.
 - [ ] Test building ID không tồn tại trả 404.
-- [ ] Test ID sai định dạng.
+- [ ] Test UUID sai định dạng cho region_id/building_id.
+- [ ] Test building detail có `name = NULL`.
+- [ ] Test region boundary và building footprint được serialize đúng GeoJSON MultiPolygon EPSG:4326.
 - [ ] Test geometry response là GeoJSON hợp lệ.
 - [ ] Test các thuộc tính trả về khớp schema.
 - [ ] Test lỗi database được xử lý an toàn.
@@ -176,6 +199,11 @@ Truy vấn một công trình theo building ID.
 - [ ] Chạy formatter, linter và test.
 - [ ] Kiểm tra API bằng HTTP client.
 - [ ] Xác nhận dữ liệu response đủ cho luồng chọn khu vực và xem chi tiết công trình ở Frontend.
+
+### Database access and security
+
+- [ ] Backend truy vấn bằng server-side role/credential có quyền phù hợp; không mở public read policy hoặc tắt RLS để phục vụ API.
+- [ ] Không có database secret/service-role key trong Frontend, response hoặc log.
 
 ## 6. Acceptance Criteria
 

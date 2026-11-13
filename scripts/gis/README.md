@@ -55,3 +55,152 @@ Large PBF files and temporary artifacts are excluded from Git. Generated GeoJSON
 - GDAL's OSM driver reconstructs polygon features from OSM ways and relations; verify the `multipolygons` layer and required fields with `ogrinfo` before relying on extraction.
 - The output is 2D; no building height or floor count is inferred.
 - OSM coverage is not guaranteed to be complete.
+
+## KAN-14 – Import the approved sample into PostGIS
+
+KAN-14 imports the committed KAN-6 GeoJSON snapshot into the KAN-13 PostGIS schema. The import uses host-side GDAL staging followed by transactional PostgreSQL upserts. It does not add a backend endpoint or a Python service.
+
+### Prerequisites
+
+- Docker Engine and Docker Compose v2.
+- GDAL/OGR with the PostgreSQL driver (ogr2ogr, ogrinfo).
+- The repository's backend/.env file must exist (it may be empty for the default Compose configuration).
+- Both processed GeoJSON files from KAN-6 must exist.
+
+Check the GDAL PostgreSQL driver:
+
+~~~bash
+ogrinfo --formats | grep PostgreSQL
+~~~
+
+Start PostGIS and the backend. The backend applies SQLx migrations, including KAN-13:
+
+~~~bash
+docker compose up -d --build postgres backend
+docker compose ps
+~~~
+
+### Human approval workflow
+
+**Gate 1 – Validate first; do not import yet**
+
+~~~bash
+bash scripts/gis/import_sample_to_postgis.sh validate
+~~~
+
+The command loads the GeoJSON files into staging tables (kan14_stage_regions and kan14_stage_buildings) and runs automated checks. It does not write to the production regions or buildings tables.
+
+Review the snapshot counts and field mapping below. The default approved snapshot is 1 region and 431 buildings. If the source count changes, the command stops. Only after reviewing and approving the changed snapshot should an operator use --allow-count-change.
+
+**Gate 1 – Apply after approval**
+
+~~~bash
+bash scripts/gis/import_sample_to_postgis.sh apply
+~~~
+
+The script asks the operator to type IMPORT. This explicit confirmation approves writing to the target tables. In CI only, apply --yes is used against a disposable test database.
+
+The apply command:
+1. Re-loads and validates staging tables.
+2. Upserts the region by stable code hcm-ben-thanh-1km2.
+3. Upserts buildings by OSM external_id.
+4. Lets PostgreSQL generate UUIDs and resolves region_id from the region upsert.
+5. Runs post-import checks.
+6. Repeats the upsert and verifies that the row count remains unchanged.
+
+The importer never deletes destination records absent from the source snapshot. It fails rather than silently dropping records when validation finds null/duplicate identifiers, invalid geometry, inconsistent OSM IDs, wrong SRID/dimension/type, or a building outside the AOI.
+
+### Source-to-target mapping
+
+| KAN-6 source | KAN-13 target |
+|---|---|
+| Boundary name | regions.name |
+| Boundary area_note | regions.description |
+| Boundary boundary_method | regions.boundary_method |
+| Boundary source_reference | regions.source_reference |
+| Stable constant hcm-ben-thanh-1km2 | regions.code |
+| Boundary geometry | regions.boundary (MultiPolygon, 4326) |
+| building_id | buildings.external_id |
+| osm_type, osm_id, osm_way_id | Corresponding OSM columns |
+| name | buildings.name |
+| building | buildings.building_type |
+| Building geometry | buildings.footprint (MultiPolygon, 4326) |
+| Database-generated UUID / resolved region | buildings.id / buildings.region_id |
+
+### Gate 2 – Validation exceptions
+
+The SQL preflight stops on invalid data; it does not repair or exclude records automatically. Inspect staging rows and the exception, decide whether to correct the source or approve a documented exclusion, and re-run validation. Do not bypass preflight by manually editing destination rows.
+
+~~~sql
+SELECT building_id, osm_type, osm_id, osm_way_id,
+       ST_IsValid(geom), ST_IsValidReason(geom)
+FROM kan14_stage_buildings
+WHERE geom IS NULL OR ST_IsEmpty(geom) OR NOT ST_IsValid(geom);
+
+SELECT building_id
+FROM kan14_stage_buildings
+GROUP BY building_id
+HAVING COUNT(*) > 1;
+~~~
+
+### Gate 3 – Visual QA in QGIS (operator action required)
+
+1. In QGIS, create a PostgreSQL connection to host 127.0.0.1, port 5432, database appdb, user appuser (use configured Compose values if changed).
+2. Add public.regions using geometry column boundary.
+3. Add public.buildings using geometry column footprint.
+4. Set project CRS to EPSG:4326 for direct comparison with source GeoJSON.
+5. Confirm the AOI is around Ben Thanh Market, building footprints align with the KAN-6 GeoJSON, and there are no obvious displaced/outlier features or unexpected gaps.
+6. Record pass/fail. If an issue is found, do not accept KAN-14; investigate the source, mapping, or import.
+
+### Gate 4 – Final acceptance
+
+Use automated validation output together with the QGIS visual review. Confirm source counts, attributes, geometry/SRID, FK relationship, spatial query results, and successful re-import. Manual inspection of every building is not required; review dataset-level appearance and investigate exceptions.
+
+### Configuration
+
+The importer reads these environment variables (defaults match docker-compose.yml):
+
+| Variable | Default | Purpose |
+|---|---|---|
+| POSTGRES_HOST | 127.0.0.1 | Host reachable from the machine running GDAL |
+| POSTGRES_PORT | 5432 | Published PostgreSQL port |
+| POSTGRES_USER | appuser | Database user |
+| POSTGRES_PASSWORD | apppassword | Database password |
+| POSTGRES_DB | appdb | Database name |
+| EXPECTED_BUILDINGS | 431 | Expected approved KAN-6 snapshot count |
+
+Do not commit real credentials. For a deliberately reviewed new snapshot count, update EXPECTED_BUILDINGS or use --allow-count-change only after reviewing the source metadata and validation output.
+
+
+## Supabase deployment and re-import notes
+
+The KAN-14 importer script above is intentionally scoped to the repository's local Docker Compose service: it calls `docker compose exec postgres` and uses the local Compose database defaults. **Do not point it at Supabase or assume that setting `POSTGRES_HOST` alone makes it compatible.** The script has not been implemented or integration-tested against a remote Supabase target.
+
+The approved sample has already been imported separately into the Supabase project used by this coursework:
+
+- PostgreSQL 17.11 with PostGIS 3.3.7 (extension objects are installed in Supabase's `extensions` schema).
+- Target tables: `public.regions` and `public.buildings`.
+- Approved snapshot: 1 region and 431 buildings.
+- RLS is enabled. No broad `anon` or `authenticated` read policy was added; keep the raw GIS tables private until the application access model is designed.
+
+For a future repeat import to Supabase:
+
+1. Use the Supabase project's **Connect** dialog to obtain the current host, port, database, username, and recommended connection mode. Prefer the direct connection when the network supports it, otherwise use the documented session pooler mode compatible with the chosen client.
+2. Require TLS/SSL (for libpq clients, use `sslmode=require` unless Supabase currently documents a stricter supported mode for that connection).
+3. Store the database password in a local untracked environment file or an approved secret manager. Never put it in this README, shell history, GitHub source, screenshots, or committed workflow logs.
+4. Before writing, confirm the target project/ref and inspect the current row counts. Run validation against a staging area first; do not run destructive cleanup or delete rows absent from the source.
+5. Use a Supabase-compatible import procedure that explicitly accounts for the extension schema and the existing RLS/privilege configuration. The local Compose importer is not that procedure; do not claim a remote re-import is reproducible until a dedicated remote-target mode has been implemented and tested.
+6. After import, rerun the KAN-14 checks: 1 region, 431 buildings for the approved snapshot, unique OSM external IDs, valid non-empty MultiPolygon geometries in SRID 4326, valid region foreign keys, AOI intersection, and a repeat-import/idempotency check.
+
+The successful Supabase import recorded in the KAN-14 plan is an already-completed deployment operation. This note documents the target and safe operating boundary; it does not claim that the local shell importer can recreate that remote operation today.
+
+### Optional QGIS inspection of the Supabase PostGIS target
+
+The earlier user-approved QGIS visual check covered the KAN-6 source GeoJSON. A separate visual check of the imported Supabase tables can be performed if additional spatial evidence is desired:
+
+1. In Supabase Dashboard, open **Connect** and copy the current PostgreSQL connection parameters. Do not paste the password into project files.
+2. In QGIS, create a PostgreSQL connection with the supplied host, port, database and user; enable **SSL** and use the SSL mode recommended by Supabase for that connection type.
+3. Connect using a database role that is permitted to read the tables. Do not weaken RLS or grant public access just to make QGIS connect; use an appropriately secured database connection/role.
+4. Add `public.regions` (geometry column `boundary`) and `public.buildings` (geometry column `footprint`).
+5. Set the project CRS to EPSG:4326 and visually compare the AOI and building footprints with the approved KAN-6 GeoJSON.
+6. Record this as a separate Supabase-target visual QA result. Until that is done, describe the existing Gate 3 evidence accurately as source-GeoJSON QA, not PostGIS-layer QA.

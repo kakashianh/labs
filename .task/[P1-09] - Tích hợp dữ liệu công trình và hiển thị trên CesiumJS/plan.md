@@ -46,7 +46,16 @@ Mục tiêu của ticket là đưa dữ liệu công trình thực tế từ Pos
 | Backend API | Rust + Axum | Cung cấp dữ liệu |
 | Database | PostgreSQL + PostGIS | Nguồn dữ liệu GIS |
 
-Không tạo backend/service mới. Frontend chỉ gọi API Backend đã có.
+Không tạo backend/service mới. Frontend chỉ gọi API Backend đã có; không kết nối trực tiếp Supabase/PostGIS từ trình duyệt.
+
+### KAN-14 data contract (verified)
+
+- Supabase chứa 1 region và 431 buildings trong snapshot đã nghiệm thu.
+- `regions.id`, `buildings.id`, `buildings.region_id` là UUID.
+- `regions.boundary` và `buildings.footprint` là `MultiPolygon`, EPSG:4326, 2D.
+- `buildings.name` nullable (326/431 bản ghi thiếu tên); `building_type` là thuộc tính phân loại được map từ nguồn GeoJSON.
+- Dataset không cung cấp height/floors đáng tin cậy để dựng extrusion; mặc định hiển thị footprint trên mặt đất.
+- RLS đang bật trên các bảng Supabase; Frontend chỉ gọi Rust API, không dùng database credential/service-role key.
 
 ## 4. Data Flow
 
@@ -80,7 +89,7 @@ GET /api/v1/regions/{id}     GET /api/v1/buildings/{id}
              Building Footprints on Map
 ~~~
 
-API paths cần đối chiếu với route thực tế sau KAN-15/KAN-7; không hard-code một contract khác với Backend.
+API paths cần đối chiếu với route thực tế sau KAN-15/KAN-7; không hard-code một contract khác với Backend. `GET /api/v1/buildings` của KAN-15 có pagination; `GET /api/v1/buildings/{building_id}` và region endpoints của KAN-7 là API tra cứu riêng.
 
 ## 5. Implementation Plan
 
@@ -90,7 +99,9 @@ API paths cần đối chiếu với route thực tế sau KAN-15/KAN-7; không 
 - [ ] Kiểm tra cách cấu hình API base URL trong Frontend.
 - [ ] Kiểm tra response thực tế của GET /api/v1/regions.
 - [ ] Kiểm tra response thực tế của GET /api/v1/buildings.
-- [ ] Kiểm tra geometry type, coordinate order và SRID/CRS của GeoJSON.
+- [ ] Xác nhận API trả geometry `MultiPolygon` từ `footprint`/`boundary`, SRID 4326.
+- [ ] Xác nhận UUID được giữ dưới dạng string trong TypeScript; `name` được khai báo nullable.
+- [ ] Kiểm tra coordinate order longitude/latitude và không áp dụng phép đổi trục ngoài ý muốn.
 - [ ] Kiểm tra pagination metadata và giới hạn page_size.
 - [ ] Xác định cách tải tất cả trang cần thiết trong phạm vi dataset mẫu.
 - [ ] Không giả định API trả toàn bộ công trình trong một response.
@@ -141,7 +152,7 @@ Yêu cầu:
 - [ ] Implement hàm chuyển GeoJSON thành Cesium DataSource.
 - [ ] Gắn building ID và properties vào entity.
 - [ ] Cấu hình style mặc định cho footprint.
-- [ ] Kiểm tra polygon/multipolygon nếu dataset có cả hai loại.
+- [ ] Kiểm tra `MultiPolygon` (kiểu geometry đã xác nhận của KAN-14) và xử lý an toàn nếu API có feature không hợp lệ.
 - [ ] Kiểm tra geometry null/empty được bỏ qua hoặc xử lý an toàn.
 - [ ] Không tạo building extrusion từ dữ liệu không có căn cứ.
 
@@ -169,7 +180,7 @@ Phạm vi chỉ cần xác nhận người dùng có thể chọn một công tr
 
 ### Step 7 – Verify Data Accuracy and Performance
 
-- [ ] Đối chiếu số công trình nhận từ API với số entity được hiển thị (tính đến pagination/filter).
+- [ ] Đối chiếu số công trình nhận từ API với số entity được hiển thị (tính đến pagination/filter); với snapshot hiện tại kỳ vọng 431 nếu không áp dụng filter.
 - [ ] Kiểm tra vị trí công trình trên đúng khu vực nghiên cứu.
 - [ ] Kiểm tra một số geometry đại diện bằng cách đối chiếu PostGIS/GeoJSON.
 - [ ] Kiểm tra click chọn công trình trả đúng ID.
@@ -186,6 +197,12 @@ Phạm vi chỉ cần xác nhận người dùng có thể chọn một công tr
 - [ ] Chạy TypeScript checks và production build.
 - [ ] Kiểm tra browser console không có lỗi Cesium/API nghiêm trọng.
 - [ ] Kiểm tra luồng end-to-end từ PostGIS đến Cesium Viewer.
+
+### Data access and privacy constraints
+
+- Frontend chỉ gọi Rust + Axum API; không truy cập trực tiếp `public.buildings`/`public.regions`.
+- Không đưa database password hoặc Supabase service-role key vào Vite environment variables được bundle cho browser.
+- `name` null không làm lỗi TypeScript mapping, label hoặc selection.
 
 ## 6. Acceptance Criteria
 
