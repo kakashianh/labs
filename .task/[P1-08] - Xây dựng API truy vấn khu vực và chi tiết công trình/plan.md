@@ -318,6 +318,6 @@ ci(api): verify region and building detail API tests
 
 ## 10. Final Definition of Done
 
-<small>Implementation đã merge vào `project/3D-map-medical` qua PR #11 (merge commit `0d07cdb0d07aff58daaee9459f3048f0253857d0`); CI workflow #130 xanh. Các checklist còn mở bên dưới là những xác minh chưa có bằng chứng trực tiếp (runtime least-privilege role, Swagger UI smoke test và ví dụ response chi tiết).</small>
+> **Implementation status:** Đã merge vào `project/3D-map-medical` qua PR #11 (merge commit `0d07cdb0d07aff58daaee9459f3048f0253857d0`); CI workflow #130 xanh. Các checklist còn mở bên dưới là những xác minh chưa có bằng chứng trực tiếp (runtime least-privilege role, Swagger UI smoke test và ví dụ response chi tiết).
 
 KAN-7/P1-08 hoàn thành khi Frontend có thể lấy danh sách region theo thứ tự ổn định, lấy geometry/metadata của region theo UUID và lấy geometry/thuộc tính building theo UUID. APIs khớp schema PostGIS thực tế, dùng chung response/error/OpenAPI conventions của KAN-15, có Unit Tests và Testcontainers Integration Tests xanh trên CI. Không triển khai lại Building List API của KAN-15 và không bao gồm CesiumJS integration của KAN-16.
