@@ -109,6 +109,26 @@ async fn buildings_api_works_against_real_postgis() {
         .iter()
         .all(|item| item["geometry"]["type"] == "MultiPolygon"));
 
+    let unfiltered_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/buildings?page_size=100")
+                .body(Body::empty())
+                .expect("build unfiltered request"),
+        )
+        .await
+        .expect("call unfiltered route");
+    assert_eq!(unfiltered_response.status(), StatusCode::OK);
+    let unfiltered_body =
+        axum::body::to_bytes(unfiltered_response.into_body(), 1024 * 1024)
+            .await
+            .expect("read unfiltered body");
+    let unfiltered_json: Value =
+        serde_json::from_slice(&unfiltered_body).expect("valid unfiltered JSON");
+    assert_eq!(unfiltered_json["data"].as_array().unwrap().len(), 3);
+    assert_eq!(unfiltered_json["pagination"]["total"], 3);
+
     let empty_response = app
         .clone()
         .oneshot(
@@ -126,6 +146,27 @@ async fn buildings_api_works_against_real_postgis() {
     let empty_json: Value = serde_json::from_slice(&empty_body).expect("valid empty JSON");
     assert_eq!(empty_json["data"].as_array().unwrap().len(), 0);
     assert_eq!(empty_json["pagination"]["total"], 1);
+
+    let no_matches_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/api/v1/buildings?region_id=cccccccc-cccc-4ccc-8ccc-cccccccccccc")
+                .body(Body::empty())
+                .expect("build no-matches request"),
+        )
+        .await
+        .expect("call no-matches route");
+    assert_eq!(no_matches_response.status(), StatusCode::OK);
+    let no_matches_body =
+        axum::body::to_bytes(no_matches_response.into_body(), 1024 * 1024)
+            .await
+            .expect("read no-matches body");
+    let no_matches_json: Value =
+        serde_json::from_slice(&no_matches_body).expect("valid no-matches JSON");
+    assert_eq!(no_matches_json["data"].as_array().unwrap().len(), 0);
+    assert_eq!(no_matches_json["pagination"]["total"], 0);
+    assert_eq!(no_matches_json["pagination"]["total_pages"], 0);
 
     let docs_response = app
         .clone()
