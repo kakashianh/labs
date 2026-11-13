@@ -15,10 +15,10 @@ use tower::ServiceExt;
 #[tokio::test]
 async fn buildings_api_works_against_real_postgis() {
     let container = GenericImage::new("postgis/postgis", "16-3.4")
+        .with_exposed_port(5432.tcp())
         .with_env_var("POSTGRES_USER", "gis_test")
         .with_env_var("POSTGRES_PASSWORD", "gis_test")
         .with_env_var("POSTGRES_DB", "gis_test")
-        .with_exposed_port(5432.tcp())
         .with_wait_for(WaitFor::message_on_stderr(
             "database system is ready to accept connections",
         ))
