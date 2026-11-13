@@ -6,7 +6,7 @@ use crate::{middleware::logging::tracing_layer, routes, state::AppState};
 
 /// Build the full Axum router with shared state and layers.
 ///
-/// - Merges all route groups (currently `GET /health`).
+/// - Merges health, building-list, and OpenAPI documentation routes.
 /// - Applies `tower_http::trace::TraceLayer` for request/response logging.
 /// - Applies permissive CORS so the React frontend can call the API.
 pub fn router(state: AppState) -> Router {
