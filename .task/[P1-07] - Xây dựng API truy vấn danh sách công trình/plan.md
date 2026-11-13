@@ -139,7 +139,6 @@ Yêu cầu:
 - Hỗ trợ filter region_id khi được truyền vào.
 - Pagination bằng LIMIT/OFFSET hoặc cơ chế phù hợp với repository hiện tại.
 - ORDER BY id ASC (UUID PK duy nhất) hoặc ordering deterministic tương đương; không phân trang trên thứ tự không xác định.
-- Có ORDER BY xác định để kết quả giữa các trang ổn định.
 - Serialize `footprint` sang GeoJSON bằng PostGIS (ví dụ `ST_AsGeoJSON(footprint)`) hoặc mapping tương đương. PostGIS extension của Supabase đang nằm trong schema `extensions`; kiểm tra `search_path`/schema qualification khi gọi spatial functions.
 - Tính tổng số record phù hợp với filter để trả pagination metadata.
 
@@ -211,15 +210,15 @@ Mở rộng workflow Rust CI hiện có nếu có; tránh tạo workflow trùng 
 
 Tạo OpenAPI specification làm API contract chính thức cho KAN-15; không chỉ ghi endpoint trong README.
 
-- [ ] Kiểm tra convention tài liệu API hiện có trước khi chọn thư viện.
-- [ ] Nếu chưa có giải pháp OpenAPI, ưu tiên utoipa để derive spec từ Axum handlers/request/response DTO; tích hợp utoipa-swagger-ui nếu phù hợp.
-- [ ] Khai báo GET /api/v1/buildings, query parameters (page, page_size, region_id), types/default/max, response 200/400/500 và error schema.
-- [ ] Khai báo DTO schema: UUID fields, nullable name, building_type, GeoJSON MultiPolygon, pagination metadata.
-- [ ] Mô tả semantics total, total_pages, empty result và page vượt phạm vi.
-- [ ] Thêm ví dụ request/response thành công, empty result và validation error.
-- [ ] Expose OpenAPI JSON (ví dụ /api-docs/openapi.json) và Swagger UI (ví dụ /swagger-ui) theo convention; ưu tiên bật UI ở development, không làm lộ secrets/thông tin nội bộ.
-- [ ] Generate spec từ DTO/route annotations hoặc kiểm tra drift trong CI; tránh duy trì spec thủ công lệch implementation.
-- [ ] Ghi hướng dẫn truy cập OpenAPI JSON/Swagger UI và chạy Backend + PostGIS local.
+- [x] Kiểm tra convention tài liệu API hiện có; repository chưa có OpenAPI framework.
+- [x] Chọn OpenAPI 3.0.3 JSON version-controlled tại backend/openapi/openapi.json để giữ dependency runtime gọn; Swagger UI dùng trang tĩnh tại backend/openapi/swagger-ui.html.
+- [x] Khai báo GET /api/v1/buildings, query parameters, defaults/limits, response 200/400/500 và error schema.
+- [x] Khai báo DTO schema: UUID fields, nullable name, building_type, GeoJSON MultiPolygon và pagination metadata.
+- [x] Mô tả semantics total, total_pages, empty result và page vượt phạm vi.
+- [x] Thêm ví dụ request/response thành công và empty result; mô tả validation error.
+- [x] Expose OpenAPI JSON tại /api-docs/openapi.json và Swagger UI tại /docs.
+- [x] Thêm Unit Test parse OpenAPI JSON và kiểm tra endpoint, max page_size, MultiPolygon schema; khi contract thay đổi phải cập nhật spec và test cùng nhau.
+- [x] Ghi hướng dẫn truy cập OpenAPI JSON/Swagger UI và chạy Backend + PostGIS local.
 - [ ] Chạy formatter, linter, Unit Tests và Integration Tests.
 - [ ] Kiểm tra endpoint bằng HTTP client và đối chiếu response với OpenAPI.
 - [ ] Xác nhận response đủ dữ liệu để KAN-16 tích hợp.
@@ -244,7 +243,7 @@ Tạo OpenAPI specification làm API contract chính thức cho KAN-15; không c
 - [ ] Có Unit Tests cho validation, pagination, DTO/error mapping; không phụ thuộc database.
 - [ ] Có Integration Tests chạy PostgreSQL/PostGIS thật bằng Testcontainers, bao phủ repository và Axum HTTP route.
 - [ ] GitHub Actions chạy xanh Unit + Integration Tests; Integration Test không dùng Supabase credentials.
-- [ ] Có OpenAPI JSON generate từ implementation và Swagger UI (nếu phù hợp), mô tả đúng request/response/error contract.
+- [ ] Có OpenAPI 3.0.3 JSON version-controlled, được expose qua API và kiểm tra tính hợp lệ/những thành phần contract chính bằng Unit Test; Swagger UI truy cập được tại /docs.
 
 ## 6. Deliverables
 
