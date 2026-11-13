@@ -1,0 +1,79 @@
+use axum::{body::Body, http::{Request, StatusCode}};
+use backend::{db, router::router, state::AppState};
+use serde_json::Value;
+use sqlx::postgres::PgPoolOptions;
+use testcontainers::{clients, core::WaitFor, images::generic::GenericImage};
+use tower::ServiceExt;
+
+#[tokio::test]
+async fn buildings_api_works_against_real_postgis() {
+    let docker = clients::Cli::default();
+    let image = GenericImage::new("postgis/postgis", "16-3.4")
+        .with_env_var("POSTGRES_USER", "gis_test")
+        .with_env_var("POSTGRES_PASSWORD", "gis_test")
+        .with_env_var("POSTGRES_DB", "gis_test")
+        .with_exposed_port(5432)
+        .with_wait_for(WaitFor::message_on_stderr("database system is ready to accept connections"));
+    let container = docker.run(image);
+    let port = container.get_host_port_ipv4(5432);
+    let database_url = format!("postgres://gis_test:gis_test@127.0.0.1:{port}/gis_test");
+    let pool = PgPoolOptions::new().max_connections(5).connect(&database_url)
+        .await.expect("connect to Testcontainers PostGIS");
+    db::run_migrations(&pool).await.expect("apply application migrations");
+
+    let region_a: uuid::Uuid = sqlx::query_scalar(
+        r#"INSERT INTO public.regions (code,name,boundary_method,boundary)
+           VALUES ('test-a','Test A','fixture',ST_GeomFromText('MULTIPOLYGON(((106 10,107 10,107 11,106 11,106 10)))',4326))
+           RETURNING id"#,
+    ).fetch_one(&pool).await.expect("insert region A");
+    let region_b: uuid::Uuid = sqlx::query_scalar(
+        r#"INSERT INTO public.regions (code,name,boundary_method,boundary)
+           VALUES ('test-b','Test B','fixture',ST_GeomFromText('MULTIPOLYGON(((107 10,108 10,108 11,107 11,107 10)))',4326))
+           RETURNING id"#,
+    ).fetch_one(&pool).await.expect("insert region B");
+
+    for (external_id, osm_way_id, region_id, name) in [
+        ("way/1001", 1001_i64, region_a, Some("Building A")),
+        ("way/1002", 1002_i64, region_a, None),
+        ("way/2001", 2001_i64, region_b, Some("Building B")),
+    ] {
+        sqlx::query(
+            r#"INSERT INTO public.buildings
+               (external_id,osm_type,osm_way_id,region_id,name,building_type,footprint)
+               VALUES ($1,'way',$2,$3,$4,'residential',
+                 ST_GeomFromText('MULTIPOLYGON(((106.1 10.1,106.2 10.1,106.2 10.2,106.1 10.2,106.1 10.1)))',4326))"#,
+        ).bind(external_id).bind(osm_way_id).bind(region_id).bind(name)
+          .execute(&pool).await.expect("insert building fixture");
+    }
+
+    let app = router(AppState::new(pool.clone()));
+    let response = app.clone().oneshot(
+        Request::builder().uri(format!("/api/v1/buildings?region_id={region_a}&page=1&page_size=10"))
+            .body(Body::empty()).expect("build request"),
+    ).await.expect("call Axum router");
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = axum::body::to_bytes(response.into_body(), 1024 * 1024).await.expect("read body");
+    let json: Value = serde_json::from_slice(&body).expect("valid JSON response");
+    assert_eq!(json["data"].as_array().expect("data array").len(), 2);
+    assert_eq!(json["pagination"]["total"], 2);
+    assert_eq!(json["pagination"]["total_pages"], 1);
+    assert!(json["data"].as_array().unwrap().iter().any(|item| item["name"].is_null()));
+    assert!(json["data"].as_array().unwrap().iter().all(|item| item["geometry"]["type"] == "MultiPolygon"));
+
+    let empty_response = app.clone().oneshot(
+        Request::builder().uri(format!("/api/v1/buildings?region_id={region_b}&page=99"))
+            .body(Body::empty()).expect("build empty-page request"),
+    ).await.expect("call empty-page route");
+    assert_eq!(empty_response.status(), StatusCode::OK);
+    let empty_body = axum::body::to_bytes(empty_response.into_body(), 1024 * 1024).await.expect("read empty body");
+    let empty_json: Value = serde_json::from_slice(&empty_body).expect("valid empty JSON");
+    assert_eq!(empty_json["data"].as_array().unwrap().len(), 0);
+    assert_eq!(empty_json["pagination"]["total"], 1);
+
+    let invalid_response = app.oneshot(
+        Request::builder().uri("/api/v1/buildings?region_id=not-a-uuid")
+            .body(Body::empty()).expect("build invalid request"),
+    ).await.expect("call invalid route");
+    assert_eq!(invalid_response.status(), StatusCode::BAD_REQUEST);
+    pool.close().await;
+}
