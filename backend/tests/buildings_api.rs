@@ -14,7 +14,7 @@ use tower::ServiceExt;
 
 #[tokio::test]
 async fn buildings_api_works_against_real_postgis() {
-    let container = GenericImage::new("postgis/postgis", "16-3.4")
+    let container = GenericImage::new("postgis/postgis", "17-3.5")
         .with_wait_for(WaitFor::message_on_stderr(
             "database system is ready to accept connections",
         ))
