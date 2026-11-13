@@ -37,7 +37,8 @@ mod tests {
         assert!(spec["paths"]["/api/v1/regions/{region_id}"]["get"].is_object());
         assert!(spec["paths"]["/api/v1/buildings/{building_id}"]["get"].is_object());
         assert_eq!(
-            spec["paths"]["/api/v1/regions/{region_id}"]["get"]["parameters"][0]["schema"]["format"],
+            spec["paths"]["/api/v1/regions/{region_id}"]["get"]["parameters"][0]["schema"]
+                ["format"],
             "uuid"
         );
         assert!(spec["components"]["schemas"]["RegionDetail"].is_object());
