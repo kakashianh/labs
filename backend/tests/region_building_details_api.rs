@@ -83,5 +83,17 @@ async fn region_and_building_detail_apis_work_against_postgis() {
     assert!(spec["paths"]["/api/v1/regions/{region_id}"]["get"].is_object());
     assert!(spec["paths"]["/api/v1/buildings/{building_id}"]["get"].is_object());
     assert!(other_region != region_id);
+
+    // A closed pool simulates an unavailable database; the public response must
+    // remain generic and must not disclose SQL or connection details.
     pool.close().await;
+    let unavailable_app=router(AppState::new(pool));
+    let unavailable=unavailable_app.oneshot(
+        Request::builder().uri("/api/v1/regions").body(Body::empty()).unwrap()
+    ).await.unwrap();
+    assert_eq!(unavailable.status(),StatusCode::INTERNAL_SERVER_ERROR);
+    let body=axum::body::to_bytes(unavailable.into_body(),1024*1024).await.unwrap();
+    let error:Value=serde_json::from_slice(&body).unwrap();
+    assert_eq!(error["error"],"Internal server error");
+    assert!(!body.windows(b"postgres://".len()).any(|window| window==b"postgres://"));
 }
