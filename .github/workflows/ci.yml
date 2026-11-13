@@ -337,6 +337,36 @@ jobs:
         if: failure()
         run: docker compose logs postgres redis backend
 
+  frontend:
+    name: Frontend lint, unit tests and production build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.17.0
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run Oxlint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Run GIS unit tests
+        working-directory: frontend
+        run: npm test
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
   deploy:
     name: Deploy to Render (manual)
     runs-on: ubuntu-latest
