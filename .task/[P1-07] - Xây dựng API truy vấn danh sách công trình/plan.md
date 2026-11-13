@@ -68,12 +68,12 @@ Snapshot hiện được nạp có 431 buildings và 1 region. Đây là baselin
 
 Đọc code Backend và migration/schema đã được tạo ở KAN-13, đồng thời kiểm tra dữ liệu thực tế từ KAN-14.
 
-- [ ] Kiểm tra cấu trúc thư mục Backend và cách khai báo Axum routes.
-- [ ] Kiểm tra database connection/pool và repository conventions.
-- [ ] Kiểm tra tên bảng, primary key, foreign key và các cột thực tế của buildings.
-- [ ] Xác định geometry type và SRID đang được lưu.
-- [ ] Xác định các thuộc tính công trình thực sự có trong dataset.
-- [ ] Không tự giả định các field như height, floors, usage nếu dataset không có.
+- [x] Kiểm tra cấu trúc thư mục Backend và cách khai báo Axum routes.
+- [x] Kiểm tra database connection/pool và repository conventions.
+- [x] Kiểm tra tên bảng, primary key, foreign key và các cột thực tế của buildings.
+- [x] Xác định geometry type và SRID đang được lưu.
+- [x] Xác định các thuộc tính công trình thực sự có trong dataset.
+- [x] Không tự giả định các field như height, floors, usage nếu dataset không có.
 
 ### Step 2 – Define Building List API Contract
 
@@ -219,7 +219,7 @@ Tạo OpenAPI specification làm API contract chính thức cho KAN-15; không c
 - [x] Expose OpenAPI JSON tại /api-docs/openapi.json và Swagger UI tại /docs.
 - [x] Thêm Unit Test parse OpenAPI JSON và kiểm tra endpoint, max page_size, MultiPolygon schema; khi contract thay đổi phải cập nhật spec và test cùng nhau.
 - [x] Ghi hướng dẫn truy cập OpenAPI JSON/Swagger UI và chạy Backend + PostGIS local.
-- [ ] Chạy formatter, linter, Unit Tests và Integration Tests.
+- [x] Chạy formatter, linter, Unit Tests và Integration Tests.
 - [x] Kiểm tra endpoint qua Axum integration test và đối chiếu response với OpenAPI contract test.
 - [x] Xác nhận response DTO có thuộc tính và GeoJSON MultiPolygon cho KAN-16 tích hợp.
 
@@ -232,17 +232,17 @@ Tạo OpenAPI specification làm API contract chính thức cho KAN-15; không c
 
 ## 5. Acceptance Criteria
 
-- [ ] Endpoint GET /api/v1/buildings hoạt động.
-- [ ] Trả danh sách công trình từ PostGIS.
-- [ ] Hỗ trợ pagination với giới hạn page_size.
-- [ ] Hỗ trợ filter region_id.
-- [ ] Geometry được serialize theo định dạng thống nhất, ưu tiên GeoJSON.
-- [ ] Response không phụ thuộc vào các field không tồn tại trong dataset.
-- [ ] Input sai được trả lỗi phù hợp.
-- [ ] Empty result được xử lý đúng.
-- [ ] Có Unit Tests cho validation, pagination, DTO/error mapping; không phụ thuộc database.
-- [ ] Có Integration Tests chạy PostgreSQL/PostGIS thật bằng Testcontainers, bao phủ repository và Axum HTTP route.
-- [ ] GitHub Actions chạy xanh Unit + Integration Tests; Integration Test không dùng Supabase credentials.
+- [x] Endpoint GET /api/v1/buildings hoạt động.
+- [x] Trả danh sách công trình từ PostGIS.
+- [x] Hỗ trợ pagination với giới hạn page_size.
+- [x] Hỗ trợ filter region_id.
+- [x] Geometry được serialize theo định dạng thống nhất, ưu tiên GeoJSON.
+- [x] Response không phụ thuộc vào các field không tồn tại trong dataset.
+- [x] Input sai được trả lỗi phù hợp.
+- [x] Empty result được xử lý đúng.
+- [x] Có Unit Tests cho validation, pagination, OpenAPI contract và error mapping; không phụ thuộc database.
+- [x] Có Integration Tests chạy PostgreSQL 17/PostGIS thật bằng Testcontainers, bao phủ repository và Axum HTTP route.
+- [x] GitHub Actions chạy xanh Unit + Integration Tests; Integration Test không dùng Supabase credentials.
 - [ ] Có OpenAPI 3.0.3 JSON version-controlled, được expose qua API và kiểm tra tính hợp lệ/những thành phần contract chính bằng Unit Test; Swagger UI truy cập được tại /docs.
 
 ## 6. Deliverables
