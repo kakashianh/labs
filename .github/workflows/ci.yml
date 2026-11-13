@@ -80,7 +80,7 @@ jobs:
 
       - name: Run API integration tests (Testcontainers)
         working-directory: backend
-        run: cargo test --test buildings_api -- --nocapture
+        run: cargo test --test buildings_api --test region_building_details_api -- --nocapture
 
   postgis-integration:
     name: Docker Compose + PostGIS migration verification
