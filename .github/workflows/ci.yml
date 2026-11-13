@@ -46,6 +46,13 @@ jobs:
         working-directory: backend
         run: cargo test --lib --all-features
 
+      - name: Upload resolved Cargo.lock
+        uses: actions/upload-artifact@v4
+        with:
+          name: kan-15-cargo-lock
+          path: backend/Cargo.lock
+          if-no-files-found: error
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
