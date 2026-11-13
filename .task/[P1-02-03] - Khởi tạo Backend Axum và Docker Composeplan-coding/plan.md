@@ -223,7 +223,7 @@ impl IntoResponse for AppError {
 
 ---
 
-### Bước 5 — Dockerfile
+### Bước 5 — Dockerfile (triển khai thực tế tại `backend/deployment/Dockerfile`)
 
 ```dockerfile
 # ── Build stage ──────────────────────────────────────────────────────────────
@@ -258,7 +258,7 @@ CMD ["./backend"]
 
 ---
 
-### Bước 6 — Docker Compose
+### Bước 6 — Docker Compose (file thực tế tại root `docker-compose.yml`)
 
 **`docker-compose.yml`** (đặt tại root project):
 
