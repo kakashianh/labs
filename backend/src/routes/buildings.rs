@@ -1,6 +1,7 @@
 //! Building list endpoint backed by PostGIS.
 
 use crate::{
+    db,
     error::{AppError, Result},
     state::AppState,
 };
@@ -122,49 +123,20 @@ pub async fn list_buildings(
     let page_size = i64::try_from(query.page_size)
         .map_err(|_| AppError::BadRequest("page_size is out of range".into()))?;
 
-    let mut tx = state.db.begin().await?;
-    // Supabase installs PostGIS in the extensions schema; local Compose installs
-    // it in public. Resolve spatial functions in either supported schema.
-    sqlx::query("SET LOCAL search_path TO public, extensions")
-        .execute(&mut *tx)
-        .await?;
-
-    let total: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM public.buildings b WHERE ($1::uuid IS NULL OR b.region_id = $1)",
-    )
-    .bind(query.region_id)
-    .fetch_one(&mut *tx)
-    .await?;
-
-    let rows = sqlx::query(
-        r#"
-        SELECT b.id, b.region_id, b.external_id, b.name, b.building_type,
-               ST_AsGeoJSON(b.footprint)::jsonb AS geometry
-        FROM public.buildings AS b
-        WHERE ($1::uuid IS NULL OR b.region_id = $1)
-        ORDER BY b.id ASC
-        LIMIT $2 OFFSET $3
-        "#,
-    )
-    .bind(query.region_id)
-    .bind(page_size)
-    .bind(query.offset)
-    .fetch_all(&mut *tx)
-    .await?;
-
-    let mut data = Vec::with_capacity(rows.len());
-    for row in rows {
-        data.push(BuildingDto {
-            id: row.try_get("id")?,
-            region_id: row.try_get("region_id")?,
-            external_id: row.try_get("external_id")?,
-            name: row.try_get("name")?,
-            building_type: row.try_get("building_type")?,
-            geometry: row.try_get("geometry")?,
-        });
-    }
-
-    tx.commit().await?;
+    let (total, records) =
+        db::buildings::list_buildings(&state.db, query.region_id, page_size, query.offset)
+            .await?;
+    let data = records
+        .into_iter()
+        .map(|record| BuildingDto {
+            id: record.id,
+            region_id: record.region_id,
+            external_id: record.external_id,
+            name: record.name,
+            building_type: record.building_type,
+            geometry: record.geometry,
+        })
+        .collect::<Vec<_>>();
 
     let total_pages = if total == 0 {
         0
