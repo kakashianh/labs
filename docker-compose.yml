@@ -34,7 +34,6 @@ services:
       context: ./backend
       dockerfile: deployment/Dockerfile
     restart: unless-stopped
-    env_file: ./backend/.env
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-appuser}:${POSTGRES_PASSWORD:-apppassword}@postgres:5432/${POSTGRES_DB:-appdb}
       REDIS_URL: redis://redis:6379
