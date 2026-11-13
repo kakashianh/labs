@@ -1,5 +1,5 @@
 //! Binary entrypoint: start Tokio runtime, connect Postgres, run migrations,
-//! bind the Axum router.
+ //! bind the Axum router.
 
 use std::time::Duration;
 
@@ -22,7 +22,8 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let config = Config::from_env();
-    tracing::info!(database_url = %config.database_url, "loading config");
+    // Never log DATABASE_URL: it may contain database credentials.
+    tracing::info!("configuration loaded");
 
     // Lazy pool: the server can bind immediately even if Postgres is
     // briefly unavailable; migrations below retry until it is ready.
@@ -37,7 +38,8 @@ async fn main() -> anyhow::Result<()> {
     let redis = match &config.redis_url {
         Some(url) => match redis::Client::open(url.as_str()) {
             Ok(client) => {
-                tracing::info!(redis_url = %url, "redis client configured");
+                // Do not log the Redis URL; it may contain credentials.
+                tracing::info!("redis client configured");
                 Some(client)
             }
             Err(err) => {
