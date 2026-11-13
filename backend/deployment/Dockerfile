@@ -1,5 +1,6 @@
-# ── Build stage ──────────────────────────────────────────────────────────────
-FROM rust:1-slim-bookworm AS builder
+# SQLx 0.7.4 relies on the previous never-type fallback behavior.
+# Rust 1.100 changes that behavior for all editions; pin 1.99.1 until SQLx is upgraded/fixed.
+FROM rust:1.99.1-slim-bookworm AS builder
 
 WORKDIR /app
 
