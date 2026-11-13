@@ -33,6 +33,15 @@ mod tests {
                 .expect("OpenAPI JSON must be valid");
         assert_eq!(spec["openapi"], "3.0.3");
         assert!(spec["paths"]["/api/v1/buildings"]["get"].is_object());
+        assert!(spec["paths"]["/api/v1/regions"]["get"].is_object());
+        assert!(spec["paths"]["/api/v1/regions/{region_id}"]["get"].is_object());
+        assert!(spec["paths"]["/api/v1/buildings/{building_id}"]["get"].is_object());
+        assert_eq!(
+            spec["paths"]["/api/v1/regions/{region_id}"]["get"]["parameters"][0]["schema"]["format"],
+            "uuid"
+        );
+        assert!(spec["components"]["schemas"]["RegionDetail"].is_object());
+        assert!(spec["components"]["schemas"]["BuildingDetail"].is_object());
         assert_eq!(
             spec["paths"]["/api/v1/buildings"]["get"]["parameters"][1]["schema"]["maximum"],
             500
