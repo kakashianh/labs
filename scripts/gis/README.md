@@ -170,3 +170,37 @@ The importer reads these environment variables (defaults match docker-compose.ym
 | EXPECTED_BUILDINGS | 431 | Expected approved KAN-6 snapshot count |
 
 Do not commit real credentials. For a deliberately reviewed new snapshot count, update EXPECTED_BUILDINGS or use --allow-count-change only after reviewing the source metadata and validation output.
+
+
+## Supabase deployment and re-import notes
+
+The KAN-14 importer script above is intentionally scoped to the repository's local Docker Compose service: it calls `docker compose exec postgres` and uses the local Compose database defaults. **Do not point it at Supabase or assume that setting `POSTGRES_HOST` alone makes it compatible.** The script has not been implemented or integration-tested against a remote Supabase target.
+
+The approved sample has already been imported separately into the Supabase project used by this coursework:
+
+- PostgreSQL 17.11 with PostGIS 3.3.7 (extension objects are installed in Supabase's `extensions` schema).
+- Target tables: `public.regions` and `public.buildings`.
+- Approved snapshot: 1 region and 431 buildings.
+- RLS is enabled. No broad `anon` or `authenticated` read policy was added; keep the raw GIS tables private until the application access model is designed.
+
+For a future repeat import to Supabase:
+
+1. Use the Supabase project's **Connect** dialog to obtain the current host, port, database, username, and recommended connection mode. Prefer the direct connection when the network supports it, otherwise use the documented session pooler mode compatible with the chosen client.
+2. Require TLS/SSL (for libpq clients, use `sslmode=require` unless Supabase currently documents a stricter supported mode for that connection).
+3. Store the database password in a local untracked environment file or an approved secret manager. Never put it in this README, shell history, GitHub source, screenshots, or committed workflow logs.
+4. Before writing, confirm the target project/ref and inspect the current row counts. Run validation against a staging area first; do not run destructive cleanup or delete rows absent from the source.
+5. Use a Supabase-compatible import procedure that explicitly accounts for the extension schema and the existing RLS/privilege configuration. The local Compose importer is not that procedure; do not claim a remote re-import is reproducible until a dedicated remote-target mode has been implemented and tested.
+6. After import, rerun the KAN-14 checks: 1 region, 431 buildings for the approved snapshot, unique OSM external IDs, valid non-empty MultiPolygon geometries in SRID 4326, valid region foreign keys, AOI intersection, and a repeat-import/idempotency check.
+
+The successful Supabase import recorded in the KAN-14 plan is an already-completed deployment operation. This note documents the target and safe operating boundary; it does not claim that the local shell importer can recreate that remote operation today.
+
+### Optional QGIS inspection of the Supabase PostGIS target
+
+The earlier user-approved QGIS visual check covered the KAN-6 source GeoJSON. A separate visual check of the imported Supabase tables can be performed if additional spatial evidence is desired:
+
+1. In Supabase Dashboard, open **Connect** and copy the current PostgreSQL connection parameters. Do not paste the password into project files.
+2. In QGIS, create a PostgreSQL connection with the supplied host, port, database and user; enable **SSL** and use the SSL mode recommended by Supabase for that connection type.
+3. Connect using a database role that is permitted to read the tables. Do not weaken RLS or grant public access just to make QGIS connect; use an appropriately secured database connection/role.
+4. Add `public.regions` (geometry column `boundary`) and `public.buildings` (geometry column `footprint`).
+5. Set the project CRS to EPSG:4326 and visually compare the AOI and building footprints with the approved KAN-6 GeoJSON.
+6. Record this as a separate Supabase-target visual QA result. Until that is done, describe the existing Gate 3 evidence accurately as source-GeoJSON QA, not PostGIS-layer QA.
