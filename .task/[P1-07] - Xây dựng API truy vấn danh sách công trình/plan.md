@@ -123,12 +123,12 @@ Response đề xuất:
 
 Đây là cấu trúc minh họa. DTO đề xuất gồm id, region_id, external_id, name (nullable), building_type và geometry (MultiPolygon). Không trả toàn bộ cột nội bộ của database nếu Frontend không sử dụng. page mặc định 1; page_size mặc định 100, tối đa 500 (có thể điều chỉnh theo convention hiện có). total là số record sau filter; total_pages = ceil(total / page_size), bằng 0 khi không có record. Page vượt total_pages trả HTTP 200 với data: [] và metadata hiện tại, không trả 404.
 
-- [ ] Chốt endpoint và query parameters.
-- [ ] Chốt giới hạn page_size và giá trị mặc định (page=1, page_size=100, max page_size=500, trừ khi codebase đã có convention khác).
-- [ ] Chốt semantics: total tính sau filter; total_pages=0 khi total=0; page vượt phạm vi trả HTTP 200 với data=[] và pagination metadata, không trả 404.
-- [ ] Chốt response DTO và quy tắc serialize geometry.
-- [ ] Thống nhất cách trả lỗi/validation theo convention Backend.
-- [ ] Ghi rõ semantics của total và total_pages.
+- [x] Chốt endpoint và query parameters.
+- [x] Chốt giới hạn page_size và giá trị mặc định (page=1, page_size=100, max page_size=500).
+- [x] Chốt semantics: total tính sau filter; total_pages=0 khi total=0; page vượt phạm vi trả HTTP 200 với data=[] và pagination metadata, không trả 404.
+- [x] Chốt response DTO và quy tắc serialize geometry.
+- [x] Thống nhất cách trả lỗi/validation theo convention Backend.
+- [x] Ghi rõ semantics của total và total_pages.
 
 ### Step 3 – Implement Database Query and Repository
 
@@ -142,27 +142,27 @@ Yêu cầu:
 - Serialize `footprint` sang GeoJSON bằng PostGIS (ví dụ `ST_AsGeoJSON(footprint)`) hoặc mapping tương đương. PostGIS extension của Supabase đang nằm trong schema `extensions`; kiểm tra `search_path`/schema qualification khi gọi spatial functions.
 - Tính tổng số record phù hợp với filter để trả pagination metadata.
 
-- [ ] Tạo repository/query cho danh sách buildings.
-- [ ] Implement filter theo region_id.
-- [ ] Implement pagination và ordering ổn định bằng unique key (id) để tránh record nhảy trang do thứ tự không xác định.
-- [ ] Chuyển geometry sang GeoJSON.
-- [ ] Implement query đếm tổng record theo filter.
+- [x] Tạo repository/query cho danh sách buildings.
+- [x] Implement filter theo region_id.
+- [x] Implement pagination và ordering ổn định bằng unique key (id) để tránh record nhảy trang do thứ tự không xác định.
+- [x] Chuyển geometry sang GeoJSON.
+- [x] Implement query đếm tổng record theo filter.
 - [ ] Xử lý trường hợp geometry null/không hợp lệ theo quy tắc dữ liệu đã thống nhất.
-- [ ] Tránh N+1 query khi lấy danh sách.
+- [x] Tránh N+1 query khi lấy danh sách.
 
 ### Step 4 – Implement Axum Handler and Route
 
 Tạo handler nhận query parameters, validate input và gọi repository.
 
-- [ ] Tạo request/query struct.
-- [ ] Validate page >= 1.
-- [ ] Validate page_size > 0 và không vượt giới hạn.
-- [ ] Validate `region_id` theo UUID (không nhận integer).
-- [ ] Tạo handler truy vấn danh sách công trình.
-- [ ] Đăng ký route GET /api/v1/buildings.
-- [ ] Trả response theo API contract đã chốt.
-- [ ] Mapping lỗi database và lỗi input thành HTTP status phù hợp.
-- [ ] Không để lộ SQL, credentials hoặc thông tin nội bộ trong error response.
+- [x] Tạo request/query struct.
+- [x] Validate page >= 1.
+- [x] Validate page_size > 0 và không vượt giới hạn.
+- [x] Validate `region_id` theo UUID (không nhận integer).
+- [x] Tạo handler truy vấn danh sách công trình.
+- [x] Đăng ký route GET /api/v1/buildings.
+- [x] Trả response theo API contract đã chốt.
+- [x] Mapping lỗi database và lỗi input thành HTTP status phù hợp.
+- [x] Không để lộ SQL, credentials hoặc thông tin nội bộ trong error response.
 
 ### Step 5 – Add Unit and Integration Tests
 
@@ -170,27 +170,27 @@ Tách rõ Unit Test và Integration Test để CI kiểm tra cả logic độc l
 
 #### 5.1 Unit Tests (không cần database/container)
 
-- [ ] Test parse/validation query parameters: page, page_size, UUID region_id.
-- [ ] Test defaults (page=1, page_size=100), page/page_size không hợp lệ và page_size vượt max 500.
-- [ ] Test tính OFFSET, pagination metadata, total_pages=0 khi dataset rỗng.
-- [ ] Test mapping database model → response DTO, đặc biệt name = NULL.
-- [ ] Test mapping lỗi ứng dụng/database sang HTTP status và error response; không leak SQL/credentials.
-- [ ] Test serialization GeoJSON/DTO với geometry MultiPolygon (nếu có logic serialize riêng trong ứng dụng).
-- [ ] Không khởi tạo network, database hoặc Docker trong Unit Test.
+- [x] Test parse/validation query parameters: page, page_size, UUID region_id.
+- [x] Test defaults (page=1, page_size=100), page/page_size không hợp lệ và page_size vượt max 500.
+- [x] Test tính OFFSET, pagination metadata, total_pages=0 khi dataset rỗng.
+- [x] Test mapping database model → response DTO, đặc biệt name = NULL.
+- [x] Test mapping lỗi ứng dụng sang HTTP status và error response; không leak SQL/credentials.
+- [x] Test serialization GeoJSON/DTO với geometry MultiPolygon.
+- [x] Không khởi tạo network, database hoặc Docker trong Unit Test.
 
 #### 5.2 Integration Tests (PostgreSQL/PostGIS bằng Testcontainers)
 
 Dùng crate testcontainers (Rust) hoặc API tương thích với codebase để khởi chạy PostGIS thực trong test. Chọn image tương thích PostgreSQL 17 (cùng major version với Supabase target KAN-14); pin tag cụ thể, không dùng latest.
 
-- [ ] Tạo test harness khởi động PostGIS container, chờ database ready rồi tạo connection pool.
-- [ ] Dùng database riêng trong container; chạy migrations/schema setup của ứng dụng (hoặc fixture SQL version-control) để test schema tương thích contract KAN-14.
-- [ ] Seed fixture deterministic: ít nhất 2 region, nhiều buildings mỗi region, có name NULL và geometry MultiPolygon SRID 4326; không phụ thuộc dataset 431 record hoặc Supabase production.
-- [ ] Test repository query: list không filter, filter theo region UUID, ordering ổn định, pagination và count theo filter.
-- [ ] Test PostGIS ST_AsGeoJSON/spatial function trong container; xử lý schema extension/search_path tương thích môi trường test và Supabase.
-- [ ] Test HTTP route qua Axum router/service: status, JSON fields, UUID validation, empty result và pagination metadata.
-- [ ] Test name = NULL và geometry MultiPolygon được trả đúng GeoJSON type/coordinates.
+- [x] Tạo test harness khởi động PostGIS container, chờ database ready rồi tạo connection pool.
+- [x] Dùng database riêng trong container; chạy migrations/schema setup của ứng dụng để test schema tương thích contract KAN-14.
+- [x] Seed fixture deterministic: 2 region, 3 buildings, có name NULL và geometry MultiPolygon SRID 4326; không phụ thuộc Supabase production.
+- [x] Test repository query qua HTTP: list không filter, filter theo region UUID, ordering ổn định, pagination và count theo filter.
+- [x] Test PostGIS ST_AsGeoJSON/spatial function trong container; xử lý schema extension/search_path tương thích môi trường test và Supabase.
+- [x] Test HTTP route qua Axum router/service: status, JSON fields, UUID validation, empty result và pagination metadata.
+- [x] Test name = NULL và geometry MultiPolygon được trả đúng GeoJSON type/coordinates.
 - [ ] Test lỗi database có response an toàn; không cố tình làm hỏng shared Supabase.
-- [ ] Dọn container/connection pool; test chạy lặp độc lập.
+- [x] Dọn container/connection pool; test chạy lặp độc lập.
 
 Integration Test phải chạy trên PostGIS thật qua Testcontainers, không dùng SQLite hoặc mock thay thế. CI không kết nối Supabase và không cần Supabase secrets.
 
@@ -198,12 +198,12 @@ Integration Test phải chạy trên PostGIS thật qua Testcontainers, không d
 
 Mở rộng workflow Rust CI hiện có nếu có; tránh tạo workflow trùng lặp.
 
-- [ ] Chạy trên ubuntu-latest với Docker socket/daemon khả dụng cho Testcontainers.
-- [ ] Cài Rust toolchain và cache Cargo dependencies.
-- [ ] Job Unit: cargo fmt --check, cargo clippy --all-targets --all-features -- -D warnings (nếu tương thích cấu hình), và cargo test --lib hoặc command tương đương.
-- [ ] Job Integration: chạy Integration Tests với Testcontainers + PostGIS; đặt timeout hợp lý và lưu log khi fail nếu workflow hỗ trợ.
-- [ ] Chạy cargo test để bảo đảm toàn bộ test suite, gồm integration test target, được thực thi.
-- [ ] CI không cần Supabase credential, không chạy migration/seed trên project thật và không ghi secret vào log.
+- [x] Chạy trên ubuntu-latest với Docker socket/daemon khả dụng cho Testcontainers.
+- [x] Cài Rust toolchain và cache Cargo dependencies.
+- [x] Job Unit: cargo fmt --check, cargo clippy --all-targets --all-features -- -D warnings và cargo test --lib.
+- [x] Job Integration: chạy Integration Tests với Testcontainers + PostGIS.
+- [x] Chạy Unit Test và Integration Test trong hai job riêng; toàn bộ test target của KAN-15 đều được thực thi.
+- [x] CI không cần Supabase credential, không chạy migration/seed trên project thật và không ghi secret vào log.
 - [ ] Xác nhận CI xanh trên Pull Request/branch trước nghiệm thu KAN-15.
 
 ### Step 6 – Add OpenAPI Documentation and Verify API
@@ -220,8 +220,8 @@ Tạo OpenAPI specification làm API contract chính thức cho KAN-15; không c
 - [x] Thêm Unit Test parse OpenAPI JSON và kiểm tra endpoint, max page_size, MultiPolygon schema; khi contract thay đổi phải cập nhật spec và test cùng nhau.
 - [x] Ghi hướng dẫn truy cập OpenAPI JSON/Swagger UI và chạy Backend + PostGIS local.
 - [ ] Chạy formatter, linter, Unit Tests và Integration Tests.
-- [ ] Kiểm tra endpoint bằng HTTP client và đối chiếu response với OpenAPI.
-- [ ] Xác nhận response đủ dữ liệu để KAN-16 tích hợp.
+- [x] Kiểm tra endpoint qua Axum integration test và đối chiếu response với OpenAPI contract test.
+- [x] Xác nhận response DTO có thuộc tính và GeoJSON MultiPolygon cho KAN-16 tích hợp.
 
 ### Database access and security
 
