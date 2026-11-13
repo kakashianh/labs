@@ -57,6 +57,27 @@ Không tạo backend/service mới. Frontend chỉ gọi API Backend đã có; k
 - Dataset không cung cấp height/floors đáng tin cậy để dựng extrusion; mặc định hiển thị footprint trên mặt đất.
 - RLS đang bật trên các bảng Supabase; Frontend chỉ gọi Rust API, không dùng database credential/service-role key.
 
+### Verified API contract after KAN-15 and KAN-7 merge
+
+Prerequisites are now present on the default branch `project/3D-map-medical`: KAN-15/P1-07 (PR #10) and KAN-7/P1-08 (PR #11). Use the implementation/OpenAPI as the source of truth; do not recreate DTOs from assumptions.
+
+| Endpoint | Response/use in P1-09 |
+|---|---|
+| `GET /api/v1/regions` | `{ data: RegionListItem[] }`; no pagination; ordered by `code ASC`. |
+| `GET /api/v1/regions/{region_id}` | `{ data: RegionDetail }`; includes region boundary GeoJSON MultiPolygon. Call only if the viewer needs the boundary/extent. |
+| `GET /api/v1/buildings` | `{ data: Building[], pagination: { page, page_size, total, total_pages } }`; supports `page`, `page_size` (default 100, maximum 500) and UUID `region_id` filter. |
+| `GET /api/v1/buildings/{building_id}` | `{ data: BuildingDetail }`; available for a selected building lookup, but not required to render the building list because list items already contain geometry and properties. |
+
+Building list items contain `id`, `region_id`, `external_id`, nullable `name`, nullable `building_type`, and `geometry` (GeoJSON MultiPolygon). Region list items contain `id`, `code`, `name`, and nullable `description`; geometry is only in Region Detail.
+
+**Important integration rules:**
+- Fetch buildings page-by-page until all pages indicated by `pagination.total_pages` are loaded; do not infer completeness from a single response or hard-code 431.
+- For the current snapshot, `page_size=500` can fit 431 records in one page, but pagination logic must still work for larger datasets.
+- API returns geometry as a GeoJSON Geometry nested in each DTO, not a GeoJSON FeatureCollection. Convert each building into a GeoJSON Feature (properties include at least `id`, `region_id`, `external_id`, `name`, `building_type`) and wrap them in a FeatureCollection before passing to `Cesium.GeoJsonDataSource`, or implement an equivalent explicit Cesium mapping.
+- Keep `building.id` as the stable selection key. Do not use `external_id` as the internal identifier.
+- Empty collections are valid; the regions endpoint returns `data: []`, and buildings returns an empty `data` array with pagination metadata.
+- Do not call detail endpoints for every building (N+1 HTTP requests). Building detail is optional and belongs to a later selected-item flow if required.
+
 ## 4. Data Flow
 
 ~~~text
@@ -89,7 +110,7 @@ GET /api/v1/regions/{id}     GET /api/v1/buildings/{id}
              Building Footprints on Map
 ~~~
 
-API paths cần đối chiếu với route thực tế sau KAN-15/KAN-7; không hard-code một contract khác với Backend. `GET /api/v1/buildings` của KAN-15 có pagination; `GET /api/v1/buildings/{building_id}` và region endpoints của KAN-7 là API tra cứu riêng.
+API paths và response contract đã được xác nhận từ Backend/OpenAPI trên default branch. Frontend chỉ sử dụng các endpoint được liệt kê ở mục 3; không hard-code contract khác với Backend.
 
 ## 5. Implementation Plan
 
@@ -120,7 +141,8 @@ Các kiểu dữ liệu cần thiết:
 - [ ] Tạo hoặc cập nhật thư mục src/types/ cho GIS types.
 - [ ] Tạo service gọi regions API.
 - [ ] Tạo service gọi buildings API.
-- [ ] Implement pagination fetching nếu API phân trang.
+- [ ] Implement pagination fetching theo `pagination.total_pages`; hỗ trợ `page_size` và `region_id` filter.
+- [ ] Khai báo response types chính xác: Region list `{ data }`, Building list `{ data, pagination }`, detail `{ data }`.
 - [ ] Cấu hình API base URL qua environment variable.
 - [ ] Xử lý HTTP error và parse response.
 - [ ] Tránh any không cần thiết trong phần mapping dữ liệu.
@@ -149,7 +171,8 @@ Yêu cầu:
 - Chỉ dùng height/extrusion khi thuộc tính độ cao thực sự tồn tại và có đơn vị rõ ràng.
 - Nếu không có height, hiển thị footprint dạng polygon trên mặt đất, không tự bịa chiều cao công trình.
 
-- [ ] Implement hàm chuyển GeoJSON thành Cesium DataSource.
+- [ ] Chuyển danh sách DTO thành GeoJSON FeatureCollection (mỗi item là Feature; geometry lấy từ DTO.geometry, properties giữ building ID và thuộc tính cần thiết).
+- [ ] Load FeatureCollection bằng Cesium GeoJsonDataSource hoặc mapping Cesium tương đương; xử lý lỗi geometry theo từng feature.
 - [ ] Gắn building ID và properties vào entity.
 - [ ] Cấu hình style mặc định cho footprint.
 - [ ] Kiểm tra `MultiPolygon` (kiểu geometry đã xác nhận của KAN-14) và xử lý an toàn nếu API có feature không hợp lệ.
@@ -198,6 +221,14 @@ Phạm vi chỉ cần xác nhận người dùng có thể chọn một công tr
 - [ ] Kiểm tra browser console không có lỗi Cesium/API nghiêm trọng.
 - [ ] Kiểm tra luồng end-to-end từ PostGIS đến Cesium Viewer.
 
+### Test strategy
+
+- Unit test API response mapping and TypeScript DTO types where practical.
+- Unit test pagination aggregation (multiple pages, empty result, final partial page) without depending on the current 431-record snapshot.
+- Unit test GeoJSON Geometry-to-FeatureCollection conversion and preservation of `building.id`/properties.
+- Verify Cesium entity selection returns the original UUID string.
+- Keep live Backend/PostGIS as the source of data in manual end-to-end verification; do not add Supabase browser access or embed credentials.
+
 ### Data access and privacy constraints
 
 - Frontend chỉ gọi Rust + Axum API; không truy cập trực tiếp `public.buildings`/`public.regions`.
@@ -207,7 +238,8 @@ Phạm vi chỉ cần xác nhận người dùng có thể chọn một công tr
 ## 6. Acceptance Criteria
 
 - [ ] Frontend gọi thành công API regions và buildings.
-- [ ] Có thể tải dữ liệu công trình qua pagination khi API yêu cầu.
+- [ ] Có thể tải đủ công trình qua pagination dựa trên `total_pages`; không phụ thuộc page_size hiện tại.
+- [ ] API DTO geometry được chuyển thành GeoJSON FeatureCollection/ Cesium entities đúng contract.
 - [ ] Geometry công trình được hiển thị trên đúng vị trí bản đồ.
 - [ ] Các properties/ID được giữ lại trong Cesium entity.
 - [ ] Người dùng có thể click chọn một công trình.
