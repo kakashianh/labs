@@ -78,7 +78,7 @@ jobs:
   postgis-integration:
     name: Docker Compose + PostGIS migration verification
     runs-on: ubuntu-latest
-    needs: test
+    needs: [test, testcontainers-integration]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
