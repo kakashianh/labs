@@ -64,6 +64,12 @@ mod tests {
         assert!(text.contains("Not found"));
     }
 
+    #[test]
+    fn bad_request_returns_400() {
+        let response = AppError::BadRequest("invalid query".into()).into_response();
+        assert_eq!(response.status(), HttpStatus::BAD_REQUEST);
+    }
+
     #[tokio::test]
     async fn unauthorized_returns_401() {
         let response = AppError::Unauthorized.into_response();
