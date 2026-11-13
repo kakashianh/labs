@@ -1,6 +1,7 @@
 //! Top-level router.
-use axum::Router;
+
 use crate::{middleware::logging::tracing_layer, routes, state::AppState};
+use axum::Router;
 
 /// Build the full Axum router with shared state and layers.
 pub fn router(state: AppState) -> Router {
