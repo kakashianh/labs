@@ -126,12 +126,7 @@ async fn region_and_building_detail_apis_work_against_postgis() {
     for uri in ["/api/v1/regions/not-a-uuid", "/api/v1/buildings/not-a-uuid"] {
         let response = app
             .clone()
-            .oneshot(
-                Request::builder()
-                    .uri(uri)
-                    .body(Body::empty())
-                    .unwrap(),
-            )
+            .oneshot(Request::builder().uri(uri).body(Body::empty()).unwrap())
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::BAD_REQUEST, "{uri}");
