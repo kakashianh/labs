@@ -22,7 +22,6 @@ Set `VITE_API_BASE_URL` in `.env.local` to the browser-accessible Axum API URL. 
 Start the backend and PostGIS from the repository root in another terminal:
 
 ```bash
-cp backend/.env.example backend/.env
 docker compose up --build
 ```
 
