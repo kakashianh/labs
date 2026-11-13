@@ -1,5 +1,5 @@
 //! Binary entrypoint: start Tokio runtime, connect Postgres, run migrations,
- //! bind the Axum router.
+//! bind the Axum router.
 
 use std::time::Duration;
 
