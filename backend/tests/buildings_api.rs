@@ -120,10 +120,9 @@ async fn buildings_api_works_against_real_postgis() {
         .await
         .expect("call unfiltered route");
     assert_eq!(unfiltered_response.status(), StatusCode::OK);
-    let unfiltered_body =
-        axum::body::to_bytes(unfiltered_response.into_body(), 1024 * 1024)
-            .await
-            .expect("read unfiltered body");
+    let unfiltered_body = axum::body::to_bytes(unfiltered_response.into_body(), 1024 * 1024)
+        .await
+        .expect("read unfiltered body");
     let unfiltered_json: Value =
         serde_json::from_slice(&unfiltered_body).expect("valid unfiltered JSON");
     assert_eq!(unfiltered_json["data"].as_array().unwrap().len(), 3);
@@ -158,10 +157,9 @@ async fn buildings_api_works_against_real_postgis() {
         .await
         .expect("call no-matches route");
     assert_eq!(no_matches_response.status(), StatusCode::OK);
-    let no_matches_body =
-        axum::body::to_bytes(no_matches_response.into_body(), 1024 * 1024)
-            .await
-            .expect("read no-matches body");
+    let no_matches_body = axum::body::to_bytes(no_matches_response.into_body(), 1024 * 1024)
+        .await
+        .expect("read no-matches body");
     let no_matches_json: Value =
         serde_json::from_slice(&no_matches_body).expect("valid no-matches JSON");
     assert_eq!(no_matches_json["data"].as_array().unwrap().len(), 0);
