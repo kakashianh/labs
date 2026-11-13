@@ -17,8 +17,8 @@ Khởi tạo dự án backend bằng **Rust + Axum**, thiết lập cấu trúc 
 | Serialization | Serde + serde_json |
 | Validation | validator |
 | Tracing / Logging | tracing + tracing-subscriber |
-| Config | config-rs hoặc dotenvy |
-| Database | PostgreSQL 16 |
+| Config | dotenvy + biến môi trường |
+| Database | PostgreSQL 16 + PostGIS 3.5 (Docker Compose local) |
 | Cache | Redis 7 |
 | Container | Docker + Docker Compose v2 |
 
@@ -267,7 +267,7 @@ version: "3.9"
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgis/postgis:16-3.5
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-appuser}
@@ -297,7 +297,7 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile
+      dockerfile: deployment/Dockerfile
     restart: unless-stopped
     env_file: ./backend/.env
     environment:
@@ -388,3 +388,41 @@ sqlx migrate run
 - `AppState` phải implement `Clone` vì Axum clone state cho mỗi request.
 - Dùng `tower-http::TraceLayer` thay vì middleware logging tự viết để tích hợp sẵn với `tracing`.
 - Build multi-stage trong Dockerfile giúp image runtime nhỏ (~20 MB) so với image dev (~1.5 GB).
+
+
+---
+
+## 12. As-built configuration and verification update (2026-11-13)
+
+Phần hướng dẫn ở các bước 1–8 phía trên là bản thiết kế/scaffold ban đầu. Khi triển khai, repository đã có một số khác biệt; **cấu hình trong source code và Docker Compose hiện tại là nguồn chuẩn**, không copy nguyên các snippet cũ để tái tạo cấu hình.
+
+### Cấu hình thực tế đã đối chiếu trên nhánh `project/3D-map-medical`
+
+- Backend dependencies được quản lý trong `backend/Cargo.toml`: Axum 0.7, Tokio, SQLx 0.7, Redis client 0.25, Serde, tracing và dotenvy.
+- Dockerfile thực tế: `backend/deployment/Dockerfile`; Docker Compose build backend từ `./backend` với đường dẫn Dockerfile này.
+- Compose services: PostGIS `postgis/postgis:16-3.5`, Redis 7 Alpine và backend.
+- Backend đọc cấu hình qua `Config::from_env()`; SQLx pool dùng `connect_lazy`, migration được chạy khi khởi động với retry.
+- Redis client hiện là optional trong AppState; không xem Redis là dependency bắt buộc của các API GIS hiện tại.
+- Router hiện ghép health, building list, building detail, region list/detail và OpenAPI routes.
+
+### Cập nhật trạng thái verification
+
+- [x] Backend format, Clippy và unit tests được CI kiểm tra.
+- [x] Docker image build được CI kiểm tra.
+- [x] Docker Compose + PostGIS integration/migration được CI kiểm tra ở workflow run [#130](https://github.com/kakashianh/labs/actions/runs/43433456047).
+- [ ] Chưa đánh dấu toàn bộ stack local (bao gồm Redis service và thao tác thủ công trên máy developer) là đã được nghiệm thu chỉ dựa trên CI trên; chỉ tick khi có log/evidence tương ứng.
+- [ ] Request/response tracing cần được xác nhận bằng log runtime thực tế; sự hiện diện của TraceLayer trong code không tự nó chứng minh toàn bộ log đã được review.
+
+**Lưu ý:** P1-05 có ghi nhận môi trường Supabase PostgreSQL 17.11 + PostGIS 3.3.7, khác với local CI PostgreSQL 16 + PostGIS 3.5. Đây là khác biệt môi trường đã biết; không thay đổi lịch sử verification của P1-05 hoặc tuyên bố hai môi trường dùng cùng phiên bản.
+
+### Files of truth
+
+- `docker-compose.yml`
+- `backend/Cargo.toml`
+- `backend/src/main.rs`
+- `backend/src/config.rs`
+- `backend/src/router.rs`
+- `backend/deployment/Dockerfile`
+- `backend/migrations/`
+
+Khi plan và source code khác nhau, cập nhật plan để phản ánh implementation đã merge; không sửa code chỉ để khớp các snippet scaffold cũ.
