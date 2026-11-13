@@ -116,16 +116,16 @@ API paths và response contract đã được xác nhận từ Backend/OpenAPI t
 
 ### Step 1 – Inspect API Contract and Existing Cesium Setup
 
-- [ ] Kiểm tra CesiumViewer được tạo ở KAN-11.
-- [ ] Kiểm tra cách cấu hình API base URL trong Frontend.
+- [x] Kiểm tra CesiumViewer được tạo ở KAN-11.
+- [x] Kiểm tra cách cấu hình API base URL trong Frontend; bổ sung `VITE_API_BASE_URL` với mặc định local `http://localhost:8000`.
 - [ ] Kiểm tra response thực tế của GET /api/v1/regions.
 - [ ] Kiểm tra response thực tế của GET /api/v1/buildings.
-- [ ] Xác nhận API trả geometry `MultiPolygon` từ `footprint`/`boundary`, SRID 4326.
-- [ ] Xác nhận UUID được giữ dưới dạng string trong TypeScript; `name` được khai báo nullable.
-- [ ] Kiểm tra coordinate order longitude/latitude và không áp dụng phép đổi trục ngoài ý muốn.
-- [ ] Kiểm tra pagination metadata và giới hạn page_size.
-- [ ] Xác định cách tải tất cả trang cần thiết trong phạm vi dataset mẫu.
-- [ ] Không giả định API trả toàn bộ công trình trong một response.
+- [x] Xác nhận API trả geometry `MultiPolygon` từ `footprint`/`boundary`, SRID 4326 qua OpenAPI contract.
+- [x] Xác nhận UUID được giữ dưới dạng string trong TypeScript; `name` được khai báo nullable.
+- [x] Kiểm tra coordinate order longitude/latitude từ OpenAPI; không áp dụng phép đổi trục.
+- [x] Kiểm tra pagination metadata và giới hạn `page_size` (tối đa 500).
+- [x] Xác định và triển khai tải tuần tự tất cả trang theo `pagination.total_pages`.
+- [x] Không giả định API trả toàn bộ công trình trong một response.
 
 ### Step 2 – Define Frontend GIS Types and API Client
 
@@ -138,26 +138,26 @@ Các kiểu dữ liệu cần thiết:
 - Pagination response.
 - API error response.
 
-- [ ] Tạo hoặc cập nhật thư mục src/types/ cho GIS types.
-- [ ] Tạo service gọi regions API.
-- [ ] Tạo service gọi buildings API.
-- [ ] Implement pagination fetching theo `pagination.total_pages`; hỗ trợ `page_size` và `region_id` filter.
-- [ ] Khai báo response types chính xác: Region list `{ data }`, Building list `{ data, pagination }`, detail `{ data }`.
-- [ ] Cấu hình API base URL qua environment variable.
-- [ ] Xử lý HTTP error và parse response.
-- [ ] Tránh any không cần thiết trong phần mapping dữ liệu.
+- [x] Tạo hoặc cập nhật thư mục src/types/ cho GIS types.
+- [x] Tạo service gọi regions API.
+- [x] Tạo service gọi buildings API.
+- [x] Implement pagination fetching theo `pagination.total_pages`; hỗ trợ `page_size` và `region_id` filter.
+- [x] Khai báo response types chính xác cho hai list endpoint đang dùng: Region list `{ data }`, Building list `{ data, pagination }`; detail endpoint không gọi ở P1-09 để tránh N+1 và thuộc luồng P1-10.
+- [x] Cấu hình API base URL qua environment variable `VITE_API_BASE_URL`.
+- [x] Xử lý HTTP error và parse response.
+- [x] Tránh `any` trong phần mapping dữ liệu.
 
 ### Step 3 – Implement GIS Data Loading Flow
 
 Tạo luồng tải dữ liệu tách khỏi component Cesium Viewer.
 
-- [ ] Tải danh sách khu vực khi khởi tạo màn hình bản đồ.
-- [ ] Tải danh sách công trình theo pagination và filter phù hợp.
-- [ ] Xử lý trạng thái loading.
-- [ ] Xử lý response rỗng.
-- [ ] Xử lý API timeout/network error.
-- [ ] Tránh gọi API lặp lại không cần thiết khi component re-render.
-- [ ] Đảm bảo component có thể cleanup khi request không còn cần thiết.
+- [x] Tải danh sách khu vực khi khởi tạo màn hình bản đồ.
+- [x] Tải danh sách công trình theo pagination; không áp dụng filter mặc định để hiển thị toàn bộ AOI.
+- [x] Xử lý trạng thái loading.
+- [x] Xử lý response rỗng.
+- [x] Xử lý API timeout/network error.
+- [x] Tránh gọi API lặp lại không cần thiết khi component re-render; request chỉ khởi tạo theo lifecycle của Viewer.
+- [x] Đảm bảo component có thể cleanup khi request không còn cần thiết bằng `AbortController`.
 
 ### Step 4 – Convert GeoJSON to Cesium Data Source
 
@@ -171,35 +171,35 @@ Yêu cầu:
 - Chỉ dùng height/extrusion khi thuộc tính độ cao thực sự tồn tại và có đơn vị rõ ràng.
 - Nếu không có height, hiển thị footprint dạng polygon trên mặt đất, không tự bịa chiều cao công trình.
 
-- [ ] Chuyển danh sách DTO thành GeoJSON FeatureCollection (mỗi item là Feature; geometry lấy từ DTO.geometry, properties giữ building ID và thuộc tính cần thiết).
-- [ ] Load FeatureCollection bằng Cesium GeoJsonDataSource hoặc mapping Cesium tương đương; xử lý lỗi geometry theo từng feature.
-- [ ] Gắn building ID và properties vào entity.
-- [ ] Cấu hình style mặc định cho footprint.
-- [ ] Kiểm tra `MultiPolygon` (kiểu geometry đã xác nhận của KAN-14) và xử lý an toàn nếu API có feature không hợp lệ.
-- [ ] Kiểm tra geometry null/empty được bỏ qua hoặc xử lý an toàn.
-- [ ] Không tạo building extrusion từ dữ liệu không có căn cứ.
+- [x] Chuyển danh sách DTO thành GeoJSON FeatureCollection (geometry lấy từ DTO.geometry; properties giữ UUID và thuộc tính cần thiết).
+- [x] Load FeatureCollection bằng `Cesium.GeoJsonDataSource`; geometry sai cấu trúc/empty được bỏ qua trước khi load.
+- [x] Gắn building ID và properties vào Feature để Cesium giữ lại trên entity.
+- [x] Cấu hình style mặc định cho footprint.
+- [x] Kiểm tra `MultiPolygon` (kiểu geometry đã xác nhận của KAN-14) và bỏ qua feature có cấu trúc không hợp lệ.
+- [x] Kiểm tra geometry null/empty được bỏ qua hoặc xử lý an toàn.
+- [x] Không tạo building extrusion từ dữ liệu không có căn cứ.
 
 ### Step 5 – Integrate Data Source into Cesium Viewer
 
-- [ ] Tích hợp data loading flow vào trang bản đồ.
-- [ ] Add/remove data source đúng vòng đời component.
-- [ ] Tránh add trùng entities khi tải lại dữ liệu.
-- [ ] Zoom camera tới extent của khu vực/dữ liệu sau khi tải thành công.
-- [ ] Giữ thao tác camera cơ bản của Cesium Viewer.
-- [ ] Đảm bảo Viewer cleanup không để lại event handler/data source cũ.
-- [ ] Kiểm tra tải lại trang không tạo nhiều lớp công trình trùng nhau.
+- [x] Tích hợp data loading flow vào trang bản đồ.
+- [x] Add/remove data source đúng vòng đời component.
+- [x] Tránh add trùng entities khi tải lại dữ liệu bằng một data source trong một Viewer lifecycle.
+- [x] Zoom camera tới extent dữ liệu sau khi tải thành công.
+- [x] Giữ thao tác camera cơ bản của Cesium Viewer.
+- [x] Đảm bảo Viewer cleanup không để lại event handler/data source cũ.
+- [x] Đảm bảo tải lại trang không tạo nhiều lớp công trình trùng nhau qua cleanup Viewer; cần xác nhận trực quan khi chạy app.
 
 ### Step 6 – Implement Basic Building Selection
 
 Phạm vi chỉ cần xác nhận người dùng có thể chọn một công trình trên bản đồ; panel và trải nghiệm tương tác đầy đủ thuộc KAN-17.
 
-- [ ] Đăng ký click handler cho Cesium Viewer.
-- [ ] Xác định entity công trình được click.
-- [ ] Lấy building ID từ entity properties.
-- [ ] Lưu selected building ID trong React state hoặc state management hiện có.
-- [ ] Có thể highlight công trình được chọn ở mức cơ bản.
-- [ ] Cleanup ScreenSpaceEventHandler khi component unmount.
-- [ ] Không gọi building detail API hoặc xây dựng panel chi tiết nếu chưa cần cho acceptance của ticket này.
+- [x] Đăng ký click handler cho Cesium Viewer.
+- [x] Xác định entity công trình được click.
+- [x] Lấy building ID từ entity properties.
+- [x] Lưu selected building ID trong React state.
+- [x] Highlight công trình được chọn ở mức cơ bản.
+- [x] Cleanup `ScreenSpaceEventHandler` khi component unmount.
+- [x] Không gọi building detail API hoặc xây dựng panel chi tiết; phần này thuộc P1-10.
 
 ### Step 7 – Verify Data Accuracy and Performance
 
@@ -214,10 +214,10 @@ Phạm vi chỉ cần xác nhận người dùng có thể chọn một công tr
 
 ### Step 8 – Document and Final Verification
 
-- [ ] Cập nhật hướng dẫn cấu hình API URL.
-- [ ] Ghi rõ cách chạy Frontend và Backend đồng thời.
-- [ ] Ghi nhận API endpoints mà Frontend sử dụng.
-- [ ] Chạy TypeScript checks và production build.
+- [x] Cập nhật hướng dẫn cấu hình API URL.
+- [x] Ghi rõ cách chạy Frontend và Backend đồng thời.
+- [x] Ghi nhận API endpoints mà Frontend sử dụng.
+- [x] Chạy TypeScript checks và production build (GitHub Actions frontend job).
 - [ ] Kiểm tra browser console không có lỗi Cesium/API nghiêm trọng.
 - [ ] Kiểm tra luồng end-to-end từ PostGIS đến Cesium Viewer.
 
@@ -245,9 +245,9 @@ Phạm vi chỉ cần xác nhận người dùng có thể chọn một công tr
 - [ ] Người dùng có thể click chọn một công trình.
 - [ ] Không hiển thị sai vị trí do CRS/coordinate order.
 - [ ] Không tự tạo chiều cao 3D khi dataset không cung cấp dữ liệu height hợp lệ.
-- [ ] Loading, empty và error state được xử lý.
-- [ ] Không tạo entities/data sources trùng khi component re-render hoặc tải lại.
-- [ ] Frontend production build thành công.
+- [x] Loading, empty và error state được xử lý.
+- [x] Không tạo entities/data sources trùng khi component re-render hoặc tải lại.
+- [x] Frontend production build thành công (GitHub Actions frontend job).
 
 ## 7. Deliverables
 
