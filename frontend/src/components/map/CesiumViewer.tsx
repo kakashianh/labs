@@ -62,7 +62,6 @@ export default function CesiumViewer() {
     })
 
     const clickHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas)
-    let dataSource: Cesium.GeoJsonDataSource | undefined
     let selectedEntity: Cesium.Entity | undefined
 
     async function loadBuildingData() {
@@ -86,7 +85,7 @@ export default function CesiumViewer() {
           return
         }
 
-        dataSource = await Cesium.GeoJsonDataSource.load(
+        const dataSource = await Cesium.GeoJsonDataSource.load(
           featureCollection as Parameters<typeof Cesium.GeoJsonDataSource.load>[0],
           {
             clampToGround: true,
@@ -107,8 +106,9 @@ export default function CesiumViewer() {
             picked?.id instanceof Cesium.Entity ? (picked.id as Cesium.Entity) : undefined
 
           if (!entity?.polygon) {
-            if (selectedEntity?.polygon) {
-              selectedEntity.polygon.material =
+            const previousPolygon = selectedEntity?.polygon
+            if (previousPolygon) {
+              previousPolygon.material =
                 new Cesium.ColorMaterialProperty(DEFAULT_BUILDING_FILL)
             }
             selectedEntity = undefined
@@ -116,13 +116,15 @@ export default function CesiumViewer() {
             return
           }
 
-          if (selectedEntity?.polygon) {
-            selectedEntity.polygon.material =
+          const previousPolygon = selectedEntity?.polygon
+          if (previousPolygon) {
+            previousPolygon.material =
               new Cesium.ColorMaterialProperty(DEFAULT_BUILDING_FILL)
           }
 
+          const selectedPolygon = entity.polygon
           selectedEntity = entity
-          selectedEntity.polygon.material =
+          selectedPolygon.material =
             new Cesium.ColorMaterialProperty(SELECTED_BUILDING_FILL)
 
           const propertyId = entity.properties?.buildingId?.getValue(Cesium.JulianDate.now())
