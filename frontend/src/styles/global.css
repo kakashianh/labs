@@ -17,7 +17,9 @@ body {
   background: #000;
 }
 
-.home-page {
+.home-page,
+.map-shell {
+  position: relative;
   width: 100%;
   height: 100%;
 }
@@ -32,4 +34,46 @@ body {
   width: 100%;
   height: 100%;
   display: block;
+}
+
+.map-status {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 10;
+  max-width: min(520px, calc(100% - 32px));
+  padding: 10px 14px;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 8px;
+  background: rgb(20 28 38 / 88%);
+  color: #f8fafc;
+  font-size: 13px;
+  line-height: 1.5;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 24%);
+  pointer-events: none;
+}
+
+.map-status p {
+  margin: 0;
+}
+
+.map-status p + p {
+  margin-top: 4px;
+}
+
+.map-status code {
+  overflow-wrap: anywhere;
+  color: #bfdbfe;
+}
+
+.map-status-warning {
+  color: #fde68a;
+}
+
+.map-status-error {
+  color: #fecaca;
+}
+
+.map-status-selection {
+  color: #bfdbfe;
 }
