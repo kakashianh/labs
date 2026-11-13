@@ -4,7 +4,7 @@
 
 Hoàn thiện trải nghiệm tương tác trên bản đồ CesiumJS để người dùng có thể điều hướng bản đồ, chọn công trình và xem thông tin chi tiết của công trình được chọn.
 
-Ticket này phát triển trên nền tảng hiển thị geometry và khả năng chọn công trình cơ bản đã có ở KAN-16. Trọng tâm là quản lý selected state và trình bày thông tin từ API.
+Ticket này phát triển trên nền tảng hiển thị geometry và khả năng chọn công trình cơ bản đã có ở P1-09. Trọng tâm là quản lý selected state và trình bày thông tin từ API.
 
 **Expected result:**
 - Người dùng zoom, pan, rotate và tilt bản đồ ổn định.
@@ -17,10 +17,10 @@ Ticket này phát triển trên nền tảng hiển thị geometry và khả nă
 ## 2. Scope
 
 ### In scope
-- Rà soát Cesium Viewer và cơ chế chọn entity từ KAN-16.
+- Rà soát Cesium Viewer và cơ chế chọn entity từ P1-09.
 - Hoàn thiện thao tác điều hướng bản đồ.
 - Quản lý selected building state trong React.
-- Gọi API chi tiết công trình theo ID từ KAN-7.
+- Gọi API chi tiết công trình theo ID từ P1-08.
 - Xây dựng popup/panel hiển thị thông tin công trình.
 - Highlight công trình được chọn.
 - Xử lý chuyển lựa chọn, bỏ chọn và dữ liệu thiếu.
@@ -28,8 +28,8 @@ Ticket này phát triển trên nền tảng hiển thị geometry và khả nă
 - Kiểm thử các trạng thái tương tác.
 
 ### Out of scope
-- Tải và render geometry công trình từ API (KAN-16).
-- Xây dựng lại API chi tiết công trình (KAN-7).
+- Tải và render geometry công trình từ API (P1-09).
+- Xây dựng lại API chi tiết công trình (P1-08).
 - Tích hợp end-to-end toàn bộ luồng bản đồ (KAN-8).
 - Hiển thị trạng thái SIR hoặc màu nguy cơ dịch bệnh.
 - Chỉnh sửa thuộc tính công trình.
@@ -75,15 +75,15 @@ Render building information panel
         +---- Click empty map --------> Clear selection / close panel
 ~~~
 
-Endpoint và response phải khớp API contract thực tế của KAN-7.
+Endpoint và response phải khớp API contract thực tế của P1-08.
 
 ## 5. Implementation Plan
 
 ### Step 1 – Inspect Existing Map Selection and Building Detail API
 
-- [ ] Kiểm tra Cesium entity properties được gắn ở KAN-16.
+- [ ] Kiểm tra Cesium entity properties được gắn ở P1-09.
 - [ ] Xác nhận entity lưu building ID ổn định.
-- [ ] Kiểm tra endpoint GET /api/v1/buildings/{building_id} của KAN-7.
+- [ ] Kiểm tra endpoint GET /api/v1/buildings/{building_id} của P1-08.
 - [ ] Kiểm tra response DTO và các thuộc tính thực tế có thể hiển thị.
 - [ ] Kiểm tra API client/service hiện có để tái sử dụng.
 - [ ] Xác định quy ước click vào vùng trống để bỏ chọn.
@@ -213,4 +213,59 @@ docs(frontend): document map interaction behavior
 
 KAN-17 hoàn thành khi người dùng có thể điều hướng bản đồ, chọn một công trình để xem thông tin, chuyển sang công trình khác hoặc bỏ chọn; panel luôn phản ánh đúng selection hiện tại và không làm gián đoạn thao tác bản đồ.
 
-Ticket này hoàn thiện tương tác và hiển thị thông tin; không triển khai lại phần tải/render dữ liệu GIS của KAN-16.
+Ticket này hoàn thiện tương tác và hiển thị thông tin; không triển khai lại phần tải/render dữ liệu GIS của P1-09.
+
+
+---
+
+## 10. API contract and dependency alignment (2026-11-13)
+
+P1-10 consumes the merged backend APIs from P1-07/P1-08 and the Cesium building entities produced by P1-09. Do not use the old KAN-7 endpoint assumptions or infer a building identifier from OSM `external_id`.
+
+### Building detail API — P1-08
+
+```http
+GET /api/v1/buildings/{building_id}
+```
+
+Success response shape:
+
+```json
+{
+  "data": {
+    "id": "<UUID>",
+    "region_id": "<UUID>",
+    "external_id": "way/...",
+    "name": null,
+    "building_type": "yes",
+    "geometry": {
+      "type": "MultiPolygon",
+      "coordinates": []
+    }
+  }
+}
+```
+
+- `building_id` path parameter must be a valid UUID. Invalid UUID returns 400; a valid UUID not found returns 404.
+- `data.id` and `data.region_id` are UUIDs. `external_id` is the source identifier and is not the primary key used by the API.
+- `name` and `building_type` are nullable. The frontend must render safe fallbacks and must not assume a name exists.
+- `geometry` is a GeoJSON Geometry object (currently MultiPolygon), not a Feature or FeatureCollection. P1-10 normally does not need to render this detail geometry again.
+- API response is wrapped in `{ "data": ... }`; read the detail DTO from `response.data`.
+
+### P1-09 → P1-10 handoff
+
+- P1-09 owns loading the paginated building collection, converting each Geometry to a GeoJSON Feature/FeatureCollection for Cesium, and attaching the stable UUID `id` to the corresponding entity properties.
+- P1-10 owns selection state, detail fetching, panel and highlight behavior.
+- Resolve the selected entity's UUID from the property attached by P1-09; do not use entity display name, array index, or `external_id` as the API path ID.
+- Avoid duplicate data loading and do not issue one detail request per rendered building. Fetch detail only for the currently selected building.
+- The optional region endpoints are `GET /api/v1/regions` and `GET /api/v1/regions/{region_id}`; use them only if the panel needs region metadata not already present.
+
+### Updated verification checklist
+
+- [ ] Confirm the actual P1-09 entity property name and UUID extraction path in the implemented frontend before coding.
+- [ ] Confirm API base URL/configuration and response unwrapping in the existing API client.
+- [ ] Verify success, invalid UUID (400), not found (404), nullable fields and network failure.
+- [ ] Verify rapid selection does not allow stale requests to overwrite the current selected building.
+- [ ] Verify panel and Cesium highlight are both keyed by the same UUID.
+
+**Dependency note:** P1-09 and P1-08 are merged prerequisites. P1-10 must integrate with their existing outputs and must not recreate the building list/detail APIs or the Cesium data-loading pipeline.
