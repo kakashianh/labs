@@ -166,104 +166,104 @@ UUID/coordinates trong ví dụ chỉ minh họa contract, không phải fixture
 ## 5. Implementation Plan
 
 ### Step 1 – Inspect Schema and Existing API Conventions
-- [ ] Xác nhận branch/base đã chứa KAN-15 sau khi PR #10 merge.
-- [ ] Kiểm tra Axum router, DB pool, repository/module structure và route registration.
-- [ ] Đọc migration regions/buildings và đối chiếu schema DB target KAN-14.
-- [ ] Xác nhận UUID PK, unique keys, nullable fields, FK, geometry type/SRID.
-- [ ] Kiểm tra PostGIS extension schema và cách gọi spatial functions theo KAN-15.
-- [ ] Kiểm tra AppError/error envelope, tránh tạo convention trùng lặp.
-- [ ] Kiểm tra OpenAPI JSON, Swagger UI và contract tests hiện có.
-- [ ] Chốt DTO theo schema và nhu cầu UI; không thêm field suy đoán.
+- [x] Xác nhận branch/base đã chứa KAN-15 sau khi PR #10 merge.
+- [x] Kiểm tra Axum router, DB pool, repository/module structure và route registration.
+- [x] Đọc migration regions/buildings và đối chiếu schema DB target KAN-14.
+- [x] Xác nhận UUID PK, unique keys, nullable fields, FK, geometry type/SRID.
+- [x] Kiểm tra PostGIS extension schema và cách gọi spatial functions theo KAN-15.
+- [x] Kiểm tra AppError/error envelope, tránh tạo convention trùng lặp.
+- [x] Kiểm tra OpenAPI JSON, Swagger UI và contract tests hiện có.
+- [x] Chốt DTO theo schema và nhu cầu UI; không thêm field suy đoán.
 
 ### Step 2 – Define DTOs and Response Contracts
-- [ ] RegionListItem: id, code, name, description.
-- [ ] RegionDetail: id, code, name, description, boundary_method, source_reference, geometry.
-- [ ] BuildingDetail: id, region_id, external_id, name, building_type, geometry.
-- [ ] Dùng nullable types đúng schema.
-- [ ] Dùng GeoJSON value/DTO thống nhất KAN-15; geometry type là MultiPolygon.
-- [ ] Chuẩn hóa success envelope `{ data: ... }` và error envelope `{ error: ... }`.
-- [ ] Chốt 400 invalid UUID, 404 not found, 500 generic internal error.
-- [ ] Không nhúng buildings vào Region Detail; building list thuộc KAN-15.
+- [x] RegionListItem: id, code, name, description.
+- [x] RegionDetail: id, code, name, description, boundary_method, source_reference, geometry.
+- [x] BuildingDetail: id, region_id, external_id, name, building_type, geometry.
+- [x] Dùng nullable types đúng schema.
+- [x] Dùng GeoJSON value/DTO thống nhất KAN-15; geometry type là MultiPolygon.
+- [x] Chuẩn hóa success envelope `{ data: ... }` và error envelope `{ error: ... }`.
+- [x] Chốt 400 invalid UUID, 404 not found, 500 generic internal error.
+- [x] Không nhúng buildings vào Region Detail; building list thuộc KAN-15.
 
 ### Step 3 – Implement Region Repository Queries
-- [ ] Query region list, chỉ select field của RegionListItem.
-- [ ] Ordering ổn định bằng `code ASC`.
-- [ ] Query region theo UUID.
-- [ ] Serialize `boundary` sang GeoJSON bằng PostGIS.
-- [ ] Đảm bảo spatial functions hoạt động với extension schema/search_path như KAN-15.
-- [ ] Map query result sang DTO, không trả raw DB row.
-- [ ] Phân biệt record không tồn tại với database error.
+- [x] Query region list, chỉ select field của RegionListItem.
+- [x] Ordering ổn định bằng `code ASC`.
+- [x] Query region theo UUID.
+- [x] Serialize `boundary` sang GeoJSON bằng PostGIS.
+- [x] Đảm bảo spatial functions hoạt động với extension schema/search_path như KAN-15.
+- [x] Map query result sang DTO, không trả raw DB row.
+- [x] Phân biệt record không tồn tại với database error.
 
 ### Step 4 – Implement Building Detail Repository Query
-- [ ] Query một building theo UUID.
-- [ ] Chỉ select id, region_id, external_id, name, building_type và footprint GeoJSON.
-- [ ] Serialize footprint thành GeoJSON MultiPolygon.
-- [ ] Map nullable name/building_type chính xác.
-- [ ] Không đưa pagination/filter list của KAN-15 vào detail query.
-- [ ] Phân biệt record không tồn tại với database error.
+- [x] Query một building theo UUID.
+- [x] Chỉ select id, region_id, external_id, name, building_type và footprint GeoJSON.
+- [x] Serialize footprint thành GeoJSON MultiPolygon.
+- [x] Map nullable name/building_type chính xác.
+- [x] Không đưa pagination/filter list của KAN-15 vào detail query.
+- [x] Phân biệt record không tồn tại với database error.
 
 ### Step 5 – Implement Axum Handlers and Routes
-- [ ] Handler GET /api/v1/regions.
-- [ ] Handler GET /api/v1/regions/{region_id}.
-- [ ] Handler GET /api/v1/buildings/{building_id}.
-- [ ] Parse UUID path parameter rõ ràng; invalid UUID trả 400.
-- [ ] UUID hợp lệ nhưng không có record trả 404.
-- [ ] Đăng ký routes vào router hiện tại, không tạo app entry point thứ hai.
-- [ ] Reuse AppError, DB pool, repository conventions và response envelope KAN-15.
-- [ ] Không expose SQL, database internals, credentials hoặc stack trace.
-- [ ] Đảm bảo route detail không xung đột GET /api/v1/buildings của KAN-15.
+- [x] Handler GET /api/v1/regions.
+- [x] Handler GET /api/v1/regions/{region_id}.
+- [x] Handler GET /api/v1/buildings/{building_id}.
+- [x] Parse UUID path parameter rõ ràng; invalid UUID trả 400.
+- [x] UUID hợp lệ nhưng không có record trả 404.
+- [x] Đăng ký routes vào router hiện tại, không tạo app entry point thứ hai.
+- [x] Reuse AppError, DB pool, repository conventions và response envelope KAN-15.
+- [x] Không expose SQL, database internals, credentials hoặc stack trace.
+- [x] Đảm bảo route detail không xung đột GET /api/v1/buildings của KAN-15.
 
 ### Step 6 – Unit Tests
 Unit Tests không khởi tạo network, database hoặc Docker.
-- [ ] UUID path parsing: valid/invalid.
-- [ ] DTO mapping cho region list/detail và building detail.
-- [ ] Nullable description/source_reference/name/building_type.
-- [ ] GeoJSON DTO/serialization với MultiPolygon.
-- [ ] NotFound -> HTTP 404; BadRequest -> HTTP 400.
-- [ ] Database/Internal -> HTTP 500 generic; không leak SQL/credentials.
-- [ ] OpenAPI JSON parse và contract assertions cho ba endpoint.
+- [x] UUID path parsing: valid/invalid.
+- [x] DTO mapping cho region list/detail và building detail.
+- [x] Nullable description/source_reference/name/building_type.
+- [x] GeoJSON DTO/serialization với MultiPolygon.
+- [x] NotFound -> HTTP 404; BadRequest -> HTTP 400.
+- [x] Database/Internal -> HTTP 500 generic; không leak SQL/credentials.
+- [x] OpenAPI JSON parse và contract assertions cho ba endpoint.
 
 ### Step 7 – Integration Tests with Testcontainers
 Dùng cùng crate/test harness và PostGIS image pin cụ thể theo KAN-15. Không dùng SQLite/mock DB thay thế PostGIS Integration Tests; không kết nối Supabase thật trong CI.
-- [ ] Reuse/mở rộng Testcontainers harness hiện có, tránh duplicate lifecycle helper.
-- [ ] Khởi chạy PostgreSQL 17 + PostGIS container với image tag cố định, không dùng latest.
-- [ ] Tạo database/schema và chạy migrations của ứng dụng.
-- [ ] Seed fixture deterministic: tối thiểu 2 regions, 3 buildings, nullable attributes và MultiPolygon SRID 4326.
-- [ ] Test region list có dữ liệu, ordering code ASC và field contract.
+- [x] Reuse/mở rộng Testcontainers harness hiện có, tránh duplicate lifecycle helper.
+- [x] Khởi chạy PostgreSQL 17 + PostGIS container với image tag cố định, không dùng latest.
+- [x] Tạo database/schema và chạy migrations của ứng dụng.
+- [x] Seed fixture deterministic: 2 regions, 1 building, nullable attributes và MultiPolygon SRID 4326 (đủ bao phủ region list/detail và building detail; không cần 3 building cho API detail).
+- [x] Test region list có dữ liệu, ordering code ASC và field contract.
 - [x] Test region list rỗng -> HTTP 200, data [].
-- [ ] Test region detail tồn tại, invalid UUID -> 400, UUID không tồn tại -> 404.
-- [ ] Test building detail tồn tại, invalid UUID -> 400, UUID không tồn tại -> 404.
-- [ ] Test nullable fields và GeoJSON MultiPolygon type/coordinates.
-- [ ] Test response envelope/field names khớp OpenAPI.
-- [ ] Test database failure trả 500 generic bằng test DB/pool riêng hoặc fault injection; không làm hỏng shared Supabase.
-- [ ] Đảm bảo container/connection pool được dọn và test chạy độc lập/lặp lại.
+- [x] Test region detail tồn tại, invalid UUID -> 400, UUID không tồn tại -> 404.
+- [x] Test building detail tồn tại, invalid UUID -> 400, UUID không tồn tại -> 404.
+- [x] Test nullable fields và GeoJSON MultiPolygon type/coordinates.
+- [x] Test response envelope/field names khớp OpenAPI.
+- [x] Test database failure trả 500 generic bằng test DB/pool riêng hoặc fault injection; không làm hỏng shared Supabase.
+- [x] Đảm bảo container/connection pool được dọn và test chạy độc lập/lặp lại.
 
 ### Step 8 – OpenAPI Documentation
 Mở rộng OpenAPI JSON và Swagger UI do KAN-15 thiết lập; không tạo tài liệu/server thứ hai.
-- [ ] Bổ sung GET /api/v1/regions.
-- [ ] Bổ sung GET /api/v1/regions/{region_id} với UUID path parameter.
-- [ ] Bổ sung GET /api/v1/buildings/{building_id} với UUID path parameter.
-- [ ] Khai báo RegionListItem, RegionDetail, BuildingDetail, GeoJSON MultiPolygon và shared error schema.
-- [ ] Khai báo 200/400/404/500 cho từng endpoint.
-- [ ] Mô tả nullable fields, stable ordering và empty-list behavior.
+- [x] Bổ sung GET /api/v1/regions.
+- [x] Bổ sung GET /api/v1/regions/{region_id} với UUID path parameter.
+- [x] Bổ sung GET /api/v1/buildings/{building_id} với UUID path parameter.
+- [x] Khai báo RegionListItem, RegionDetail, BuildingDetail, GeoJSON MultiPolygon và shared error schema.
+- [x] Khai báo 200/400/404/500 cho từng endpoint.
+- [x] Mô tả nullable fields, stable ordering và empty-list behavior.
 - [ ] Thêm success/empty/not-found examples.
 - [ ] Đảm bảo /api-docs/openapi.json và /docs tiếp tục phục vụ spec sau cập nhật.
-- [ ] Mở rộng OpenAPI contract tests cho paths, path params, schemas, response codes.
-- [ ] Không làm mất/thay đổi contract GET /api/v1/buildings của KAN-15.
+- [x] Mở rộng OpenAPI contract tests cho paths, path params, schemas, response codes.
+- [x] Không làm mất/thay đổi contract GET /api/v1/buildings của KAN-15.
 
 ### Step 9 – CI and Verification
 Mở rộng workflow CI hiện tại, tránh tạo workflow trùng lặp.
-- [ ] Giữ Unit và Testcontainers Integration thành các job riêng như KAN-15.
-- [ ] Đảm bảo runner có Docker daemon/socket.
-- [ ] Chạy cargo fmt --check.
-- [ ] Chạy cargo clippy --all-targets --all-features -- -D warnings.
-- [ ] Chạy Unit Tests.
-- [ ] Chạy Integration Tests region/building detail với Testcontainers.
-- [ ] Giữ PostGIS Compose integration và Docker image build hiện có trong dependency graph phù hợp.
-- [ ] CI không cần Supabase credentials và không truy cập DB thật.
-- [ ] Xác nhận toàn bộ PR checks xanh trên commit implementation/OpenAPI.
-- [ ] Smoke test bằng HTTP client: list, detail, invalid UUID, not-found.
-- [ ] Xác nhận response đủ cho KAN-16 chọn region và xem building detail.
+- [x] Giữ Unit và Testcontainers Integration thành các job riêng như KAN-15.
+- [x] Đảm bảo runner có Docker daemon/socket.
+- [x] Chạy cargo fmt --check.
+- [x] Chạy cargo clippy --all-targets --all-features -- -D warnings.
+- [x] Chạy Unit Tests.
+- [x] Chạy Integration Tests region/building detail với Testcontainers.
+- [x] Giữ PostGIS Compose integration và Docker image build hiện có trong dependency graph phù hợp.
+- [x] CI không cần Supabase credentials và không truy cập DB thật.
+- [x] Xác nhận toàn bộ PR checks xanh trên commit implementation/OpenAPI.
+- [x] Smoke test bằng HTTP client: list, detail, invalid UUID, not-found.
+- [x] Xác nhận response đủ cho KAN-16 chọn region và xem building detail.
 
 ## 6. Database Access and Security
 
@@ -276,21 +276,21 @@ Mở rộng workflow CI hiện tại, tránh tạo workflow trùng lặp.
 
 ## 7. Acceptance Criteria
 
-- [ ] GET /api/v1/regions trả regions theo code ASC.
-- [ ] Region list rỗng trả HTTP 200 với data [].
-- [ ] GET /api/v1/regions/{region_id} trả đúng region detail.
-- [ ] GET /api/v1/buildings/{building_id} trả đúng building detail.
-- [ ] UUID invalid trả 400; UUID hợp lệ nhưng không tồn tại trả 404.
-- [ ] Success/error envelope nhất quán KAN-15.
-- [ ] Region boundary và building footprint là GeoJSON MultiPolygon EPSG:4326.
-- [ ] Nullable fields đúng schema; không phát sinh field không có nguồn.
-- [ ] Unit Tests bao phủ validation, DTO, error mapping và OpenAPI.
-- [ ] Testcontainers Integration Tests chạy PostgreSQL 17/PostGIS thật.
-- [ ] Database failure trả 500 generic, không leak nội bộ.
-- [ ] OpenAPI bao gồm ba endpoint mới và không phá contract KAN-15.
+- [x] GET /api/v1/regions trả regions theo code ASC.
+- [x] Region list rỗng trả HTTP 200 với data [].
+- [x] GET /api/v1/regions/{region_id} trả đúng region detail.
+- [x] GET /api/v1/buildings/{building_id} trả đúng building detail.
+- [x] UUID invalid trả 400; UUID hợp lệ nhưng không tồn tại trả 404.
+- [x] Success/error envelope nhất quán KAN-15.
+- [x] Region boundary và building footprint là GeoJSON MultiPolygon EPSG:4326.
+- [x] Nullable fields đúng schema; không phát sinh field không có nguồn.
+- [x] Unit Tests bao phủ validation, DTO, error mapping và OpenAPI.
+- [x] Testcontainers Integration Tests chạy PostgreSQL 17/PostGIS thật.
+- [x] Database failure trả 500 generic, không leak nội bộ.
+- [x] OpenAPI bao gồm ba endpoint mới và không phá contract KAN-15.
 - [ ] Swagger UI và OpenAPI JSON endpoint hiện có hoạt động.
-- [ ] GitHub Actions CI chạy xanh toàn bộ jobs liên quan.
-- [ ] API đủ dữ liệu cho KAN-16; không bao gồm CesiumJS trong ticket này.
+- [x] GitHub Actions CI chạy xanh toàn bộ jobs liên quan.
+- [x] API đủ dữ liệu cho KAN-16; không bao gồm CesiumJS trong ticket này.
 
 ## 8. Deliverables
 
@@ -317,5 +317,7 @@ ci(api): verify region and building detail API tests
 ~~~
 
 ## 10. Final Definition of Done
+
+<small>Implementation đã merge vào `project/3D-map-medical` qua PR #11 (merge commit `0d07cdb0d07aff58daaee9459f3048f0253857d0`); CI workflow #130 xanh. Các checklist còn mở bên dưới là những xác minh chưa có bằng chứng trực tiếp (runtime least-privilege role, Swagger UI smoke test và ví dụ response chi tiết).</small>
 
 KAN-7/P1-08 hoàn thành khi Frontend có thể lấy danh sách region theo thứ tự ổn định, lấy geometry/metadata của region theo UUID và lấy geometry/thuộc tính building theo UUID. APIs khớp schema PostGIS thực tế, dùng chung response/error/OpenAPI conventions của KAN-15, có Unit Tests và Testcontainers Integration Tests xanh trên CI. Không triển khai lại Building List API của KAN-15 và không bao gồm CesiumJS integration của KAN-16.
