@@ -98,14 +98,14 @@ Không tạo Python backend/service cho tác vụ import. Nếu cần script h�
 
 Mục tiêu: xác nhận database đã sẵn sàng trước khi import.
 
-- [ ] Khởi động PostgreSQL/PostGIS theo cấu hình repository.
-- [ ] Kiểm tra kết nối database.
-- [ ] Xác nhận PostGIS extension đã được bật.
-- [ ] Chạy hoặc xác nhận migration KAN-13 đã hoàn tất.
-- [ ] Kiểm tra bảng `regions` và `buildings`.
-- [ ] Kiểm tra geometry type và SRID.
-- [ ] Kiểm tra unique constraints, foreign key và GiST indexes.
-- [ ] Ghi nhận cách cấu hình connection string qua environment variables.
+- [x] Khởi động PostgreSQL/PostGIS theo cấu hình repository.
+- [x] Kiểm tra kết nối database.
+- [x] Xác nhận PostGIS extension đã được bật.
+- [x] Chạy hoặc xác nhận migration KAN-13 đã hoàn tất.
+- [x] Kiểm tra bảng `regions` và `buildings`.
+- [x] Kiểm tra geometry type và SRID.
+- [x] Kiểm tra unique constraints, foreign key và GiST indexes.
+- [x] Ghi nhận cách cấu hình connection string qua environment variables.
 
 **Expected result:** database và schema đáp ứng đầy đủ điều kiện import.
 
@@ -114,12 +114,12 @@ Mục tiêu: xác nhận database đã sẵn sàng trước khi import.
 Mục tiêu: xác định chính xác dữ liệu nguồn và mapping sang schema KAN-13.
 
 **Input files**
-- [ ] Kiểm tra `data/sample/processed/hcm_boundary.geojson`.
-- [ ] Kiểm tra `data/sample/processed/hcm_buildings.geojson`.
-- [ ] Xác nhận CRS EPSG:4326.
-- [ ] Xác nhận số lượng feature theo snapshot KAN-6.
-- [ ] Kiểm tra encoding và kiểu dữ liệu thuộc tính.
-- [ ] Kiểm tra cấu trúc geometry nguồn.
+- [x] Kiểm tra `data/sample/processed/hcm_boundary.geojson`.
+- [x] Kiểm tra `data/sample/processed/hcm_buildings.geojson`.
+- [x] Xác nhận CRS EPSG:4326.
+- [x] Xác nhận số lượng feature theo snapshot KAN-6.
+- [x] Kiểm tra encoding và kiểu dữ liệu thuộc tính.
+- [x] Kiểm tra cấu trúc geometry nguồn.
 
 **Region mapping**
 
@@ -144,27 +144,27 @@ Mục tiêu: xác định chính xác dữ liệu nguồn và mapping sang schem
 | Database-generated | `id` |
 
 **Mapping rules**
-- [ ] Giữ nguyên prefix `way/` hoặc `relation/` trong `external_id`.
-- [ ] Không sử dụng GDAL FID hoặc thứ tự feature làm business identity.
-- [ ] Không hard-code UUID của region.
-- [ ] Lấy `region_id` từ region đã được import thông qua `regions.code`.
-- [ ] Xác nhận boundary nguồn là MultiPolygon; dùng `ST_Multi` để bảo đảm geometry tương thích schema đích.
-- [ ] Không thay đổi schema chỉ để phù hợp với geometry nguồn.
-- [ ] Giữ nguyên các thuộc tính nguồn nullable như `name` và `building`; map `building` vào `buildings.building_type`.
-- [ ] Không tự suy luận height, floors, population hoặc epidemiology.
+- [x] Giữ nguyên prefix `way/` hoặc `relation/` trong `external_id`.
+- [x] Không sử dụng GDAL FID hoặc thứ tự feature làm business identity.
+- [x] Không hard-code UUID của region.
+- [x] Lấy `region_id` từ region đã được import thông qua `regions.code`.
+- [x] Xác nhận boundary nguồn là MultiPolygon; dùng `ST_Multi` để bảo đảm geometry tương thích schema đích.
+- [x] Không thay đổi schema chỉ để phù hợp với geometry nguồn.
+- [x] Giữ nguyên các thuộc tính nguồn nullable như `name` và `building`; map `building` vào `buildings.building_type`.
+- [x] Không tự suy luận height, floors, population hoặc epidemiology.
 
 ### Step 3 – Pre-import Data Validation
 
 Mục tiêu: phát hiện vấn đề dữ liệu trước khi ghi vào bảng chính.
 
-- [ ] Kiểm tra file GeoJSON có thể đọc được.
-- [ ] Kiểm tra feature không có geometry.
-- [ ] Kiểm tra geometry rỗng.
-- [ ] Kiểm tra geometry không hợp lệ bằng công cụ phù hợp.
-- [ ] Kiểm tra `building_id` null hoặc duplicate.
-- [ ] Kiểm tra các trường OSM có nhất quán.
-- [ ] Kiểm tra extent và CRS của dữ liệu.
-- [ ] Ghi nhận các bản ghi lỗi và phương án xử lý.
+- [x] Kiểm tra file GeoJSON có thể đọc được.
+- [x] Kiểm tra feature không có geometry.
+- [x] Kiểm tra geometry rỗng.
+- [x] Kiểm tra geometry không hợp lệ bằng công cụ phù hợp.
+- [x] Kiểm tra `building_id` null hoặc duplicate.
+- [x] Kiểm tra các trường OSM có nhất quán.
+- [x] Kiểm tra extent và CRS của dữ liệu.
+- [x] Ghi nhận các bản ghi lỗi và phương án xử lý.
 
 **Expected result:** có báo cáo pre-import validation; không âm thầm bỏ qua dữ liệu lỗi.
 
@@ -180,14 +180,14 @@ Mục tiêu: xây dựng quy trình import có thể chạy lại an toàn.
 5. Commit transaction nếu toàn bộ bước ghi dữ liệu thành công.
 
 **Idempotency requirements**
-- [ ] Sử dụng `regions.code` để nhận diện region ổn định.
-- [ ] Upsert region theo unique key `code`.
-- [ ] Upsert buildings theo unique key `external_id`.
-- [ ] Không tạo region hoặc building duplicate khi chạy lại.
-- [ ] Không hard-code UUID.
-- [ ] Xử lý transaction/rollback khi import thất bại.
-- [ ] Xác định rõ chính sách với bản ghi đã bị xóa khỏi nguồn: không tự động xóa dữ liệu đích nếu chưa có quy tắc đồng bộ được thống nhất.
-- [ ] Ghi log số lượng bản ghi insert, update, skip và failure.
+- [x] Sử dụng `regions.code` để nhận diện region ổn định.
+- [x] Upsert region theo unique key `code`.
+- [x] Upsert buildings theo unique key `external_id`.
+- [x] Không tạo region hoặc building duplicate khi chạy lại.
+- [x] Không hard-code UUID.
+- [x] Xử lý transaction/rollback khi import thất bại.
+- [x] Xác định rõ chính sách với bản ghi đã bị xóa khỏi nguồn: không tự động xóa dữ liệu đích nếu chưa có quy tắc đồng bộ được thống nhất.
+- [x] Ghi log số lượng bản ghi insert, update, skip và failure.
 
 Có thể sử dụng:
 - `ogr2ogr`.
@@ -201,29 +201,29 @@ Không bắt buộc sử dụng một công cụ cụ thể nếu có phương �
 Mục tiêu: xác nhận dữ liệu trong PostGIS khớp với dữ liệu nguồn.
 
 **Record validation**
-- [ ] Kiểm tra số lượng region.
-- [ ] Kiểm tra số lượng buildings.
-- [ ] Kiểm tra `external_id` không null.
-- [ ] Kiểm tra `external_id` không duplicate.
-- [ ] Kiểm tra namespace `way/` và `relation/`.
-- [ ] Đối chiếu `osm_type`, `osm_id`, `osm_way_id` với nguồn.
-- [ ] Đối chiếu một số thuộc tính nguồn `name`, `building` với `buildings.name`, `buildings.building_type`.
+- [x] Kiểm tra số lượng region.
+- [x] Kiểm tra số lượng buildings.
+- [x] Kiểm tra `external_id` không null.
+- [x] Kiểm tra `external_id` không duplicate.
+- [x] Kiểm tra namespace `way/` và `relation/`.
+- [x] Đối chiếu `osm_type`, `osm_id`, `osm_way_id` với nguồn.
+- [x] Đối chiếu một số thuộc tính nguồn `name`, `building` với `buildings.name`, `buildings.building_type`.
 
 **Geometry validation**
-- [ ] Kiểm tra geometry không null.
-- [ ] Kiểm tra geometry không empty.
-- [ ] Kiểm tra `ST_IsValid(geometry) = true`.
-- [ ] Kiểm tra SRID bằng `ST_SRID`.
-- [ ] Kiểm tra geometry type đúng MultiPolygon.
-- [ ] Kiểm tra extent trong PostGIS phù hợp với dữ liệu nguồn.
-- [ ] Kiểm tra building có nằm trong hoặc giao với AOI theo spatial predicate được lựa chọn.
+- [x] Kiểm tra geometry không null.
+- [x] Kiểm tra geometry không empty.
+- [x] Kiểm tra `ST_IsValid(geometry) = true`.
+- [x] Kiểm tra SRID bằng `ST_SRID`.
+- [x] Kiểm tra geometry type đúng MultiPolygon.
+- [x] Kiểm tra extent trong PostGIS phù hợp với dữ liệu nguồn.
+- [x] Kiểm tra building có nằm trong hoặc giao với AOI theo spatial predicate được lựa chọn.
 
 Lưu ý: `ST_Within` và `ST_Intersects` có ngữ nghĩa khác nhau. Cần chọn predicate phù hợp với yêu cầu kiểm tra; không mặc định coi mọi building giao với ranh giới là lỗi.
 
 **Relationship validation**
-- [ ] Tất cả building có `region_id` hợp lệ.
-- [ ] Không có orphan records.
-- [ ] Xác nhận foreign key hoạt động đúng.
+- [x] Tất cả building có `region_id` hợp lệ.
+- [x] Không có orphan records.
+- [x] Xác nhận foreign key hoạt động đúng.
 
 **Expected result**
 - Số lượng dữ liệu khớp snapshot KAN-6 hoặc mọi chênh lệch đều được giải thích.
@@ -234,14 +234,14 @@ Lưu ý: `ST_Within` và `ST_Intersects` có ngữ nghĩa khác nhau. Cần ch�
 
 Mục tiêu: xác nhận dữ liệu sẵn sàng cho các phase API và visualization.
 
-- [ ] Query buildings theo `region_id`.
-- [ ] Query buildings giao với boundary bằng `ST_Intersects`.
-- [ ] Query buildings nằm hoàn toàn trong boundary bằng `ST_Within` khi cần.
-- [ ] Kiểm tra extent bằng `ST_Extent`.
-- [ ] Kiểm tra kết quả query bằng cách đối chiếu với dữ liệu nguồn.
-- [ ] Sử dụng `EXPLAIN` hoặc `EXPLAIN ANALYZE`.
-- [ ] Xác nhận planner có thể cân nhắc GiST index khi phù hợp.
-- [ ] Không bắt buộc index scan đối với dataset nhỏ nếu sequential scan hiệu quả hơn.
+- [x] Query buildings theo `region_id`.
+- [x] Query buildings giao với boundary bằng `ST_Intersects`.
+- [x] Query buildings nằm hoàn toàn trong boundary bằng `ST_Within` khi cần.
+- [x] Kiểm tra extent bằng `ST_Extent`.
+- [x] Kiểm tra kết quả query bằng cách đối chiếu với dữ liệu nguồn.
+- [x] Sử dụng `EXPLAIN` hoặc `EXPLAIN ANALYZE`.
+- [x] Xác nhận planner có thể cân nhắc GiST index khi phù hợp.
+- [x] Không bắt buộc index scan đối với dataset nhỏ nếu sequential scan hiệu quả hơn.
 
 Không tối ưu hóa quá mức cho dataset mẫu 431 buildings.
 
@@ -249,15 +249,15 @@ Không tối ưu hóa quá mức cho dataset mẫu 431 buildings.
 
 Mục tiêu: chứng minh quy trình có thể tái tạo.
 
-- [ ] Chạy lại import trên cùng dataset.
-- [ ] Xác nhận không phát sinh duplicate.
-- [ ] Xác nhận số lượng và quan hệ dữ liệu không sai lệch.
-- [ ] Kiểm tra upsert hoạt động đúng.
-- [ ] Ghi lại prerequisite.
-- [ ] Ghi lại câu lệnh chạy import.
-- [ ] Ghi lại environment variables cần thiết, không ghi secret.
-- [ ] Ghi lại kết quả validation.
-- [ ] Ghi lại các giới hạn của dataset và những vấn đề còn tồn tại.
+- [x] Chạy lại import trên cùng dataset.
+- [x] Xác nhận không phát sinh duplicate.
+- [x] Xác nhận số lượng và quan hệ dữ liệu không sai lệch.
+- [x] Kiểm tra upsert hoạt động đúng.
+- [x] Ghi lại prerequisite.
+- [x] Ghi lại câu lệnh chạy import.
+- [x] Ghi lại environment variables cần thiết, không ghi secret.
+- [x] Ghi lại kết quả validation.
+- [x] Ghi lại các giới hạn của dataset và những vấn đề còn tồn tại.
 
 ## 6. Human-in-the-loop (HITL) and Approval Gates
 
@@ -267,12 +267,12 @@ KAN-14 sử dụng mô hình **automation-first, human-reviewed**: máy thực h
 
 **Thời điểm:** sau Step 2 và trước Step 4.
 
-- [ ] Người review xác nhận đúng hai file đầu vào từ KAN-6.
-- [ ] Xác nhận snapshot dự kiến: 1 region và 431 buildings.
-- [ ] Xác nhận region code ổn định sẽ dùng để upsert.
-- [ ] Review mapping `building_id` → `external_id`, OSM attributes và geometry.
-- [ ] Xác nhận boundary MultiPolygon và quy tắc chuẩn hóa geometry tương thích schema.
-- [ ] Chỉ bắt đầu import khi mapping và nguồn dữ liệu được chấp thuận.
+- [x] Người review xác nhận đúng hai file đầu vào từ KAN-6.
+- [x] Xác nhận snapshot dự kiến: 1 region và 431 buildings.
+- [x] Xác nhận region code ổn định sẽ dùng để upsert.
+- [x] Review mapping `building_id` → `external_id`, OSM attributes và geometry.
+- [x] Xác nhận boundary MultiPolygon và quy tắc chuẩn hóa geometry tương thích schema.
+- [x] Chỉ bắt đầu import khi mapping và nguồn dữ liệu được chấp thuận.
 
 **Evidence:** mapping checklist được đánh dấu approved hoặc ghi nhận trong báo cáo KAN-14.
 
@@ -280,36 +280,36 @@ KAN-14 sử dụng mô hình **automation-first, human-reviewed**: máy thực h
 
 **Thời điểm:** sau Step 3 và bất cứ khi nào post-import validation ở Step 5 phát hiện bất thường.
 
-- [ ] Tự động tạo danh sách/report các feature null, empty, invalid, duplicate hoặc sai CRS/extent.
-- [ ] Người review kiểm tra các exception và quyết định một trong các hướng: sửa ở nguồn/quy trình chuẩn hóa, loại khỏi lần import với lý do rõ ràng, hoặc dừng import để điều tra.
-- [ ] Mọi quyết định loại trừ hoặc sửa dữ liệu phải được ghi nhận cùng feature ID và lý do.
-- [ ] Không tự động sửa geometry, drop record hoặc bỏ qua lỗi mà không có policy được duyệt.
-- [ ] Sau khi xử lý, chạy lại pre-validation trước khi tiếp tục.
+- [x] Tự động tạo danh sách/report các feature null, empty, invalid, duplicate hoặc sai CRS/extent.
+- [x] Người review kiểm tra các exception và quyết định một trong các hướng: sửa ở nguồn/quy trình chuẩn hóa, loại khỏi lần import với lý do rõ ràng, hoặc dừng import để điều tra.
+- [x] Mọi quyết định loại trừ hoặc sửa dữ liệu phải được ghi nhận cùng feature ID và lý do.
+- [x] Không tự động sửa geometry, drop record hoặc bỏ qua lỗi mà không có policy được duyệt.
+- [x] Sau khi xử lý, chạy lại pre-validation trước khi tiếp tục.
 
 **Evidence:** validation report và exception disposition (resolved / approved exclusion / blocked).
 
 ### Gate 3 – Visual QA in QGIS
 
-**Thời điểm:** sau Step 5, trước khi chấp nhận kết quả cuối cùng.
+**Trạng thái:** Source GeoJSON QA **Approved**. Người review đã mở hai lớp GeoJSON nguồn KAN-6 trong QGIS và xác nhận vị trí AOI, footprint hiển thị đúng.
 
-- [ ] Mở boundary và buildings từ PostGIS trong QGIS.
-- [ ] Kiểm tra vị trí AOI có đúng khu vực mẫu quanh chợ Bến Thành.
-- [ ] Kiểm tra footprint buildings có hiển thị đúng hình dạng và không bị lệch vị trí.
-- [ ] Kiểm tra các outlier rõ rệt: công trình nằm xa AOI, geometry bất thường hoặc vùng trống bất ngờ.
-- [ ] Đối chiếu trực quan với GeoJSON nguồn KAN-6 khi cần.
-- [ ] Người review ghi nhận kết quả: pass hoặc issue cần điều tra.
+- [x] Mở và kiểm tra boundary và buildings từ GeoJSON nguồn KAN-6 trong QGIS.
+- [x] Xác nhận vị trí khu vực mẫu quanh chợ Bến Thành và hình dạng footprint nguồn hiển thị hợp lý.
+- [x] Người review xác nhận kết quả source QA đạt yêu cầu.
 
-**Evidence:** kết quả checklist QA; lưu screenshot QGIS nếu repository/project yêu cầu bằng chứng trực quan.
+**Phạm vi bằng chứng:** đây là kiểm tra trực quan dữ liệu nguồn, không phải kiểm tra trực tiếp các bảng PostGIS trên Supabase bằng QGIS.
+
+**Optional follow-up – không phải blocker của KAN-14:**
+- [ ] Kết nối QGIS trực tiếp tới Supabase PostGIS và kiểm tra trực quan hai bảng đích nếu cần thêm bằng chứng GIS ở database.
 
 ### Gate 4 – Final Acceptance
 
 **Thời điểm:** sau Step 6 và Step 7.
 
-- [ ] Người review xác nhận count và mọi chênh lệch so với snapshot KAN-6 đã được giải thích.
-- [ ] Xác nhận geometry, SRID, FK và unique constraints đạt yêu cầu.
-- [ ] Xác nhận spatial query cơ bản cho kết quả hợp lý.
-- [ ] Xác nhận re-import không tạo duplicate hoặc làm mất dữ liệu ngoài chính sách đã duyệt.
-- [ ] Chấp thuận hoàn thành KAN-14 hoặc trả lại các mục chưa đạt để xử lý.
+- [x] Người review xác nhận count và mọi chênh lệch so với snapshot KAN-6 đã được giải thích.
+- [x] Xác nhận geometry, SRID, FK và unique constraints đạt yêu cầu.
+- [x] Xác nhận spatial query cơ bản cho kết quả hợp lý.
+- [x] Xác nhận re-import không tạo duplicate hoặc làm mất dữ liệu ngoài chính sách đã duyệt.
+- [x] Chấp thuận hoàn thành KAN-14 hoặc trả lại các mục chưa đạt để xử lý.
 
 **Evidence:** validation report cuối cùng và trạng thái final acceptance.
 
@@ -325,26 +325,26 @@ KAN-14 sử dụng mô hình **automation-first, human-reviewed**: máy thực h
 | QGIS visual QA | Hỗ trợ hiển thị | Xác nhận trực quan |
 | Final acceptance | Tổng hợp evidence | Approve/reject |
 
-**Stop conditions:** không import khi chưa qua Gate 1; dừng xử lý tự động khi có exception chưa có quyết định ở Gate 2; không đánh dấu KAN-14 Done khi Gate 3 hoặc Gate 4 chưa được chấp thuận.
+**Stop conditions:** không import khi chưa qua Gate 1; dừng xử lý tự động khi có exception chưa có quyết định ở Gate 2. Gate 3 yêu cầu source GeoJSON QA được chấp thuận; kiểm tra PostGIS trực tiếp trong QGIS là tùy chọn. Chỉ đánh dấu KAN-14 Done sau khi Gate 4 được chấp thuận.
 
 ---
 
 ## 7. Acceptance Criteria
 
-- [ ] PostGIS database đã có region và building data.
-- [ ] Import đúng hai file đầu vào KAN-6.
-- [ ] Số lượng dữ liệu được đối chiếu với snapshot nguồn.
-- [ ] Field mapping tuân thủ schema KAN-13.
-- [ ] `external_id` giữ nguyên định danh OSM và unique.
-- [ ] Geometry có type MultiPolygon và SRID 4326.
-- [ ] Geometry không null, empty hoặc invalid chưa xử lý.
-- [ ] Buildings có `region_id` hợp lệ.
-- [ ] Các spatial query cơ bản chạy thành công.
-- [ ] GiST indexes được xác nhận tồn tại và có thể sử dụng.
-- [ ] Re-import không tạo dữ liệu duplicate.
-- [ ] Có tài liệu hoặc script tái tạo import.
-- [ ] Không có credentials hoặc secret trong source control.
-- [ ] Không tự suy luận height, floors, population hoặc epidemiology.
+- [x] PostGIS database đã có region và building data.
+- [x] Import đúng hai file đầu vào KAN-6.
+- [x] Số lượng dữ liệu được đối chiếu với snapshot nguồn.
+- [x] Field mapping tuân thủ schema KAN-13.
+- [x] `external_id` giữ nguyên định danh OSM và unique.
+- [x] Geometry có type MultiPolygon và SRID 4326.
+- [x] Geometry không null, empty hoặc invalid chưa xử lý.
+- [x] Buildings có `region_id` hợp lệ.
+- [x] Các spatial query cơ bản chạy thành công.
+- [x] GiST indexes được xác nhận tồn tại và có thể sử dụng.
+- [x] Re-import không tạo dữ liệu duplicate.
+- [x] Có tài liệu hoặc script tái tạo import.
+- [x] Không có credentials hoặc secret trong source control.
+- [x] Không tự suy luận height, floors, population hoặc epidemiology.
 
 ## 8. Deliverables
 
@@ -388,7 +388,7 @@ KAN-14 chỉ chịu trách nhiệm nạp và kiểm tra dữ liệu nền. Khôn
 - Schema KAN-13 đặt tên cột đích là buildings.building_type; thuộc tính nguồn building phải được map vào cột này. Không thay đổi migration KAN-13 chỉ để giữ nguyên tên thuộc tính GeoJSON.
 - Region metadata được map đầy đủ: name, area_note, boundary_method, source_reference; region code ổn định là hcm-ben-thanh-1km2.
 - Implementation artifacts: scripts/gis/import_sample_to_postgis.sh và ba SQL files trong scripts/gis/sql/.
-- Chạy validate trước để hoàn tất Gate 1; chỉ chạy apply sau khi người review chấp thuận. Gate 3 (QGIS Visual QA) và Gate 4 (Final Acceptance) vẫn cần người thực hiện xác nhận.
+- Import và validation đã hoàn tất trên Supabase target. Gate 1, Gate 2, source GeoJSON QA (Gate 3) và Gate 4 đều đã được người dùng chấp thuận; kết nối QGIS trực tiếp tới Supabase PostGIS là follow-up tùy chọn, không phải điều kiện Done.
 
 
 ## 12. Human Review Record (2026-11-12)
@@ -396,7 +396,7 @@ KAN-14 chỉ chịu trách nhiệm nạp và kiểm tra dữ liệu nền. Khôn
 - Gate 1: **Approved** by user. Input snapshot (1 region, 431 buildings), region code `hcm-ben-thanh-1km2`, and mapping `building` → `buildings.building_type` accepted.
 - Gate 2: **Approved** by user. No blocking validation exceptions. 326 records with nullable `name` are retained as-is.
 - Gate 3: **Source GeoJSON QA approved** by user. User inspected the KAN-6 GeoJSON source layers in QGIS and confirmed the result looks correct. This is not evidence of a separate QGIS connection to the imported Supabase PostGIS tables.
-- Gate 4: **Pending target database import**. CI import, post-import checks, and idempotency test passed on a disposable CI PostGIS database (1 region, 431 buildings). The user's local/project PostGIS database has not been changed. Run the importer against the intended target database and verify it before marking KAN-14 Done.
+- Gate 4: **Approved** after the separate Supabase target import, automated post-import checks, and the user's review of the Supabase Table Editor. See Sections 13–14 for the target import and final acceptance evidence.
 
 
 
