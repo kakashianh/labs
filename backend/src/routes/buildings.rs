@@ -12,7 +12,6 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sqlx::Row;
 use uuid::Uuid;
 
 const DEFAULT_PAGE: u64 = 1;
