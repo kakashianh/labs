@@ -395,7 +395,7 @@ KAN-14 chỉ chịu trách nhiệm nạp và kiểm tra dữ liệu nền. Khôn
 
 - Gate 1: **Approved** by user. Input snapshot (1 region, 431 buildings), region code `hcm-ben-thanh-1km2`, and mapping `building` → `buildings.building_type` accepted.
 - Gate 2: **Approved** by user. No blocking validation exceptions. 326 records with nullable `name` are retained as-is.
-- Gate 3: **Approved** by user. User completed QGIS visual inspection of the KAN-6 GeoJSON source layers and confirmed the result looks correct.
+- Gate 3: **Source GeoJSON QA approved** by user. User inspected the KAN-6 GeoJSON source layers in QGIS and confirmed the result looks correct. This is not evidence of a separate QGIS connection to the imported Supabase PostGIS tables.
 - Gate 4: **Pending target database import**. CI import, post-import checks, and idempotency test passed on a disposable CI PostGIS database (1 region, 431 buildings). The user's local/project PostGIS database has not been changed. Run the importer against the intended target database and verify it before marking KAN-14 Done.
 
 
@@ -425,3 +425,13 @@ KAN-14 chỉ chịu trách nhiệm nạp và kiểm tra dữ liệu nền. Khôn
 - Gate 4: **Approved** by user after reviewing the imported Supabase tables and confirming the result looks correct.
 - KAN-14 data import and verification are accepted for the Supabase target.
 - Scope note: Gate 3 evidence remains the user's visual QA of the KAN-6 GeoJSON source layers in QGIS; the Supabase table review is recorded separately as final target-data acceptance. No claim is made that PostGIS layers were independently inspected in QGIS.
+
+
+## 15. Documentation Follow-up (2026-11-13)
+
+- [x] Clarified that `scripts/gis/import_sample_to_postgis.sh` currently targets the repository's local Docker Compose PostgreSQL service only; it is not a Supabase-aware importer.
+- [x] Documented the Supabase target environment and the distinction between the tested local CI importer and the separately completed Supabase import.
+- [x] Added a safe Supabase/QGIS connection checklist using the project's own connection details and SSL requirement; credentials must remain outside Git.
+- [x] Clarified Gate 3 evidence: QGIS source GeoJSON review was approved, while a separate QGIS visual inspection of the Supabase PostGIS layers is optional follow-up and is not claimed as completed.
+- [x] Retained Gate 4 final acceptance as approved based on automated target-data verification and the user's Supabase Table Editor review.
+- No schema, imported records, or Supabase security policies were changed in this documentation-only follow-up.
