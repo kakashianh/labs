@@ -5,22 +5,30 @@ use axum::{
 use backend::{db, router::router, state::AppState};
 use serde_json::Value;
 use sqlx::postgres::PgPoolOptions;
-use testcontainers::{clients, core::WaitFor, images::generic::GenericImage};
+use testcontainers::{
+    core::{IntoContainerPort, WaitFor},
+    runners::AsyncRunner,
+    GenericImage, ImageExt,
+};
 use tower::ServiceExt;
 
 #[tokio::test]
 async fn buildings_api_works_against_real_postgis() {
-    let docker = clients::Cli::default();
-    let image = GenericImage::new("postgis/postgis", "16-3.4")
+    let container = GenericImage::new("postgis/postgis", "16-3.4")
         .with_env_var("POSTGRES_USER", "gis_test")
         .with_env_var("POSTGRES_PASSWORD", "gis_test")
         .with_env_var("POSTGRES_DB", "gis_test")
-        .with_exposed_port(5432)
+        .with_exposed_port(5432.tcp())
         .with_wait_for(WaitFor::message_on_stderr(
             "database system is ready to accept connections",
-        ));
-    let container = docker.run(image);
-    let port = container.get_host_port_ipv4(5432);
+        ))
+        .start()
+        .await
+        .expect("start Testcontainers PostGIS");
+    let port = container
+        .get_host_port_ipv4(5432)
+        .await
+        .expect("resolve mapped PostGIS port");
     let database_url = format!("postgres://gis_test:gis_test@127.0.0.1:{port}/gis_test");
 
     let pool = PgPoolOptions::new()
