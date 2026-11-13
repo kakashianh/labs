@@ -18,6 +18,9 @@ pub enum AppError {
     #[error("Unauthorized")]
     Unauthorized,
 
+    #[error("Bad request: {0}")]
+    BadRequest(String),
+
     #[error("Database error: {0}")]
     Database(#[from] sqlx::Error),
 
@@ -33,6 +36,7 @@ impl IntoResponse for AppError {
         let (status, message) = match &self {
             AppError::NotFound => (StatusCode::NOT_FOUND, self.to_string()),
             AppError::Unauthorized => (StatusCode::UNAUTHORIZED, self.to_string()),
+            AppError::BadRequest(message) => (StatusCode::BAD_REQUEST, message.clone()),
             AppError::Database(_) | AppError::Internal(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Internal server error".to_string(),
@@ -58,6 +62,12 @@ mod tests {
             .unwrap_or_default();
         let text = String::from_utf8_lossy(&body);
         assert!(text.contains("Not found"));
+    }
+
+    #[test]
+    fn bad_request_returns_400() {
+        let response = AppError::BadRequest("invalid query".into()).into_response();
+        assert_eq!(response.status(), HttpStatus::BAD_REQUEST);
     }
 
     #[tokio::test]

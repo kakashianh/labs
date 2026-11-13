@@ -1,0 +1,58 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "GIS 3D Backend API",
+    "version": "1.0.0",
+    "description": "API for querying GIS region and building data. KAN-15 currently exposes the paginated building list endpoint."
+  },
+  "servers": [{ "url": "/" }],
+  "paths": {
+    "/api/v1/buildings": {
+      "get": {
+        "operationId": "listBuildings",
+        "summary": "List buildings",
+        "description": "Returns building footprints from PostGIS ordered by UUID ascending. An out-of-range page returns HTTP 200 with an empty data array.",
+        "parameters": [
+          {"name":"page","in":"query","required":false,"description":"1-based page number.","schema":{"type":"integer","minimum":1,"default":1}},
+          {"name":"page_size","in":"query","required":false,"description":"Number of records per page; maximum 500.","schema":{"type":"integer","minimum":1,"maximum":500,"default":100}},
+          {"name":"region_id","in":"query","required":false,"description":"Region UUID from public.regions.id.","schema":{"type":"string","format":"uuid"}}
+        ],
+        "responses": {
+          "200": {
+            "description": "Building page, including an empty page when no records match.",
+            "content": {"application/json":{"schema":{"$ref":"#/components/schemas/BuildingListResponse"},"examples":{
+              "withBuildings":{"value":{"data":[{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","region_id":"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb","external_id":"way/123456","name":null,"building_type":"residential","geometry":{"type":"MultiPolygon","coordinates":[[[[106.695,10.765],[106.696,10.765],[106.696,10.766],[106.695,10.766],[106.695,10.765]]]]}}],"pagination":{"page":1,"page_size":100,"total":1,"total_pages":1}}},
+              "empty":{"value":{"data":[],"pagination":{"page":1,"page_size":100,"total":0,"total_pages":0}}}
+            }}}
+          },
+          "400":{"description":"Invalid query parameter.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"},"example":{"error":"region_id must be a valid UUID"}}}},
+          "500":{"description":"Unexpected database or server error.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"},"example":{"error":"Internal server error"}}}}
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BuildingListResponse":{"type":"object","required":["data","pagination"],"properties":{"data":{"type":"array","items":{"$ref":"#/components/schemas/Building"}},"pagination":{"$ref":"#/components/schemas/Pagination"}}},
+      "Building":{"type":"object","required":["id","region_id","external_id","geometry"],"properties":{
+        "id":{"type":"string","format":"uuid"},
+        "region_id":{"type":"string","format":"uuid"},
+        "external_id":{"type":"string","example":"way/123456"},
+        "name":{"type":"string","nullable":true},
+        "building_type":{"type":"string","nullable":true},
+        "geometry":{"$ref":"#/components/schemas/MultiPolygon"}
+      }},
+      "MultiPolygon":{"type":"object","required":["type","coordinates"],"properties":{
+        "type":{"type":"string","enum":["MultiPolygon"]},
+        "coordinates":{"type":"array","description":"GeoJSON coordinates in longitude, latitude order (EPSG:4326).","items":{"type":"array","items":{"type":"array","items":{"type":"array","items":{"type":"number"}}}}}
+      }},
+      "Pagination":{"type":"object","required":["page","page_size","total","total_pages"],"properties":{
+        "page":{"type":"integer","minimum":1},
+        "page_size":{"type":"integer","minimum":1,"maximum":500},
+        "total":{"type":"integer","minimum":0,"description":"Total matching records after region filtering."},
+        "total_pages":{"type":"integer","minimum":0,"description":"Zero when total is zero."}
+      }},
+      "ErrorResponse":{"type":"object","required":["error"],"properties":{"error":{"type":"string"}}}
+    }
+  }
+}
