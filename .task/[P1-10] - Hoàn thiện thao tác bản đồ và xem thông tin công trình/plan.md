@@ -82,10 +82,10 @@ Endpoint và response phải khớp API contract thực tế của P1-08.
 ### Step 1 – Inspect Existing Map Selection and Building Detail API
 
 - [ ] Kiểm tra Cesium entity properties được gắn ở P1-09.
-- [ ] Xác nhận entity lưu building ID ổn định.
+- [x] Xác nhận entity lưu building ID ổn định tại `entity.properties.buildingId` (P1-09 `buildingsToFeatureCollection` → GeoJSON properties → Cesium entity properties).
 - [ ] Kiểm tra endpoint GET /api/v1/buildings/{building_id} của P1-08.
 - [ ] Kiểm tra response DTO và các thuộc tính thực tế có thể hiển thị.
-- [ ] Kiểm tra API client/service hiện có để tái sử dụng.
+- [x] Kiểm tra và tái sử dụng API client/service hiện có (`getJson`, `API_BASE_URL`, `ApiRequestError`).
 - [ ] Xác định quy ước click vào vùng trống để bỏ chọn.
 
 ### Step 2 – Implement Selected Building State
@@ -98,22 +98,22 @@ State đề xuất:
 - detailLoading: trạng thái tải.
 - detailError: lỗi tải thông tin nếu có.
 
-- [ ] Tạo state selectedBuildingId.
-- [ ] Tạo state dữ liệu detail và loading/error.
-- [ ] Khi chọn entity có building ID, cập nhật selectedBuildingId.
-- [ ] Khi click entity không phải công trình, không tạo selected building giả.
-- [ ] Khi click vùng trống, clear selectedBuildingId theo quy ước UX.
-- [ ] Tránh response cũ ghi đè dữ liệu khi người dùng chọn liên tiếp nhiều công trình; dùng AbortController hoặc kiểm tra ID của request hiện hành.
+- [x] Tạo state selectedBuildingId.
+- [x] Tạo state dữ liệu detail và loading/error.
+- [x] Khi chọn entity có building ID hợp lệ, cập nhật selectedBuildingId; không dùng `entity.id` làm fallback.
+- [x] Khi click entity không phải công trình, không tạo selected building giả và giữ nguyên selection hiện tại.
+- [x] Khi click vùng trống, clear selectedBuildingId và khôi phục highlight.
+- [x] Tránh response cũ ghi đè dữ liệu khi người dùng chọn liên tiếp nhiều công trình bằng AbortController, đồng thời chỉ nhận detail có UUID khớp selection.
 
 ### Step 3 – Fetch Building Detail
 
-- [ ] Tái sử dụng API client của Frontend.
-- [ ] Gọi GET /api/v1/buildings/{building_id} khi selectedBuildingId thay đổi.
-- [ ] Hủy request trước đó khi selection thay đổi nếu có thể.
-- [ ] Reset detail state phù hợp khi bỏ chọn.
-- [ ] Xử lý 404 khi công trình không còn tồn tại.
-- [ ] Xử lý network/API error.
-- [ ] Không gọi API detail nếu entity không có building ID hợp lệ.
+- [x] Tái sử dụng API client của Frontend.
+- [x] Gọi GET /api/v1/buildings/{building_id} khi selectedBuildingId thay đổi.
+- [x] Hủy request trước đó khi selection thay đổi hoặc bỏ chọn bằng AbortController.
+- [x] Reset detail state phù hợp khi bỏ chọn.
+- [x] Xử lý 404 khi công trình không còn tồn tại.
+- [x] Xử lý network/API error.
+- [x] Không gọi API detail nếu entity không có building ID UUID hợp lệ.
 
 ### Step 4 – Implement Building Information Panel
 
@@ -132,20 +132,20 @@ Yêu cầu:
 - Có nút đóng panel hoặc hành vi bỏ chọn rõ ràng.
 - Panel có layout responsive, không che toàn bộ vùng bản đồ trên màn hình thông thường.
 
-- [ ] Tạo BuildingInfoPanel component.
-- [ ] Render thông tin từ API response.
-- [ ] Hiển thị loading state.
-- [ ] Hiển thị error/not-found state.
-- [ ] Xử lý thuộc tính thiếu hoặc null.
-- [ ] Thêm thao tác đóng panel.
-- [ ] Kiểm tra panel trên các kích thước màn hình khác nhau.
+- [x] Tạo BuildingInfoPanel component.
+- [x] Render thông tin từ API response.
+- [x] Hiển thị loading state.
+- [x] Hiển thị error/not-found state.
+- [x] Xử lý thuộc tính thiếu hoặc null.
+- [x] Thêm thao tác đóng panel và đồng bộ clear selection.
+- [x] Bổ sung CSS responsive cho panel; kiểm tra trực quan trên trình duyệt vẫn cần thực hiện.
 
 ### Step 5 – Highlight and Synchronize Selected Entity
 
-- [ ] Highlight entity đang được chọn.
-- [ ] Khôi phục style entity trước đó khi chọn công trình khác.
-- [ ] Khôi phục style mặc định khi bỏ chọn.
-- [ ] Đảm bảo selected state và panel luôn cùng building ID.
+- [x] Highlight entity đang được chọn.
+- [x] Khôi phục style entity trước đó khi chọn công trình khác.
+- [x] Khôi phục style mặc định khi bỏ chọn.
+- [x] Đảm bảo selected state và panel luôn cùng building ID.
 - [ ] Không làm thay đổi geometry hoặc dữ liệu gốc của entity.
 - [ ] Xử lý an toàn khi entity không còn trong data source.
 
