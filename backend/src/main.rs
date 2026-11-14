@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use backend::{config::Config, router::router, state::AppState};
 use dotenvy::dotenv;
-use sqlx::postgres::PgPoolOptions;
+use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
@@ -27,9 +27,10 @@ async fn main() -> anyhow::Result<()> {
 
     // Lazy pool: the server can bind immediately even if Postgres is
     // briefly unavailable; migrations below retry until it is ready.
+    let db_options = postgres_connect_options(&config)?;
     let db = PgPoolOptions::new()
         .max_connections(10)
-        .connect_lazy(&config.database_url)?;
+        .connect_lazy_with(db_options);
 
     tracing::info!("running migrations");
     run_migrations_with_retry(&db).await?;
@@ -60,6 +61,33 @@ async fn main() -> anyhow::Result<()> {
     axum::serve(listener, app).await?;
 
     Ok(())
+}
+
+
+/// Build PostgreSQL options from discrete environment variables when running
+/// under Docker Compose. This avoids interpolating a password into a URL,
+/// where reserved characters (for example @, :, / or #) must be percent-encoded.
+/// For direct local development, DATABASE_URL remains supported.
+fn postgres_connect_options(config: &Config) -> anyhow::Result<PgConnectOptions> {
+    if let Ok(password) = std::env::var("POSTGRES_PASSWORD") {
+        let host = std::env::var("POSTGRES_HOST").unwrap_or_else(|_| "localhost".into());
+        let port = std::env::var("POSTGRES_PORT")
+            .ok()
+            .map(|value| value.parse::<u16>())
+            .transpose()?
+            .unwrap_or(5432);
+        let username = std::env::var("POSTGRES_USER").unwrap_or_else(|_| "appuser".into());
+        let database = std::env::var("POSTGRES_DB").unwrap_or_else(|_| "appdb".into());
+
+        Ok(PgConnectOptions::new()
+            .host(&host)
+            .port(port)
+            .username(&username)
+            .password(&password)
+            .database(&database))
+    } else {
+        Ok(config.database_url.parse()?)
+    }
 }
 
 /// Run migrations with retry so `docker compose up` stays reliable when
