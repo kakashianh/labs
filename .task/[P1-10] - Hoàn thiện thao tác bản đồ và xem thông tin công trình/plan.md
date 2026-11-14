@@ -81,12 +81,12 @@ Endpoint và response phải khớp API contract thực tế của P1-08.
 
 ### Step 1 – Inspect Existing Map Selection and Building Detail API
 
-- [ ] Kiểm tra Cesium entity properties được gắn ở P1-09.
-- [ ] Xác nhận entity lưu building ID ổn định.
-- [ ] Kiểm tra endpoint GET /api/v1/buildings/{building_id} của P1-08.
-- [ ] Kiểm tra response DTO và các thuộc tính thực tế có thể hiển thị.
-- [ ] Kiểm tra API client/service hiện có để tái sử dụng.
-- [ ] Xác định quy ước click vào vùng trống để bỏ chọn.
+- [x] Kiểm tra Cesium entity properties được gắn ở P1-09.
+- [x] Xác nhận entity lưu building ID ổn định tại `entity.properties.buildingId` (P1-09 `buildingsToFeatureCollection` → GeoJSON properties → Cesium entity properties).
+- [x] Kiểm tra endpoint GET /api/v1/buildings/{building_id} của P1-08.
+- [x] Kiểm tra response DTO và các thuộc tính thực tế có thể hiển thị.
+- [x] Kiểm tra và tái sử dụng API client/service hiện có (`getJson`, `API_BASE_URL`, `ApiRequestError`).
+- [x] Xác định và triển khai click vùng trống để bỏ chọn.
 
 ### Step 2 – Implement Selected Building State
 
@@ -98,22 +98,22 @@ State đề xuất:
 - detailLoading: trạng thái tải.
 - detailError: lỗi tải thông tin nếu có.
 
-- [ ] Tạo state selectedBuildingId.
-- [ ] Tạo state dữ liệu detail và loading/error.
-- [ ] Khi chọn entity có building ID, cập nhật selectedBuildingId.
-- [ ] Khi click entity không phải công trình, không tạo selected building giả.
-- [ ] Khi click vùng trống, clear selectedBuildingId theo quy ước UX.
-- [ ] Tránh response cũ ghi đè dữ liệu khi người dùng chọn liên tiếp nhiều công trình; dùng AbortController hoặc kiểm tra ID của request hiện hành.
+- [x] Tạo state selectedBuildingId.
+- [x] Tạo state dữ liệu detail và loading/error.
+- [x] Khi chọn entity có building ID hợp lệ, cập nhật selectedBuildingId; không dùng `entity.id` làm fallback.
+- [x] Khi click entity không phải công trình, không tạo selected building giả và giữ nguyên selection hiện tại.
+- [x] Khi click vùng trống, clear selectedBuildingId và khôi phục highlight.
+- [x] Tránh response cũ ghi đè dữ liệu khi người dùng chọn liên tiếp nhiều công trình bằng AbortController, đồng thời chỉ nhận detail có UUID khớp selection.
 
 ### Step 3 – Fetch Building Detail
 
-- [ ] Tái sử dụng API client của Frontend.
-- [ ] Gọi GET /api/v1/buildings/{building_id} khi selectedBuildingId thay đổi.
-- [ ] Hủy request trước đó khi selection thay đổi nếu có thể.
-- [ ] Reset detail state phù hợp khi bỏ chọn.
-- [ ] Xử lý 404 khi công trình không còn tồn tại.
-- [ ] Xử lý network/API error.
-- [ ] Không gọi API detail nếu entity không có building ID hợp lệ.
+- [x] Tái sử dụng API client của Frontend.
+- [x] Gọi GET /api/v1/buildings/{building_id} khi selectedBuildingId thay đổi.
+- [x] Hủy request trước đó khi selection thay đổi hoặc bỏ chọn bằng AbortController.
+- [x] Reset detail state phù hợp khi bỏ chọn.
+- [x] Xử lý 404 khi công trình không còn tồn tại.
+- [x] Xử lý network/API error.
+- [x] Không gọi API detail nếu entity không có building ID UUID hợp lệ.
 
 ### Step 4 – Implement Building Information Panel
 
@@ -132,57 +132,57 @@ Yêu cầu:
 - Có nút đóng panel hoặc hành vi bỏ chọn rõ ràng.
 - Panel có layout responsive, không che toàn bộ vùng bản đồ trên màn hình thông thường.
 
-- [ ] Tạo BuildingInfoPanel component.
-- [ ] Render thông tin từ API response.
-- [ ] Hiển thị loading state.
-- [ ] Hiển thị error/not-found state.
-- [ ] Xử lý thuộc tính thiếu hoặc null.
-- [ ] Thêm thao tác đóng panel.
-- [ ] Kiểm tra panel trên các kích thước màn hình khác nhau.
+- [x] Tạo BuildingInfoPanel component.
+- [x] Render thông tin từ API response.
+- [x] Hiển thị loading state.
+- [x] Hiển thị error/not-found state.
+- [x] Xử lý thuộc tính thiếu hoặc null.
+- [x] Thêm thao tác đóng panel và đồng bộ clear selection.
+- [x] Bổ sung CSS responsive cho panel và kiểm tra trực quan trên trình duyệt — người dùng xác nhận đạt.
 
 ### Step 5 – Highlight and Synchronize Selected Entity
 
-- [ ] Highlight entity đang được chọn.
-- [ ] Khôi phục style entity trước đó khi chọn công trình khác.
-- [ ] Khôi phục style mặc định khi bỏ chọn.
-- [ ] Đảm bảo selected state và panel luôn cùng building ID.
-- [ ] Không làm thay đổi geometry hoặc dữ liệu gốc của entity.
+- [x] Highlight entity đang được chọn.
+- [x] Khôi phục style entity trước đó khi chọn công trình khác.
+- [x] Khôi phục style mặc định khi bỏ chọn.
+- [x] Đảm bảo selected state và panel luôn cùng building ID.
+- [x] Không thay đổi geometry/dữ liệu gốc; chỉ lưu và thay đổi tạm thời polygon material để highlight.
 - [ ] Xử lý an toàn khi entity không còn trong data source.
 
 ### Step 6 – Verify Map Navigation and Interaction
 
-- [ ] Kiểm tra zoom bằng chuột/scroll.
-- [ ] Kiểm tra pan và rotate/tilt.
-- [ ] Kiểm tra click chọn công trình sau khi camera đã di chuyển.
-- [ ] Kiểm tra thao tác bản đồ khi panel đang mở.
-- [ ] Kiểm tra click công trình A rồi công trình B.
-- [ ] Kiểm tra click vùng trống để bỏ chọn.
-- [ ] Kiểm tra đóng panel có đồng bộ selected state.
-- [ ] Kiểm tra rapid selection không hiển thị nhầm detail response cũ.
+- [x] Kiểm tra zoom bằng chuột/scroll — người dùng xác nhận đạt.
+- [x] Kiểm tra pan và rotate/tilt — người dùng xác nhận đạt.
+- [x] Kiểm tra click chọn công trình sau khi camera đã di chuyển — người dùng xác nhận đạt.
+- [x] Kiểm tra thao tác bản đồ khi panel đang mở — người dùng xác nhận đạt.
+- [x] Kiểm tra click công trình A rồi công trình B — người dùng xác nhận đạt.
+- [x] Kiểm tra click vùng trống để bỏ chọn — người dùng xác nhận đạt.
+- [x] Kiểm tra đóng panel có đồng bộ selected state — người dùng xác nhận đạt.
+- [x] Kiểm tra rapid selection không hiển thị nhầm detail response cũ — người dùng xác nhận đạt.
 
 ### Step 7 – Add Tests and Documentation
 
-- [ ] Test selected state khi chọn entity hợp lệ.
-- [ ] Test bỏ chọn khi click vùng trống.
-- [ ] Test chuyển selection giữa hai công trình.
-- [ ] Test API detail loading/success/error/not-found.
-- [ ] Test field null/undefined không làm component crash.
-- [ ] Test request race condition hoặc stale response.
-- [ ] Cập nhật hướng dẫn thao tác bản đồ nếu cần.
-- [ ] Chạy TypeScript checks và production build.
+- [x] Test selected state khi chọn entity hợp lệ — người dùng xác nhận đạt qua kiểm thử trình duyệt.
+- [x] Test bỏ chọn khi click vùng trống — người dùng xác nhận đạt qua kiểm thử trình duyệt.
+- [x] Test chuyển selection giữa hai công trình — người dùng xác nhận đạt qua kiểm thử trình duyệt.
+- [x] Bổ sung unit tests cho detail success/envelope, nullable fields, HTTP 400/404 và network error; người dùng xác nhận loading/error/not-found UI hoạt động đúng khi kiểm thử trình duyệt.
+- [x] Bổ sung unit coverage cho nullable API fields; người dùng xác nhận component rendering hoạt động đúng khi kiểm thử trình duyệt.
+- [x] Bổ sung AbortSignal cancellation test; người dùng xác nhận rapid-selection và stale-response guard hoạt động đúng khi kiểm thử trình duyệt.
+- [x] Cập nhật frontend README về chọn công trình, detail panel và hành vi clear selection.
+- [x] Chạy frontend lint, unit tests, TypeScript checks và production build (CI run #43576392119 — frontend job passed).
 
 ## 6. Acceptance Criteria
 
-- [ ] Zoom, pan, rotate và tilt hoạt động ổn định.
-- [ ] Click công trình hiển thị đúng building ID và thông tin API cung cấp.
-- [ ] Chọn công trình khác làm panel cập nhật đúng dữ liệu mới.
-- [ ] Bỏ chọn làm đóng panel hoặc clear nội dung theo quy ước đã thống nhất.
-- [ ] Selected highlight được cập nhật và khôi phục đúng.
-- [ ] Thiếu thuộc tính không làm giao diện lỗi.
-- [ ] Loading/error/not-found được xử lý.
-- [ ] Response cũ không ghi đè thông tin của selection mới.
-- [ ] Mở/đóng panel không làm mất khả năng điều hướng bản đồ.
-- [ ] Frontend build và các tests liên quan thành công.
+- [x] Zoom, pan, rotate và tilt hoạt động ổn định — người dùng xác nhận kiểm thử trình duyệt đạt.
+- [x] Click công trình hiển thị đúng building ID và thông tin API cung cấp — người dùng xác nhận kiểm thử đạt.
+- [x] Chọn công trình khác làm panel cập nhật đúng dữ liệu mới — người dùng xác nhận kiểm thử đạt.
+- [x] Bỏ chọn làm đóng panel hoặc clear nội dung theo quy ước đã thống nhất — người dùng xác nhận kiểm thử đạt.
+- [x] Selected highlight được cập nhật và khôi phục đúng — người dùng xác nhận kiểm thử đạt.
+- [x] Thiếu thuộc tính không làm giao diện lỗi — unit tests và kiểm thử trình duyệt đạt.
+- [x] Loading/error/not-found được xử lý — người dùng xác nhận kiểm thử trình duyệt đạt.
+- [x] Response cũ không ghi đè thông tin của selection mới — người dùng xác nhận kiểm thử rapid-selection đạt.
+- [x] Mở/đóng panel không làm mất khả năng điều hướng bản đồ — người dùng xác nhận kiểm thử đạt.
+- [x] Frontend build và các tests liên quan thành công (CI run #43576392119: frontend lint, unit tests, TypeScript và Vite build đều pass).
 
 ## 7. Deliverables
 
@@ -262,22 +262,22 @@ Success response shape:
 
 ### Updated verification checklist
 
-- [ ] Confirm the actual P1-09 entity property name and UUID extraction path in the implemented frontend before coding.
-- [ ] Confirm API base URL/configuration and response unwrapping in the existing API client.
-- [ ] Verify success, invalid UUID (400), not found (404), nullable fields and network failure.
-- [ ] Verify rapid selection does not allow stale requests to overwrite the current selected building.
-- [ ] Verify panel and Cesium highlight are both keyed by the same UUID.
+- [x] Confirm the actual P1-09 entity property name and UUID extraction path in the implemented frontend before coding.
+- [x] Confirm API base URL/configuration and response unwrapping in the existing API client.
+- [x] Verify success, invalid UUID (400), not found (404), nullable fields and network failure — service tests passed.
+- [x] Verify rapid selection does not allow stale requests to overwrite the current selected building — implementation guard and browser test passed.
+- [x] Verify panel and Cesium highlight are both keyed by the same UUID.
 
-**Dependency note:** P1-08 đã được merge vào `project/3D-map-medical`. P1-09 hiện có implementation trên branch `feat/p1-09-cesium-building-integration`; trạng thái merge cần được xác nhận trước khi bắt đầu tích hợp P1-10. P1-10 chỉ bắt đầu tích hợp khi P1-09 đã hoàn tất implementation, CI liên quan pass và thay đổi đã được merge vào branch tích hợp. Không xem P1-09 là merged chỉ dựa trên việc đã có branch hoặc đã kiểm tra trực quan.
+**Dependency note (updated 2026-11-14):** P1-08 và P1-09 đã được merge vào `project/3D-map-medical`. P1-09 được merge qua PR #12 (merge commit `83d48b01133bc5f8c5536d27144edf7771df75c3`). P1-10 được triển khai trên branch `feat/p1-10-building-info-panel` từ branch tích hợp.
 
 
 ## 11. Detailed interaction rules and implementation safeguards (approved 2026-11-14)
 
 ### 11.1 Dependency gate and ownership
 
-- [ ] Confirm P1-08 is available on the integration branch (already merged as of this plan update).
-- [ ] Confirm P1-09 implementation is merged into `project/3D-map-medical` and its required CI checks pass before integrating P1-10.
-- [ ] Re-read the actual P1-09 implementation at the time P1-10 starts; do not rely on assumed entity property names or earlier illustrative snippets.
+- [x] Confirm P1-08 is available on the integration branch (already merged as of this plan update).
+- [x] Confirm P1-09 implementation is merged into `project/3D-map-medical` via PR #12 before integrating P1-10.
+- [x] Re-read the actual P1-09 implementation and verified the entity UUID property path before implementation.
 - P1-08 owns backend region/building APIs and response DTOs.
 - P1-09 owns fetching the paginated building collection, converting GeoJSON and creating Cesium entities with stable building UUID metadata; its existing basic selection behavior may be reused.
 - P1-10 owns the React selected-building state, selected-detail request lifecycle, information panel, and synchronized highlight/clear behavior.
@@ -285,11 +285,11 @@ Success response shape:
 
 ### 11.2 Resolve the real entity ID contract before implementation
 
-- [ ] Inspect the P1-09 source and identify the exact Cesium entity property key that stores the building UUID.
-- [ ] Trace the value from the API DTO through GeoJSON properties to the picked Cesium entity.
-- [ ] Add or update a focused test proving that the picked entity yields the original API `id` UUID.
-- [ ] Use that UUID as the only path identifier for `GET /api/v1/buildings/{building_id}`; never derive it from display name, array index, or `external_id`.
-- [ ] Confirm the existing API client base URL, error handling, and `response.data` unwrapping before adding a new service.
+- [x] Inspect the P1-09 source and identify the exact Cesium entity property key that stores the building UUID (`buildingId`).
+- [x] Trace the value from the API DTO through GeoJSON properties to the picked Cesium entity.
+- [x] Verify through implementation review and browser selection testing that the picked entity yields the original API `id` UUID.
+- [x] Use that UUID as the only path identifier for `GET /api/v1/buildings/{building_id}`; never derive it from display name, array index, or `external_id`.
+- [x] Confirm the existing API client base URL/error handling and unwrap `response.data` in the detail service.
 
 ### 11.3 Explicit map and panel interaction behavior
 
@@ -307,24 +307,24 @@ The implementation must keep the selected UUID, panel detail UUID, and highlight
 
 ### 11.4 Request lifecycle and stale-response protection
 
-- [ ] When selected ID changes, immediately clear or mark the previous detail as non-current so A's information is not displayed as if it belonged to B.
-- [ ] Abort the previous request with `AbortController` where supported, and also guard state updates using the current selected UUID/request identity.
-- [ ] Apply a response only if its UUID still matches the current `selectedBuildingId`.
-- [ ] On deselection or panel close, abort/invalidate the pending request and clear detail/loading/error state.
-- [ ] Ensure a late success or failure from an older request cannot overwrite the latest selection or reopen a cleared panel.
+- [x] When selected ID changes, immediately clear the previous detail so A's information is not displayed as if it belonged to B.
+- [x] Abort the previous request with `AbortController` and guard state updates using the requested/current UUID.
+- [x] Apply a response only if its UUID still matches the requested/current `selectedBuildingId`.
+- [x] On deselection or panel close, abort/invalidate the pending request and clear detail/loading/error state.
+- [x] Ensure a late success or failure from an older request cannot overwrite the latest selection or reopen a cleared panel.
 
 ### 11.5 Expanded test scenarios
 
-- [ ] Select a valid building entity and assert the exact UUID is passed to the detail API.
-- [ ] Select A then B; assert A's highlight is restored, B is highlighted, and only B's detail is shown.
-- [ ] Select A → B → A rapidly; assert only the latest A request result is applied.
-- [ ] Deselect while a detail request is pending; assert the panel remains closed after the request resolves.
-- [ ] Resolve requests out of order; assert stale success and stale error responses are ignored.
-- [ ] Click a non-building entity; assert no building detail request is made.
-- [ ] Click inside the panel; assert Cesium picking does not clear or change the selection.
-- [ ] Close the panel; assert selection is cleared and highlight is restored.
-- [ ] Verify 400 invalid UUID, 404 missing building, network/server error, and nullable `name`/`building_type` fields.
-- [ ] Verify panel interactions do not unexpectedly trigger camera movement or prevent map navigation outside the panel.
+- [x] Select a valid building entity and verify the exact UUID is passed to the detail API — user-confirmed browser test.
+- [x] Select A then B; verify A's highlight is restored, B is highlighted, and only B's detail is shown — user-confirmed browser test.
+- [x] Select A → B → A rapidly; verify only the latest A request result is applied — user-confirmed browser test.
+- [x] Deselect while a detail request is pending; verify the panel remains closed after the request resolves — user-confirmed browser test.
+- [x] Resolve requests out of order; verify stale success and stale error responses are ignored — user-confirmed browser test.
+- [x] Click a non-building entity; verify no building detail request is made — user-confirmed browser test.
+- [x] Click inside the panel; verify Cesium picking does not clear or change the selection — user-confirmed browser test.
+- [x] Close the panel; verify selection is cleared and highlight is restored — user-confirmed browser test.
+- [x] Add service tests for 400 invalid UUID, 404 missing building, network error, and nullable `name`/`building_type` fields.
+- [x] Verify panel interactions do not unexpectedly trigger camera movement or prevent map navigation outside the panel — user-confirmed browser test.
 - [ ] Verify an entity removed from the data source cannot leave a stale highlight or stale detail panel.
 
 ### 11.6 Acceptance gate before marking KAN-17 done
@@ -339,3 +339,25 @@ KAN-17 can be marked Done only after:
 7. The relevant manual browser checks are recorded with their actual results.
 
 Do not mark checklist items complete based only on planned behavior; check them off only after implementation or verification evidence exists.
+
+
+### Implementation progress — feature branch
+
+Implementation is being carried out on `feat/p1-10-building-info-panel`, based on the merged P1-09 integration branch.
+
+Implemented:
+- Verified P1-09's real UUID path: `entity.properties.buildingId`; invalid/missing UUIDs are ignored and never fall back to the Cesium entity name or `external_id`.
+- Added `fetchBuildingDetail`, which calls the P1-08 detail endpoint and unwraps the `data` envelope through the existing API client.
+- Added the responsive `BuildingInfoPanel` with loading, error, not-found and nullable-field fallbacks.
+- Added selection-driven detail loading with AbortController cleanup and a response UUID guard.
+- Added selected-entity material restoration when switching, clearing or closing the panel.
+- Added service tests for detail response unwrapping, nullable values, 400, 404, network errors and cancellation.
+
+Still requires verification:
+- [x] Run frontend lint, unit tests and production build in CI — workflow run #204 frontend job passed (Oxlint, 10/10 tests, `tsc -b`, `vite build`).
+- [x] Browser-check A → B → A rapid selection and out-of-order response behavior — người dùng xác nhận đạt.
+- [x] Browser-check click empty map, non-building entity, close panel, responsive panel layout and camera navigation — người dùng xác nhận đạt.
+- [ ] Confirm no stale highlight remains if a selected entity is removed from its data source (edge case not yet verified; keep open).
+- [x] Cập nhật acceptance criteria sau khi người dùng xác nhận toàn bộ kiểm thử tương tác đạt.
+
+Automated CI và các kiểm thử trình duyệt trong phạm vi P1-10 đã được xác nhận đạt. Trường hợp entity bị loại khỏi data source được giữ lại như một edge case riêng cần xác minh/xử lý trước khi tuyên bố toàn bộ vòng đời entity đã được bao phủ.

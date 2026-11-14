@@ -263,3 +263,47 @@ Each building list/detail DTO contains `id` (UUID), `region_id` (UUID), `externa
 - [ ] Assert camera interaction remains available while the information panel is open.
 
 **Prerequisite status:** P1-07 and P1-08 APIs are merged; P1-09 plan has been aligned to those contracts. P1-11 implementation must still verify the actual frontend behavior and record test evidence; this documentation update does not mark P1-09, P1-10 or P1-11 implementation as complete.
+
+
+---
+
+## 11. Dependency and execution plan update (2026-11-14)
+
+### 11.1 Current prerequisite status
+
+- [x] P1-09 implementation is already merged into `project/3D-map-medical` via PR #12.
+- [x] P1-10 implementation is present on `feat/p1-10-building-info-panel`; automated CI run #43576392119 passed the required checks.
+- [x] P1-10 manual browser verification has been reported successful by the user, covering the interaction scenarios recorded in the P1-10 plan: camera navigation, selection after camera movement, A/B and rapid selection, empty-map deselection, non-building entity behavior, panel close/responsive layout, and map interaction while the panel is open.
+- [ ] P1-10 has not yet been merged into `project/3D-map-medical`. Merge is a prerequisite before P1-11 integration work begins.
+
+**Branching rule:** Do not implement P1-11 against an unmerged feature branch as if it were the integration baseline. After P1-10 is merged, create/continue the P1-11 implementation branch from the updated `project/3D-map-medical` and record the merge commit here.
+
+### 11.2 Avoid duplicate work from P1-10
+
+P1-10 has already implemented and manually verified the following, so P1-11 should validate the integrated workflow rather than re-implement these features:
+
+- Cesium building selection using the stable building UUID.
+- Selected building state and detail API request lifecycle.
+- Building information panel, including loading/error/not-found and nullable-field handling.
+- Switching selection, clearing selection, closing the panel and restoring highlight.
+- AbortController cancellation and stale-response protection.
+- Camera navigation and panel interaction behavior.
+
+P1-11 must still verify these behaviors in the integrated application after the P1-10 merge, especially that the P1-09 data-loading/rendering lifecycle and P1-10 selection/detail lifecycle work together without duplicate handlers, stale entities or inconsistent state.
+
+### 11.3 Refined P1-11 execution order
+
+1. **Integration baseline:** Confirm P1-10 merge commit is included in `project/3D-map-medical`; inspect the merged P1-09/P1-10 source and confirm the actual runtime API configuration.
+2. **Full data path:** Start Backend + PostGIS and Frontend; verify list API → pagination → GeoJSON adapter → Cesium entities → selected UUID → detail API → information panel.
+3. **List-state coverage:** Prioritize P1-11-specific cases not owned by P1-10: empty building list, failed list request versus true empty response, multi-page pagination, final partial page, page reload and duplicate data-source prevention.
+4. **Cross-component consistency:** Verify entity UUID and region ID preservation, detail response matching, coordinate placement/CRS and behavior when data source reloads or a selected entity disappears.
+5. **Regression pass:** Re-run the key P1-10 interactions once against the merged integration baseline; do not duplicate implementation or add another detail state store.
+6. **Evidence and documentation:** Record environment, dataset snapshot, CI run, browser/network observations, pass/fail and any known limitations in a repeatable checklist.
+
+### 11.4 P1-10 edge case carried into integration
+
+The P1-10 plan still tracks safe handling when a selected Cesium entity is removed from its data source. P1-11 must explicitly test data-source refresh/removal while a building is selected. If the current implementation leaves a stale highlight or detail panel, fix it within the integration scope and add a regression test. Do not mark this scenario as passed until it is actually exercised.
+
+### 11.5 Completion boundary
+
+P1-10's successful CI and browser checks do not automatically complete P1-11. P1-11 remains responsible for end-to-end evidence across the complete Backend/PostGIS-to-Cesium workflow, especially pagination, empty/error list states, coordinate correctness, lifecycle cleanup and repeatable integration verification.

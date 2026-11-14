@@ -23,6 +23,10 @@ export interface Building {
   geometry: MultiPolygonGeometry
 }
 
+export interface BuildingDetailResponse {
+  data: Building
+}
+
 export interface Pagination {
   page: number
   page_size: number

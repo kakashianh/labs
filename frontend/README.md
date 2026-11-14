@@ -32,7 +32,7 @@ The frontend calls only these backend endpoints:
 
 The building service requests pages using the API's `pagination.total_pages` metadata (up to the supported page size of 500). It does not assume the current sample size is fixed. API Geometry values are converted to GeoJSON Features before loading them into Cesium. The API UUID is retained as the feature/entity ID.
 
-The map shows ground-level building footprints. No building height is fabricated because the current dataset does not provide verified height/floor values. Click a footprint to highlight it and display its UUID; the detailed information panel belongs to the next map-interaction task.
+The map shows ground-level building footprints. No building height is fabricated because the current dataset does not provide verified height/floor values. Click a building footprint to highlight it and open the information panel. The panel fetches the selected building by its API UUID and displays the returned identifiers and available attributes; nullable name/type values use safe fallbacks. Clicking empty map space or closing the panel clears the selection.
 
 ## Verification
 
@@ -42,7 +42,7 @@ npm test
 npm run build
 ```
 
-Unit tests cover multi-page aggregation, empty data, a final partial page, GeoJSON FeatureCollection conversion, UUID/property preservation, and malformed geometry handling.
+Unit tests cover multi-page aggregation, empty data, a final partial page, GeoJSON FeatureCollection conversion, UUID/property preservation, malformed geometry, building-detail response unwrapping, nullable fields, HTTP 400/404 responses, and network failures.
 
 ## Configuration and security
 

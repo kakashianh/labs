@@ -1,8 +1,8 @@
-const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim()
+const configuredBaseUrl = import.meta.env?.VITE_API_BASE_URL?.trim()
 
 // In development, call the same-origin Vite proxy. In production, use the
 // explicitly configured API origin.
-export const API_BASE_URL = import.meta.env.DEV
+export const API_BASE_URL = import.meta.env?.DEV
   ? ''
   : (configuredBaseUrl || 'http://localhost:8000').replace(/\/+$/, '')
 
