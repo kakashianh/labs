@@ -2,7 +2,8 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { viteStaticCopy } from 'vite-plugin-static-copy'
 
-// https://vite.dev/config/
+// In Codespaces, docker-compose publishes the Rust API on port 8000 of the
+// workspace. Proxy API requests through Vite so the browser uses one origin.
 export default defineConfig({
   plugins: [
     react(),
@@ -33,5 +34,13 @@ export default defineConfig({
   ],
   define: {
     CESIUM_BASE_URL: JSON.stringify('/cesium/'),
+  },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+    },
   },
 })
