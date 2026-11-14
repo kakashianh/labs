@@ -82,3 +82,24 @@ test('fetchBuildingDetail propagates network errors', async () => {
     globalThis.fetch = originalFetch
   }
 })
+
+test('fetchBuildingDetail forwards AbortSignal and rejects after cancellation', async () => {
+  const originalFetch = globalThis.fetch
+  globalThis.fetch = (async (_input: URL | RequestInfo, init?: RequestInit) =>
+    new Promise<Response>((_resolve, reject) => {
+      init?.signal?.addEventListener('abort', () => {
+        reject(new DOMException('The operation was aborted', 'AbortError'))
+      })
+    })) as typeof fetch
+
+  const controller = new AbortController()
+  try {
+    const request = fetchBuildingDetail(sampleBuilding.id, controller.signal)
+    controller.abort()
+    await assert.rejects(request, (error: unknown) =>
+      error instanceof Error && error.name === 'AbortError',
+    )
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+})
