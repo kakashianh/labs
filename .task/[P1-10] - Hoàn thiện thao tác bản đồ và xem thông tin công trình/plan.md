@@ -268,4 +268,74 @@ Success response shape:
 - [ ] Verify rapid selection does not allow stale requests to overwrite the current selected building.
 - [ ] Verify panel and Cesium highlight are both keyed by the same UUID.
 
-**Dependency note:** P1-09 and P1-08 are merged prerequisites. P1-10 must integrate with their existing outputs and must not recreate the building list/detail APIs or the Cesium data-loading pipeline.
+**Dependency note:** P1-08 đã được merge vào `project/3D-map-medical`. P1-09 hiện có implementation trên branch `feat/p1-09-cesium-building-integration`; trạng thái merge cần được xác nhận trước khi bắt đầu tích hợp P1-10. P1-10 chỉ bắt đầu tích hợp khi P1-09 đã hoàn tất implementation, CI liên quan pass và thay đổi đã được merge vào branch tích hợp. Không xem P1-09 là merged chỉ dựa trên việc đã có branch hoặc đã kiểm tra trực quan.
+
+
+## 11. Detailed interaction rules and implementation safeguards (approved 2026-11-14)
+
+### 11.1 Dependency gate and ownership
+
+- [ ] Confirm P1-08 is available on the integration branch (already merged as of this plan update).
+- [ ] Confirm P1-09 implementation is merged into `project/3D-map-medical` and its required CI checks pass before integrating P1-10.
+- [ ] Re-read the actual P1-09 implementation at the time P1-10 starts; do not rely on assumed entity property names or earlier illustrative snippets.
+- P1-08 owns backend region/building APIs and response DTOs.
+- P1-09 owns fetching the paginated building collection, converting GeoJSON and creating Cesium entities with stable building UUID metadata; its existing basic selection behavior may be reused.
+- P1-10 owns the React selected-building state, selected-detail request lifecycle, information panel, and synchronized highlight/clear behavior.
+- P1-11 owns end-to-end acceptance across the complete map workflow.
+
+### 11.2 Resolve the real entity ID contract before implementation
+
+- [ ] Inspect the P1-09 source and identify the exact Cesium entity property key that stores the building UUID.
+- [ ] Trace the value from the API DTO through GeoJSON properties to the picked Cesium entity.
+- [ ] Add or update a focused test proving that the picked entity yields the original API `id` UUID.
+- [ ] Use that UUID as the only path identifier for `GET /api/v1/buildings/{building_id}`; never derive it from display name, array index, or `external_id`.
+- [ ] Confirm the existing API client base URL, error handling, and `response.data` unwrapping before adding a new service.
+
+### 11.3 Explicit map and panel interaction behavior
+
+| User action | Expected behavior |
+|---|---|
+| Click a building A | Select A, highlight A, clear any previous detail, and fetch A detail |
+| Click building B while A is selected | Restore A's default style, select/highlight B, and fetch B detail |
+| Click empty map space | Clear selected ID, cancel/invalidate pending detail request, restore highlight, and close/clear panel |
+| Click a non-building entity | Do not create a building selection or issue a building detail request; preserve the current building selection unless the product behavior explicitly defines otherwise |
+| Click panel content | Interact with the panel without triggering Cesium map picking |
+| Close panel | Clear selected ID, invalidate pending request, and restore the selected entity's default style |
+| Selected entity is no longer in the data source | Clear selection safely and ensure the panel does not present stale entity state |
+
+The implementation must keep the selected UUID, panel detail UUID, and highlighted entity UUID consistent. The panel must not intercept map input outside its own bounds, and clicks inside the panel must not bubble into the Cesium picking handler.
+
+### 11.4 Request lifecycle and stale-response protection
+
+- [ ] When selected ID changes, immediately clear or mark the previous detail as non-current so A's information is not displayed as if it belonged to B.
+- [ ] Abort the previous request with `AbortController` where supported, and also guard state updates using the current selected UUID/request identity.
+- [ ] Apply a response only if its UUID still matches the current `selectedBuildingId`.
+- [ ] On deselection or panel close, abort/invalidate the pending request and clear detail/loading/error state.
+- [ ] Ensure a late success or failure from an older request cannot overwrite the latest selection or reopen a cleared panel.
+
+### 11.5 Expanded test scenarios
+
+- [ ] Select a valid building entity and assert the exact UUID is passed to the detail API.
+- [ ] Select A then B; assert A's highlight is restored, B is highlighted, and only B's detail is shown.
+- [ ] Select A → B → A rapidly; assert only the latest A request result is applied.
+- [ ] Deselect while a detail request is pending; assert the panel remains closed after the request resolves.
+- [ ] Resolve requests out of order; assert stale success and stale error responses are ignored.
+- [ ] Click a non-building entity; assert no building detail request is made.
+- [ ] Click inside the panel; assert Cesium picking does not clear or change the selection.
+- [ ] Close the panel; assert selection is cleared and highlight is restored.
+- [ ] Verify 400 invalid UUID, 404 missing building, network/server error, and nullable `name`/`building_type` fields.
+- [ ] Verify panel interactions do not unexpectedly trigger camera movement or prevent map navigation outside the panel.
+- [ ] Verify an entity removed from the data source cannot leave a stale highlight or stale detail panel.
+
+### 11.6 Acceptance gate before marking KAN-17 done
+
+KAN-17 can be marked Done only after:
+1. P1-09 is merged and its CI gate is green.
+2. The real entity UUID property path is verified against P1-09 source and covered by a test.
+3. Selection, switching, deselection, close-panel, and highlight restoration behaviors pass.
+4. Detail API success, 400, 404, nullable fields, and network failure behaviors pass.
+5. Stale-response and pending-request cancellation/invalidation tests pass.
+6. TypeScript checks, unit tests, and production build pass.
+7. The relevant manual browser checks are recorded with their actual results.
+
+Do not mark checklist items complete based only on planned behavior; check them off only after implementation or verification evidence exists.
