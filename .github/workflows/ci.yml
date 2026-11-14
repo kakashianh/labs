@@ -85,6 +85,7 @@ jobs:
   postgis-integration:
     name: Docker Compose + PostGIS migration verification
     runs-on: ubuntu-latest
+    environment: 3d-gis
     needs: [test, testcontainers-integration]
     env:
       POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
