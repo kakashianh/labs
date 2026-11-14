@@ -1,33 +1,67 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import * as Cesium from 'cesium'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
-import { fetchAllBuildings, fetchRegions } from '../../services/gis-api'
+import BuildingInfoPanel from './BuildingInfoPanel'
+import { fetchBuildingDetail, fetchAllBuildings, fetchRegions } from '../../services/gis-api'
 import { buildingsToFeatureCollection } from '../../services/gis-data'
+import type { Building } from '../../types/gis'
 
 type LoadState = 'loading' | 'ready' | 'empty' | 'error'
 
 const DEFAULT_BUILDING_FILL = Cesium.Color.CORNFLOWERBLUE.withAlpha(0.35)
 const SELECTED_BUILDING_FILL = Cesium.Color.ORANGE.withAlpha(0.75)
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
-// Esri World Imagery is used instead of the OSM Foundation standard tile server.
-// Keep the provider's required source attribution visible in the Cesium viewer.
 const BASEMAP_URL =
   'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
 const BASEMAP_CREDIT =
   'Sources: Esri, DigitalGlobe, GeoEye, i-cubed, USDA FSA, USGS, AEX, Getmapping, Aerogrid, IGN, IGP, swisstopo, and the GIS User Community'
 
-/**
- * CesiumViewer displays an Esri imagery basemap and the building footprints
- * served by the Rust API. Data loading and viewer resources share one effect so
- * StrictMode cleanup aborts pending requests and destroys every Cesium resource.
- */
 export default function CesiumViewer() {
   const [loadState, setLoadState] = useState<LoadState>('loading')
   const [regionCount, setRegionCount] = useState(0)
   const [buildingCount, setBuildingCount] = useState(0)
   const [skippedCount, setSkippedCount] = useState(0)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [selectedBuilding, setSelectedBuilding] = useState<string | null>(null)
+  const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null)
+  const [buildingDetail, setBuildingDetail] = useState<Building | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailError, setDetailError] = useState<string | null>(null)
+  const clearSelectionRef = useRef<(() => void) | null>(null)
+
+  useEffect(() => {
+    if (!selectedBuildingId) {
+      setBuildingDetail(null)
+      setDetailLoading(false)
+      setDetailError(null)
+      return
+    }
+
+    const controller = new AbortController()
+    const requestedId = selectedBuildingId
+    setBuildingDetail(null)
+    setDetailLoading(true)
+    setDetailError(null)
+
+    void fetchBuildingDetail(requestedId, controller.signal)
+      .then((detail) => {
+        if (!controller.signal.aborted && detail.id === requestedId) {
+          setBuildingDetail(detail)
+        }
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return
+        if (error instanceof Error && error.name === 'AbortError') return
+        setDetailError(
+          error instanceof Error ? error.message : 'Không thể tải thông tin công trình.',
+        )
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setDetailLoading(false)
+      })
+
+    return () => controller.abort()
+  }, [selectedBuildingId])
 
   useEffect(() => {
     const container = document.querySelector<HTMLDivElement>('[data-testid="cesium-viewer"]')
@@ -36,9 +70,7 @@ export default function CesiumViewer() {
     const controller = new AbortController()
     const ionToken = import.meta.env.VITE_CESIUM_ION_TOKEN as string | undefined
 
-    if (ionToken) {
-      Cesium.Ion.defaultAccessToken = ionToken
-    }
+    if (ionToken) Cesium.Ion.defaultAccessToken = ionToken
 
     const viewer = new Cesium.Viewer(container, {
       animation: false,
@@ -70,6 +102,22 @@ export default function CesiumViewer() {
 
     const clickHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas)
     let selectedEntity: Cesium.Entity | undefined
+    let selectedOriginalMaterial: Cesium.MaterialProperty | undefined
+
+    const restoreSelectedStyle = () => {
+      if (selectedEntity?.polygon) {
+        selectedEntity.polygon.material =
+          selectedOriginalMaterial ?? new Cesium.ColorMaterialProperty(DEFAULT_BUILDING_FILL)
+      }
+      selectedEntity = undefined
+      selectedOriginalMaterial = undefined
+    }
+
+    const clearSelection = () => {
+      restoreSelectedStyle()
+      setSelectedBuildingId(null)
+    }
+    clearSelectionRef.current = clearSelection
 
     async function loadBuildingData() {
       try {
@@ -112,32 +160,24 @@ export default function CesiumViewer() {
           const entity =
             picked?.id instanceof Cesium.Entity ? (picked.id as Cesium.Entity) : undefined
 
-          if (!entity?.polygon) {
-            const previousPolygon = selectedEntity?.polygon
-            if (previousPolygon) {
-              previousPolygon.material =
-                new Cesium.ColorMaterialProperty(DEFAULT_BUILDING_FILL)
-            }
-            selectedEntity = undefined
-            setSelectedBuilding(null)
+          // Empty globe/map space clears the active selection. A non-building
+          // entity is ignored so it cannot accidentally replace the panel state.
+          if (!entity) {
+            clearSelection()
             return
           }
-
-          const previousPolygon = selectedEntity?.polygon
-          if (previousPolygon) {
-            previousPolygon.material =
-              new Cesium.ColorMaterialProperty(DEFAULT_BUILDING_FILL)
-          }
-
-          const selectedPolygon = entity.polygon
-          selectedEntity = entity
-          selectedPolygon.material =
-            new Cesium.ColorMaterialProperty(SELECTED_BUILDING_FILL)
+          if (!entity.polygon) return
 
           const propertyId = entity.properties?.buildingId?.getValue(Cesium.JulianDate.now())
-          setSelectedBuilding(
-            typeof propertyId === 'string' ? propertyId : String(entity.id),
-          )
+          if (typeof propertyId !== 'string' || !UUID_PATTERN.test(propertyId)) return
+
+          if (selectedEntity !== entity) {
+            restoreSelectedStyle()
+            selectedEntity = entity
+            selectedOriginalMaterial = entity.polygon.material
+            entity.polygon.material = new Cesium.ColorMaterialProperty(SELECTED_BUILDING_FILL)
+          }
+          setSelectedBuildingId(propertyId)
         }, Cesium.ScreenSpaceEventType.LEFT_CLICK)
 
         setLoadState('ready')
@@ -157,12 +197,13 @@ export default function CesiumViewer() {
 
     return () => {
       controller.abort()
+      clearSelectionRef.current = null
       clickHandler.destroy()
-      if (!viewer.isDestroyed()) {
-        viewer.destroy()
-      }
+      if (!viewer.isDestroyed()) viewer.destroy()
     }
   }, [])
+
+  const closeBuildingPanel = () => clearSelectionRef.current?.()
 
   return (
     <div className="map-shell">
@@ -183,11 +224,6 @@ export default function CesiumViewer() {
                 Bỏ qua {skippedCount} công trình có geometry không hợp lệ.
               </p>
             )}
-            {selectedBuilding && (
-              <p className="map-status-selection">
-                Công trình được chọn: <code>{selectedBuilding}</code>
-              </p>
-            )}
           </>
         )}
         {loadState === 'empty' && (
@@ -204,6 +240,15 @@ export default function CesiumViewer() {
           </p>
         )}
       </section>
+      {selectedBuildingId && (
+        <BuildingInfoPanel
+          building={buildingDetail}
+          loading={detailLoading}
+          error={detailError}
+          selectedBuildingId={selectedBuildingId}
+          onClose={closeBuildingPanel}
+        />
+      )}
     </div>
   )
 }
