@@ -81,12 +81,12 @@ Endpoint và response phải khớp API contract thực tế của P1-08.
 
 ### Step 1 – Inspect Existing Map Selection and Building Detail API
 
-- [ ] Kiểm tra Cesium entity properties được gắn ở P1-09.
+- [x] Kiểm tra Cesium entity properties được gắn ở P1-09.
 - [x] Xác nhận entity lưu building ID ổn định tại `entity.properties.buildingId` (P1-09 `buildingsToFeatureCollection` → GeoJSON properties → Cesium entity properties).
-- [ ] Kiểm tra endpoint GET /api/v1/buildings/{building_id} của P1-08.
-- [ ] Kiểm tra response DTO và các thuộc tính thực tế có thể hiển thị.
+- [x] Kiểm tra endpoint GET /api/v1/buildings/{building_id} của P1-08.
+- [x] Kiểm tra response DTO và các thuộc tính thực tế có thể hiển thị.
 - [x] Kiểm tra và tái sử dụng API client/service hiện có (`getJson`, `API_BASE_URL`, `ApiRequestError`).
-- [ ] Xác định quy ước click vào vùng trống để bỏ chọn.
+- [x] Xác định và triển khai click vùng trống để bỏ chọn.
 
 ### Step 2 – Implement Selected Building State
 
@@ -146,7 +146,7 @@ Yêu cầu:
 - [x] Khôi phục style entity trước đó khi chọn công trình khác.
 - [x] Khôi phục style mặc định khi bỏ chọn.
 - [x] Đảm bảo selected state và panel luôn cùng building ID.
-- [ ] Không làm thay đổi geometry hoặc dữ liệu gốc của entity.
+- [x] Không thay đổi geometry/dữ liệu gốc; chỉ lưu và thay đổi tạm thời polygon material để highlight.
 - [ ] Xử lý an toàn khi entity không còn trong data source.
 
 ### Step 6 – Verify Map Navigation and Interaction
@@ -268,7 +268,7 @@ Success response shape:
 - [ ] Verify rapid selection does not allow stale requests to overwrite the current selected building.
 - [ ] Verify panel and Cesium highlight are both keyed by the same UUID.
 
-**Dependency note:** P1-08 đã được merge vào `project/3D-map-medical`. P1-09 hiện có implementation trên branch `feat/p1-09-cesium-building-integration`; trạng thái merge cần được xác nhận trước khi bắt đầu tích hợp P1-10. P1-10 chỉ bắt đầu tích hợp khi P1-09 đã hoàn tất implementation, CI liên quan pass và thay đổi đã được merge vào branch tích hợp. Không xem P1-09 là merged chỉ dựa trên việc đã có branch hoặc đã kiểm tra trực quan.
+**Dependency note (updated 2026-11-14):** P1-08 và P1-09 đã được merge vào `project/3D-map-medical`. P1-09 được merge qua PR #12 (merge commit `83d48b01133bc5f8c5536d27144edf7771df75c3`). P1-10 được triển khai trên branch `feat/p1-10-building-info-panel` từ branch tích hợp.
 
 
 ## 11. Detailed interaction rules and implementation safeguards (approved 2026-11-14)
@@ -285,11 +285,11 @@ Success response shape:
 
 ### 11.2 Resolve the real entity ID contract before implementation
 
-- [ ] Inspect the P1-09 source and identify the exact Cesium entity property key that stores the building UUID.
-- [ ] Trace the value from the API DTO through GeoJSON properties to the picked Cesium entity.
+- [x] Inspect the P1-09 source and identify the exact Cesium entity property key that stores the building UUID (`buildingId`).
+- [x] Trace the value from the API DTO through GeoJSON properties to the picked Cesium entity.
 - [ ] Add or update a focused test proving that the picked entity yields the original API `id` UUID.
-- [ ] Use that UUID as the only path identifier for `GET /api/v1/buildings/{building_id}`; never derive it from display name, array index, or `external_id`.
-- [ ] Confirm the existing API client base URL, error handling, and `response.data` unwrapping before adding a new service.
+- [x] Use that UUID as the only path identifier for `GET /api/v1/buildings/{building_id}`; never derive it from display name, array index, or `external_id`.
+- [x] Confirm the existing API client base URL/error handling and unwrap `response.data` in the detail service.
 
 ### 11.3 Explicit map and panel interaction behavior
 
@@ -307,11 +307,11 @@ The implementation must keep the selected UUID, panel detail UUID, and highlight
 
 ### 11.4 Request lifecycle and stale-response protection
 
-- [ ] When selected ID changes, immediately clear or mark the previous detail as non-current so A's information is not displayed as if it belonged to B.
-- [ ] Abort the previous request with `AbortController` where supported, and also guard state updates using the current selected UUID/request identity.
-- [ ] Apply a response only if its UUID still matches the current `selectedBuildingId`.
-- [ ] On deselection or panel close, abort/invalidate the pending request and clear detail/loading/error state.
-- [ ] Ensure a late success or failure from an older request cannot overwrite the latest selection or reopen a cleared panel.
+- [x] When selected ID changes, immediately clear the previous detail so A's information is not displayed as if it belonged to B.
+- [x] Abort the previous request with `AbortController` and guard state updates using the requested/current UUID.
+- [x] Apply a response only if its UUID still matches the requested/current `selectedBuildingId`.
+- [x] On deselection or panel close, abort/invalidate the pending request and clear detail/loading/error state.
+- [x] Ensure a late success or failure from an older request cannot overwrite the latest selection or reopen a cleared panel.
 
 ### 11.5 Expanded test scenarios
 
@@ -323,7 +323,7 @@ The implementation must keep the selected UUID, panel detail UUID, and highlight
 - [ ] Click a non-building entity; assert no building detail request is made.
 - [ ] Click inside the panel; assert Cesium picking does not clear or change the selection.
 - [ ] Close the panel; assert selection is cleared and highlight is restored.
-- [ ] Verify 400 invalid UUID, 404 missing building, network/server error, and nullable `name`/`building_type` fields.
+- [x] Add service tests for 400 invalid UUID, 404 missing building, network error, and nullable `name`/`building_type` fields.
 - [ ] Verify panel interactions do not unexpectedly trigger camera movement or prevent map navigation outside the panel.
 - [ ] Verify an entity removed from the data source cannot leave a stale highlight or stale detail panel.
 
