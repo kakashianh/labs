@@ -169,7 +169,7 @@ Yêu cầu:
 - [x] Bổ sung unit coverage cho nullable API fields; component rendering vẫn cần browser verification.
 - [x] Bổ sung AbortSignal cancellation test; stale response guard được triển khai bằng effect cleanup + UUID match, cần browser-level rapid-selection verification.
 - [x] Cập nhật frontend README về chọn công trình, detail panel và hành vi clear selection.
-- [ ] Chạy TypeScript checks và production build.
+- [x] Chạy TypeScript checks và production build (CI run #204, frontend job passed).
 
 ## 6. Acceptance Criteria
 
@@ -182,7 +182,7 @@ Yêu cầu:
 - [ ] Loading/error/not-found được xử lý.
 - [ ] Response cũ không ghi đè thông tin của selection mới.
 - [ ] Mở/đóng panel không làm mất khả năng điều hướng bản đồ.
-- [ ] Frontend build và các tests liên quan thành công.
+- [x] Frontend build và các tests liên quan thành công (CI run #204: lint, 10/10 tests, TypeScript và Vite build đều pass).
 
 ## 7. Deliverables
 
@@ -276,7 +276,7 @@ Success response shape:
 ### 11.1 Dependency gate and ownership
 
 - [ ] Confirm P1-08 is available on the integration branch (already merged as of this plan update).
-- [ ] Confirm P1-09 implementation is merged into `project/3D-map-medical` and its required CI checks pass before integrating P1-10.
+- [x] Confirm P1-09 implementation is merged into `project/3D-map-medical` via PR #12 before integrating P1-10.
 - [ ] Re-read the actual P1-09 implementation at the time P1-10 starts; do not rely on assumed entity property names or earlier illustrative snippets.
 - P1-08 owns backend region/building APIs and response DTOs.
 - P1-09 owns fetching the paginated building collection, converting GeoJSON and creating Cesium entities with stable building UUID metadata; its existing basic selection behavior may be reused.
@@ -354,7 +354,7 @@ Implemented:
 - Added service tests for detail response unwrapping, nullable values, 400, 404, network errors and cancellation.
 
 Still requires verification:
-- [ ] Run frontend lint, unit tests and production build in CI.
+- [x] Run frontend lint, unit tests and production build in CI — workflow run #204 frontend job passed (Oxlint, 10/10 tests, `tsc -b`, `vite build`).
 - [ ] Browser-check A → B → A rapid selection and out-of-order response behavior.
 - [ ] Browser-check click empty map, non-building entity, close panel, responsive panel layout and camera navigation.
 - [ ] Confirm no stale highlight remains if a selected entity is removed from its data source.
