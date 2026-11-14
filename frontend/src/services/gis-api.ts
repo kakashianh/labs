@@ -2,12 +2,23 @@ import { getJson } from './api-client'
 import { fetchAllBuildingPages } from './gis-data'
 import type {
   Building,
+  BuildingDetailResponse,
   BuildingListResponse,
   RegionListResponse,
 } from '../types/gis'
 
 export function fetchRegions(signal?: AbortSignal) {
   return getJson<RegionListResponse>('/api/v1/regions', signal)
+}
+
+export function fetchBuildingDetail(
+  buildingId: string,
+  signal?: AbortSignal,
+): Promise<Building> {
+  return getJson<BuildingDetailResponse>(
+    `/api/v1/buildings/${encodeURIComponent(buildingId)}`,
+    signal,
+  ).then((response) => response.data)
 }
 
 export function fetchBuildingPage(
@@ -21,9 +32,7 @@ export function fetchBuildingPage(
     page_size: String(pageSize),
   })
 
-  if (regionId) {
-    params.set('region_id', regionId)
-  }
+  if (regionId) params.set('region_id', regionId)
 
   return getJson<BuildingListResponse>(`/api/v1/buildings?${params.toString()}`, signal)
 }
