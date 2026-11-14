@@ -28,6 +28,7 @@ export default function CesiumViewer() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState<string | null>(null)
   const clearSelectionRef = useRef<(() => void) | null>(null)
+  const selectedBuildingIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!selectedBuildingId) {
@@ -45,19 +46,28 @@ export default function CesiumViewer() {
 
     void fetchBuildingDetail(requestedId, controller.signal)
       .then((detail) => {
-        if (!controller.signal.aborted && detail.id === requestedId) {
+        if (
+          !controller.signal.aborted &&
+          selectedBuildingIdRef.current === requestedId &&
+          detail.id === requestedId
+        ) {
           setBuildingDetail(detail)
         }
       })
       .catch((error: unknown) => {
-        if (controller.signal.aborted) return
+        if (
+          controller.signal.aborted ||
+          selectedBuildingIdRef.current !== requestedId
+        ) return
         if (error instanceof Error && error.name === 'AbortError') return
         setDetailError(
           error instanceof Error ? error.message : 'Không thể tải thông tin công trình.',
         )
       })
       .finally(() => {
-        if (!controller.signal.aborted) setDetailLoading(false)
+        if (!controller.signal.aborted && selectedBuildingIdRef.current === requestedId) {
+          setDetailLoading(false)
+        }
       })
 
     return () => controller.abort()
@@ -115,6 +125,7 @@ export default function CesiumViewer() {
 
     const clearSelection = () => {
       restoreSelectedStyle()
+      selectedBuildingIdRef.current = null
       setSelectedBuildingId(null)
     }
     clearSelectionRef.current = clearSelection
@@ -177,6 +188,7 @@ export default function CesiumViewer() {
             selectedOriginalMaterial = entity.polygon.material
             entity.polygon.material = new Cesium.ColorMaterialProperty(SELECTED_BUILDING_FILL)
           }
+          selectedBuildingIdRef.current = propertyId
           setSelectedBuildingId(propertyId)
         }, Cesium.ScreenSpaceEventType.LEFT_CLICK)
 
