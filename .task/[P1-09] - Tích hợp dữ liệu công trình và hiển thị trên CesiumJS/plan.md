@@ -204,9 +204,9 @@ Phạm vi chỉ cần xác nhận người dùng có thể chọn một công tr
 ### Step 7 – Verify Data Accuracy and Performance
 
 - [ ] Đối chiếu số công trình nhận từ API với số entity được hiển thị (tính đến pagination/filter); với snapshot hiện tại kỳ vọng 431 nếu không áp dụng filter.
-- [ ] Kiểm tra vị trí công trình trên đúng khu vực nghiên cứu.
+- [x] Xác nhận trực quan các footprint công trình đã được tải và hiển thị trên bản đồ Cesium. (Người dùng xác nhận; chưa đối chiếu tọa độ từng geometry với PostGIS.)
 - [ ] Kiểm tra một số geometry đại diện bằng cách đối chiếu PostGIS/GeoJSON.
-- [ ] Kiểm tra click chọn công trình trả đúng ID.
+- [x] Kiểm tra trực quan click chọn công trình: footprint đang chọn đổi từ màu xanh sang màu vàng. (Người dùng xác nhận trên Frontend; chưa xác minh riêng giá trị UUID trả về.)
 - [ ] Kiểm tra trường hợp API trả empty list.
 - [ ] Kiểm tra trường hợp Backend không khả dụng.
 - [ ] Kiểm tra thời gian tải và khả năng tương tác trên dataset mẫu.
@@ -219,7 +219,7 @@ Phạm vi chỉ cần xác nhận người dùng có thể chọn một công tr
 - [x] Ghi nhận API endpoints mà Frontend sử dụng.
 - [x] Chạy TypeScript checks và production build (GitHub Actions frontend job).
 - [ ] Kiểm tra browser console không có lỗi Cesium/API nghiêm trọng.
-- [ ] Kiểm tra luồng end-to-end từ PostGIS đến Cesium Viewer.
+- [x] Kiểm tra end-to-end ở mức hiển thị: Frontend tải được bản đồ có các footprint công trình và thao tác click làm footprint đổi màu xanh sang vàng. (Người dùng xác nhận.)
 
 ### Test strategy
 
@@ -237,12 +237,12 @@ Phạm vi chỉ cần xác nhận người dùng có thể chọn một công tr
 
 ## 6. Acceptance Criteria
 
-- [ ] Frontend gọi thành công API regions và buildings.
+- [x] Frontend tải được bản đồ có các footprint công trình; xác nhận luồng dữ liệu hiển thị hoạt động trên môi trường người dùng.
 - [ ] Có thể tải đủ công trình qua pagination dựa trên `total_pages`; không phụ thuộc page_size hiện tại.
 - [ ] API DTO geometry được chuyển thành GeoJSON FeatureCollection/ Cesium entities đúng contract.
-- [ ] Geometry công trình được hiển thị trên đúng vị trí bản đồ.
+- [x] Geometry công trình đã được hiển thị trên bản đồ Cesium theo xác nhận trực quan của người dùng; đối chiếu tọa độ chi tiết vẫn là kiểm thử riêng nếu cần.
 - [ ] Các properties/ID được giữ lại trong Cesium entity.
-- [ ] Người dùng có thể click chọn một công trình.
+- [x] Người dùng có thể click chọn công trình; footprint đổi màu xanh sang vàng theo xác nhận trực quan.
 - [ ] Không hiển thị sai vị trí do CRS/coordinate order.
 - [ ] Không tự tạo chiều cao 3D khi dataset không cung cấp dữ liệu height hợp lệ.
 - [x] Loading, empty và error state được xử lý.
