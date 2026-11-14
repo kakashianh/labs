@@ -112,7 +112,7 @@ export default function CesiumViewer() {
 
     const clickHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas)
     let selectedEntity: Cesium.Entity | undefined
-    let selectedOriginalMaterial: Cesium.MaterialProperty | Cesium.Color | undefined
+    let selectedOriginalMaterial: Cesium.MaterialProperty | undefined
 
     const restoreSelectedStyle = () => {
       if (selectedEntity?.polygon) {
