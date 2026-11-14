@@ -138,7 +138,7 @@ Yêu cầu:
 - [x] Hiển thị error/not-found state.
 - [x] Xử lý thuộc tính thiếu hoặc null.
 - [x] Thêm thao tác đóng panel và đồng bộ clear selection.
-- [x] Bổ sung CSS responsive cho panel; kiểm tra trực quan trên trình duyệt vẫn cần thực hiện.
+- [x] Bổ sung CSS responsive cho panel và kiểm tra trực quan trên trình duyệt — người dùng xác nhận đạt.
 
 ### Step 5 – Highlight and Synchronize Selected Entity
 
@@ -262,11 +262,11 @@ Success response shape:
 
 ### Updated verification checklist
 
-- [ ] Confirm the actual P1-09 entity property name and UUID extraction path in the implemented frontend before coding.
-- [ ] Confirm API base URL/configuration and response unwrapping in the existing API client.
-- [ ] Verify success, invalid UUID (400), not found (404), nullable fields and network failure.
-- [ ] Verify rapid selection does not allow stale requests to overwrite the current selected building.
-- [ ] Verify panel and Cesium highlight are both keyed by the same UUID.
+- [x] Confirm the actual P1-09 entity property name and UUID extraction path in the implemented frontend before coding.
+- [x] Confirm API base URL/configuration and response unwrapping in the existing API client.
+- [x] Verify success, invalid UUID (400), not found (404), nullable fields and network failure — service tests passed.
+- [x] Verify rapid selection does not allow stale requests to overwrite the current selected building — implementation guard and browser test passed.
+- [x] Verify panel and Cesium highlight are both keyed by the same UUID.
 
 **Dependency note (updated 2026-11-14):** P1-08 và P1-09 đã được merge vào `project/3D-map-medical`. P1-09 được merge qua PR #12 (merge commit `83d48b01133bc5f8c5536d27144edf7771df75c3`). P1-10 được triển khai trên branch `feat/p1-10-building-info-panel` từ branch tích hợp.
 
@@ -275,7 +275,7 @@ Success response shape:
 
 ### 11.1 Dependency gate and ownership
 
-- [ ] Confirm P1-08 is available on the integration branch (already merged as of this plan update).
+- [x] Confirm P1-08 is available on the integration branch (already merged as of this plan update).
 - [x] Confirm P1-09 implementation is merged into `project/3D-map-medical` via PR #12 before integrating P1-10.
 - [x] Re-read the actual P1-09 implementation and verified the entity UUID property path before implementation.
 - P1-08 owns backend region/building APIs and response DTOs.
@@ -315,16 +315,16 @@ The implementation must keep the selected UUID, panel detail UUID, and highlight
 
 ### 11.5 Expanded test scenarios
 
-- [ ] Select a valid building entity and assert the exact UUID is passed to the detail API.
-- [ ] Select A then B; assert A's highlight is restored, B is highlighted, and only B's detail is shown.
-- [ ] Select A → B → A rapidly; assert only the latest A request result is applied.
-- [ ] Deselect while a detail request is pending; assert the panel remains closed after the request resolves.
-- [ ] Resolve requests out of order; assert stale success and stale error responses are ignored.
-- [ ] Click a non-building entity; assert no building detail request is made.
-- [ ] Click inside the panel; assert Cesium picking does not clear or change the selection.
-- [ ] Close the panel; assert selection is cleared and highlight is restored.
+- [x] Select a valid building entity and verify the exact UUID is passed to the detail API — user-confirmed browser test.
+- [x] Select A then B; verify A's highlight is restored, B is highlighted, and only B's detail is shown — user-confirmed browser test.
+- [x] Select A → B → A rapidly; verify only the latest A request result is applied — user-confirmed browser test.
+- [x] Deselect while a detail request is pending; verify the panel remains closed after the request resolves — user-confirmed browser test.
+- [x] Resolve requests out of order; verify stale success and stale error responses are ignored — user-confirmed browser test.
+- [x] Click a non-building entity; verify no building detail request is made — user-confirmed browser test.
+- [x] Click inside the panel; verify Cesium picking does not clear or change the selection — user-confirmed browser test.
+- [x] Close the panel; verify selection is cleared and highlight is restored — user-confirmed browser test.
 - [x] Add service tests for 400 invalid UUID, 404 missing building, network error, and nullable `name`/`building_type` fields.
-- [ ] Verify panel interactions do not unexpectedly trigger camera movement or prevent map navigation outside the panel.
+- [x] Verify panel interactions do not unexpectedly trigger camera movement or prevent map navigation outside the panel — user-confirmed browser test.
 - [ ] Verify an entity removed from the data source cannot leave a stale highlight or stale detail panel.
 
 ### 11.6 Acceptance gate before marking KAN-17 done
@@ -357,7 +357,7 @@ Still requires verification:
 - [x] Run frontend lint, unit tests and production build in CI — workflow run #204 frontend job passed (Oxlint, 10/10 tests, `tsc -b`, `vite build`).
 - [x] Browser-check A → B → A rapid selection and out-of-order response behavior — người dùng xác nhận đạt.
 - [x] Browser-check click empty map, non-building entity, close panel, responsive panel layout and camera navigation — người dùng xác nhận đạt.
-- [ ] Confirm no stale highlight remains if a selected entity is removed from its data source.
+- [ ] Confirm no stale highlight remains if a selected entity is removed from its data source (edge case not yet verified; keep open).
 - [x] Cập nhật acceptance criteria sau khi người dùng xác nhận toàn bộ kiểm thử tương tác đạt.
 
 Automated CI và các kiểm thử trình duyệt trong phạm vi P1-10 đã được xác nhận đạt. Trường hợp entity bị loại khỏi data source được giữ lại như một edge case riêng cần xác minh/xử lý trước khi tuyên bố toàn bộ vòng đời entity đã được bao phủ.
