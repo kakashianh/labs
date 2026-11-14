@@ -63,7 +63,6 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-
 /// Build PostgreSQL options from discrete environment variables when running
 /// under Docker Compose. This avoids interpolating a password into a URL,
 /// where reserved characters (for example @, :, / or #) must be percent-encoded.
