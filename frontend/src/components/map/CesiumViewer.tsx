@@ -9,10 +9,17 @@ type LoadState = 'loading' | 'ready' | 'empty' | 'error'
 const DEFAULT_BUILDING_FILL = Cesium.Color.CORNFLOWERBLUE.withAlpha(0.35)
 const SELECTED_BUILDING_FILL = Cesium.Color.ORANGE.withAlpha(0.75)
 
+// Esri World Imagery is used instead of the OSM Foundation standard tile server.
+// Keep the provider's required source attribution visible in the Cesium viewer.
+const BASEMAP_URL =
+  'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+const BASEMAP_CREDIT =
+  'Sources: Esri, DigitalGlobe, GeoEye, i-cubed, USDA FSA, USGS, AEX, Getmapping, Aerogrid, IGN, IGP, swisstopo, and the GIS User Community'
+
 /**
- * CesiumViewer displays the OSM basemap and the building footprints served by
- * the Rust API. Data loading and viewer resources share one effect so StrictMode
- * cleanup aborts pending requests and destroys every Cesium resource.
+ * CesiumViewer displays an Esri imagery basemap and the building footprints
+ * served by the Rust API. Data loading and viewer resources share one effect so
+ * StrictMode cleanup aborts pending requests and destroys every Cesium resource.
  */
 export default function CesiumViewer() {
   const [loadState, setLoadState] = useState<LoadState>('loading')
@@ -46,8 +53,8 @@ export default function CesiumViewer() {
       selectionIndicator: false,
       baseLayer: new Cesium.ImageryLayer(
         new Cesium.UrlTemplateImageryProvider({
-          url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-          credit: '© OpenStreetMap contributors',
+          url: BASEMAP_URL,
+          credit: new Cesium.Credit(BASEMAP_CREDIT),
         }),
       ),
     })
