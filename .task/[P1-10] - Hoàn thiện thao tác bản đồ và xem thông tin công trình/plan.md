@@ -165,10 +165,10 @@ Yêu cầu:
 - [ ] Test selected state khi chọn entity hợp lệ.
 - [ ] Test bỏ chọn khi click vùng trống.
 - [ ] Test chuyển selection giữa hai công trình.
-- [ ] Test API detail loading/success/error/not-found.
-- [ ] Test field null/undefined không làm component crash.
-- [ ] Test request race condition hoặc stale response.
-- [ ] Cập nhật hướng dẫn thao tác bản đồ nếu cần.
+- [x] Bổ sung unit tests cho detail success/envelope, nullable fields, HTTP 400/404 và network error; loading/error/not-found UI cần browser verification.
+- [x] Bổ sung unit coverage cho nullable API fields; component rendering vẫn cần browser verification.
+- [x] Bổ sung AbortSignal cancellation test; stale response guard được triển khai bằng effect cleanup + UUID match, cần browser-level rapid-selection verification.
+- [x] Cập nhật frontend README về chọn công trình, detail panel và hành vi clear selection.
 - [ ] Chạy TypeScript checks và production build.
 
 ## 6. Acceptance Criteria
@@ -339,3 +339,25 @@ KAN-17 can be marked Done only after:
 7. The relevant manual browser checks are recorded with their actual results.
 
 Do not mark checklist items complete based only on planned behavior; check them off only after implementation or verification evidence exists.
+
+
+### Implementation progress — feature branch
+
+Implementation is being carried out on `feat/p1-10-building-info-panel`, based on the merged P1-09 integration branch.
+
+Implemented:
+- Verified P1-09's real UUID path: `entity.properties.buildingId`; invalid/missing UUIDs are ignored and never fall back to the Cesium entity name or `external_id`.
+- Added `fetchBuildingDetail`, which calls the P1-08 detail endpoint and unwraps the `data` envelope through the existing API client.
+- Added the responsive `BuildingInfoPanel` with loading, error, not-found and nullable-field fallbacks.
+- Added selection-driven detail loading with AbortController cleanup and a response UUID guard.
+- Added selected-entity material restoration when switching, clearing or closing the panel.
+- Added service tests for detail response unwrapping, nullable values, 400, 404, network errors and cancellation.
+
+Still requires verification:
+- [ ] Run frontend lint, unit tests and production build in CI.
+- [ ] Browser-check A → B → A rapid selection and out-of-order response behavior.
+- [ ] Browser-check click empty map, non-building entity, close panel, responsive panel layout and camera navigation.
+- [ ] Confirm no stale highlight remains if a selected entity is removed from its data source.
+- [ ] Update the remaining acceptance criteria only after the corresponding checks pass.
+
+The implementation does not yet claim KAN-17 complete until these automated and manual checks pass.
