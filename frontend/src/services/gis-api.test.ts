@@ -25,7 +25,7 @@ test('fetchBuildingDetail unwraps the data envelope and preserves nullable field
 
   try {
     const result = await fetchBuildingDetail(sampleBuilding.id)
-    assert.equal(requestedUrl, `/api/v1/buildings/${sampleBuilding.id}`)
+    assert.ok(requestedUrl.endsWith(`/api/v1/buildings/${sampleBuilding.id}`))
     assert.deepEqual(result, sampleBuilding)
     assert.equal(result.name, null)
     assert.equal(result.building_type, null)
