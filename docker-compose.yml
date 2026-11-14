@@ -6,7 +6,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-appuser}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in GitHub Codespaces Secrets}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Configure POSTGRES_PASSWORD in GitHub Actions or Codespaces Secrets}
       POSTGRES_DB: ${POSTGRES_DB:-appdb}
     ports:
       - "5432:5432"
@@ -35,7 +35,7 @@ services:
       dockerfile: deployment/Dockerfile
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-appuser}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in GitHub Codespaces Secrets}@postgres:5432/${POSTGRES_DB:-appdb}
+      DATABASE_URL: postgres://${POSTGRES_USER:-appuser}:${POSTGRES_PASSWORD:?Configure POSTGRES_PASSWORD in GitHub Actions or Codespaces Secrets}@postgres:5432/${POSTGRES_DB:-appdb}
       REDIS_URL: redis://redis:6379
       HOST: 0.0.0.0
       PORT: 8000
