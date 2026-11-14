@@ -1,6 +1,10 @@
 const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim()
 
-export const API_BASE_URL = (configuredBaseUrl || 'http://localhost:8000').replace(/\/+$/, '')
+// In development, call the same-origin Vite proxy. In production, use the
+// explicitly configured API origin.
+export const API_BASE_URL = import.meta.env.DEV
+  ? ''
+  : (configuredBaseUrl || 'http://localhost:8000').replace(/\/+$/, '')
 
 export class ApiRequestError extends Error {
   public readonly status: number
