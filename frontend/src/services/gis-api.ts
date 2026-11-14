@@ -1,5 +1,5 @@
-import { getJson } from './api-client'
-import { fetchAllBuildingPages } from './gis-data'
+import { getJson } from './api-client.ts'
+import { fetchAllBuildingPages } from './gis-data.ts'
 import type {
   Building,
   BuildingDetailResponse,
