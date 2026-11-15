@@ -3,7 +3,7 @@ import * as Cesium from 'cesium'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
 import BuildingInfoPanel from './BuildingInfoPanel'
 import { fetchBuildingDetail, fetchAllBuildings, fetchRegions } from '../../services/gis-api'
-import { buildingsToFeatureCollection } from '../../services/gis-data'
+import { buildingsToFeatureCollection, isSelectedEntityRemoved } from '../../services/gis-data'
 import type { Building } from '../../types/gis'
 
 type LoadState = 'loading' | 'ready' | 'empty' | 'error'
@@ -113,6 +113,7 @@ export default function CesiumViewer() {
     const clickHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas)
     let selectedEntity: Cesium.Entity | undefined
     let selectedOriginalMaterial: Cesium.MaterialProperty | undefined
+    let cleanupDataSourceListeners: (() => void) | null = null
 
     const restoreSelectedStyle = () => {
       if (selectedEntity?.polygon) {
@@ -166,6 +167,29 @@ export default function CesiumViewer() {
         await viewer.dataSources.add(dataSource)
         if (controller.signal.aborted || viewer.isDestroyed()) return
 
+        // Keep React selection state in sync if a selected Cesium entity or its
+        // entire data source is removed while the viewer remains mounted.
+        const handleEntitiesChanged = (
+          _collection: Cesium.EntityCollection,
+          _added: Cesium.Entity[],
+          removed: Cesium.Entity[],
+        ) => {
+          if (isSelectedEntityRemoved(selectedEntity, removed)) clearSelection()
+        }
+        const handleDataSourceRemoved = (
+          _collection: Cesium.DataSourceCollection,
+          removedDataSource: Cesium.DataSource,
+        ) => {
+          if (removedDataSource === dataSource) clearSelection()
+        }
+
+        dataSource.entities.collectionChanged.addEventListener(handleEntitiesChanged)
+        viewer.dataSources.dataSourceRemoved.addEventListener(handleDataSourceRemoved)
+        cleanupDataSourceListeners = () => {
+          dataSource.entities.collectionChanged.removeEventListener(handleEntitiesChanged)
+          viewer.dataSources.dataSourceRemoved.removeEventListener(handleDataSourceRemoved)
+        }
+
         clickHandler.setInputAction((movement: Cesium.ScreenSpaceEventHandler.PositionedEvent) => {
           const picked = viewer.scene.pick(movement.position)
           const entity =
@@ -209,6 +233,7 @@ export default function CesiumViewer() {
 
     return () => {
       controller.abort()
+      cleanupDataSourceListeners?.()
       clearSelectionRef.current = null
       clickHandler.destroy()
       if (!viewer.isDestroyed()) viewer.destroy()

@@ -83,12 +83,12 @@ Show Information Panel
 
 ### Step 1 – Review Outputs from P1-09 and P1-10
 
-- [ ] Kiểm tra data loading flow và API client của P1-09.
-- [ ] Kiểm tra Cesium data source và building entity IDs.
-- [ ] Kiểm tra selection state và click handler của P1-10.
-- [ ] Kiểm tra BuildingInfoPanel và detail API integration.
-- [ ] Xác nhận route/API response thực tế giữa Frontend và Backend.
-- [ ] Ghi nhận các vấn đề tích hợp trước khi chỉnh sửa.
+- [x] Kiểm tra data loading flow và API client của P1-09.
+- [x] Kiểm tra Cesium data source và building entity IDs.
+- [x] Kiểm tra selection state và click handler của P1-10.
+- [x] Kiểm tra BuildingInfoPanel và detail API integration.
+- [ ] Xác nhận route/API response thực tế giữa Frontend và Backend bằng môi trường chạy thật.
+- [x] Ghi nhận các vấn đề tích hợp trước khi chỉnh sửa; phát hiện lifecycle chưa clear selection khi selected entity/data source bị remove.
 
 ### Step 2 – Integrate Map, Selection and Detail Panel
 
@@ -155,11 +155,11 @@ Tạo checklist có thể chạy lại theo môi trường local.
 | Điều hướng khi panel mở | Zoom/pan/rotate vẫn hoạt động |
 | Tải lại trang | Không xuất hiện duplicate data source/entity |
 
-- [ ] Tạo tài liệu checklist hoặc test suite theo khả năng repository.
-- [ ] Thực thi từng scenario trên dataset đô thị mẫu.
-- [ ] Ghi kết quả pass/fail và lỗi phát hiện.
-- [ ] Sửa lỗi thuộc phạm vi tích hợp.
-- [ ] Chạy lại toàn bộ checklist sau khi sửa.
+- [x] Tạo tài liệu checklist browser có thể chạy lại tại `frontend/docs/map-e2e-checklist.md`.
+- [x] Thực thi E2E checklist trên ứng dụng/dataset đô thị mẫu (người dùng xác nhận đã kiểm thử).
+- [ ] Bổ sung kết quả pass/fail và ghi chú theo từng MAP scenario; hiện chưa có log/kết quả chi tiết trong plan.
+- [x] Sửa lỗi lifecycle trong phạm vi tích hợp: clear selection khi selected entity hoặc data source bị remove.
+- [x] Chạy kiểm thử E2E sau khi hoàn thiện các thay đổi tích hợp (người dùng xác nhận đã thực hiện).
 
 ### Step 7 – Final Verification and Documentation
 
@@ -181,7 +181,7 @@ Tạo checklist có thể chạy lại theo môi trường local.
 - [ ] Loading, empty và error state được xử lý nhất quán.
 - [ ] API chậm hoặc lỗi không làm Cesium Viewer crash.
 - [ ] Không có stale detail response làm sai thông tin công trình đang chọn.
-- [ ] Có integration tests hoặc E2E checklist được thực thi và lưu kết quả.
+- [x] E2E checklist đã được thực thi theo xác nhận của người dùng; cần bổ sung kết quả chi tiết từng scenario để lưu evidence đầy đủ.
 - [ ] Frontend build và các kiểm thử liên quan thành công.
 
 ## 7. Deliverables
@@ -274,9 +274,11 @@ Each building list/detail DTO contains `id` (UUID), `region_id` (UUID), `externa
 - [x] P1-09 implementation is already merged into `project/3D-map-medical` via PR #12.
 - [x] P1-10 implementation is present on `feat/p1-10-building-info-panel`; automated CI run #43576392119 passed the required checks.
 - [x] P1-10 manual browser verification has been reported successful by the user, covering the interaction scenarios recorded in the P1-10 plan: camera navigation, selection after camera movement, A/B and rapid selection, empty-map deselection, non-building entity behavior, panel close/responsive layout, and map interaction while the panel is open.
-- [ ] P1-10 has not yet been merged into `project/3D-map-medical`. Merge is a prerequisite before P1-11 integration work begins.
+- [x] P1-10 was merged into `project/3D-map-medical` through PR #13 on 2026-11-14.
+- [x] P1-11 branch `feat/p1-11-map-e2e-integration` was created from the updated `project/3D-map-medical`.
+- [x] Compare check confirms the P1-11 branch is based on current `project/3D-map-medical` commit `23f39a6b025c63827745ecf22e2267306fda5187`, with 0 commits behind at the time of verification.
 
-**Branching rule:** Do not implement P1-11 against an unmerged feature branch as if it were the integration baseline. After P1-10 is merged, create/continue the P1-11 implementation branch from the updated `project/3D-map-medical` and record the merge commit here.
+**Branching rule (satisfied):** P1-11 is based on the updated integration branch, not on the P1-10 feature branch.
 
 ### 11.2 Avoid duplicate work from P1-10
 
@@ -307,3 +309,54 @@ The P1-10 plan still tracks safe handling when a selected Cesium entity is remov
 ### 11.5 Completion boundary
 
 P1-10's successful CI and browser checks do not automatically complete P1-11. P1-11 remains responsible for end-to-end evidence across the complete Backend/PostGIS-to-Cesium workflow, especially pagination, empty/error list states, coordinate correctness, lifecycle cleanup and repeatable integration verification.
+
+
+---
+
+## 12. P1-11 implementation progress (2026-11-15)
+
+### 12.1 Branch and baseline
+
+- Branch: `feat/p1-11-map-e2e-integration`.
+- Base: `project/3D-map-medical`.
+- Verified base commit at branch creation: `23f39a6b025c63827745ecf22e2267306fda5187`.
+- Compare result after the initial implementation: 5 commits ahead, 0 commits behind the base branch.
+- P1-10 prerequisite: merged through PR #13.
+
+### 12.2 Changes implemented
+
+- Added Cesium `EntityCollection.collectionChanged` handling. If the selected entity is removed, restore its style and clear the selected UUID so the detail panel and in-flight detail lifecycle are cleared.
+- Added Cesium `DataSourceCollection.dataSourceRemoved` handling. Removing the active data source also clears the selection.
+- Added listener cleanup to the Cesium Viewer effect cleanup path.
+- Added a unit-tested `isSelectedEntityRemoved` predicate used by the removal-event handler.
+- Expanded GIS data tests to assert preservation of building UUID, region UUID and GeoJSON coordinate order.
+- Added repeatable browser verification instructions and MAP-01..MAP-15 scenarios in `frontend/docs/map-e2e-checklist.md`.
+- Updated the frontend README with the P1-11 checklist and selected-entity removal behavior.
+
+### 12.3 Verification status
+
+- [x] Source review of P1-09/P1-10 ownership and current integration flow.
+- [x] Automated tests added for selected-entity removal detection and GeoJSON identity/coordinate preservation.
+- [x] Local isolated Node.js 22.16 test run: 11/11 frontend unit tests passed; this is preliminary evidence, not a substitute for the repository CI run.
+- [x] Browser checklist created.
+- [x] GitHub Actions run #43717359720 passed all 4 required jobs: API integration tests (Testcontainers PostGIS), frontend lint/unit tests/production build, Rust format/Clippy/tests + Docker build, and Docker Compose + PostGIS migration verification. Manual deploy job was skipped as expected.
+- [x] Live Backend + PostGIS + browser E2E checklist MAP-01..MAP-15 đã được người dùng xác nhận đã thực thi.
+- [ ] Bổ sung kết quả pass/fail và bằng chứng browser/network theo từng MAP scenario, actual dataset count và các giới hạn còn lại; chưa có chi tiết này trong plan.
+
+### 12.4 Known boundary
+
+No Playwright/Cypress dependency or production-only debug UI was added. Browser lifecycle scenarios MAP-11/MAP-12 are to be exercised using a temporary local debugging breakpoint or controlled development fixture, as described in the checklist. The current dataset count is dynamic and must be read from API pagination metadata.
+
+
+### 12.5 E2E and CI verification update (2026-11-15)
+
+- [x] Người dùng xác nhận đã thực hiện kiểm thử E2E trên luồng bản đồ.
+- [x] GitHub Actions run [#43717359720](https://github.com/kakashianh/labs/actions/runs/43717359720) passed 4/4 required jobs.
+- [x] Backend API integration tests với Testcontainers PostGIS.
+- [x] Frontend lint, unit tests và production build.
+- [x] Rust formatting, Clippy, unit tests và Docker backend image build.
+- [x] Docker Compose stack và PostGIS extension/migration verification.
+- [ ] Bổ sung kết quả cụ thể MAP-01..MAP-15 (pass/fail, ghi chú và bằng chứng nếu có) để người khác có thể audit và chạy lại.
+- [ ] Browser E2E evidence chi tiết chưa được đính kèm trong plan; không suy diễn kết quả từng scenario chỉ từ trạng thái CI hoặc xác nhận tổng quát.
+
+**Verification boundary:** CI xanh xác nhận các automated checks nêu trên; xác nhận E2E của người dùng được ghi nhận riêng. Hai loại bằng chứng không thay thế cho nhau.
