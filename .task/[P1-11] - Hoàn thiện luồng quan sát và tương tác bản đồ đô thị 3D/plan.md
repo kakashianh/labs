@@ -337,6 +337,7 @@ P1-10's successful CI and browser checks do not automatically complete P1-11. P1
 
 - [x] Source review of P1-09/P1-10 ownership and current integration flow.
 - [x] Automated tests added for selected-entity removal detection and GeoJSON identity/coordinate preservation.
+- [x] Local isolated Node.js 22.16 test run: 11/11 frontend unit tests passed; this is preliminary evidence, not a substitute for the repository CI run.
 - [x] Browser checklist created.
 - [ ] GitHub Actions run for this branch must pass before code verification is complete.
 - [ ] Live Backend + PostGIS + browser scenarios MAP-01..MAP-15 remain pending; do not infer browser success from unit tests.
