@@ -50,3 +50,12 @@ Call backend::simulation::sir::simulate(SirInput { ... }) from domain/applicatio
 ## Limitations
 
 This is a homogeneous, closed-population SIR model. It does not model building-level movement, spatial contacts, births/deaths, vaccination, isolation or real-world parameter fitting. Results are not real-world health advice or forecasts.
+
+## Example
+
+For N = 1,000, S = 990, I = 10, R = 0, beta = 0.3, gamma = 0.1 and dt = 0.1:
+
+- Infection flow = 0.3 × (990 / 1000) × 10 × 0.1 = 0.297
+- Recovery flow = 0.1 × 10 × 0.1 = 0.1
+- After the first step: S = 989.703, I = 10.197, R = 0.1
+- The total remains 1,000; the returned series has the initial point plus one point per step.
