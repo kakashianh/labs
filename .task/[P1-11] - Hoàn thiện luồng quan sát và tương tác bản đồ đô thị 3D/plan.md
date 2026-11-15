@@ -156,10 +156,10 @@ Tạo checklist có thể chạy lại theo môi trường local.
 | Tải lại trang | Không xuất hiện duplicate data source/entity |
 
 - [x] Tạo tài liệu checklist browser có thể chạy lại tại `frontend/docs/map-e2e-checklist.md`.
-- [ ] Thực thi từng scenario trên dataset đô thị mẫu.
-- [ ] Ghi kết quả pass/fail và lỗi phát hiện.
+- [x] Thực thi E2E checklist trên ứng dụng/dataset đô thị mẫu (người dùng xác nhận đã kiểm thử).
+- [ ] Bổ sung kết quả pass/fail và ghi chú theo từng MAP scenario; hiện chưa có log/kết quả chi tiết trong plan.
 - [x] Sửa lỗi lifecycle trong phạm vi tích hợp: clear selection khi selected entity hoặc data source bị remove.
-- [ ] Chạy lại toàn bộ checklist sau khi sửa.
+- [x] Chạy kiểm thử E2E sau khi hoàn thiện các thay đổi tích hợp (người dùng xác nhận đã thực hiện).
 
 ### Step 7 – Final Verification and Documentation
 
@@ -181,7 +181,7 @@ Tạo checklist có thể chạy lại theo môi trường local.
 - [ ] Loading, empty và error state được xử lý nhất quán.
 - [ ] API chậm hoặc lỗi không làm Cesium Viewer crash.
 - [ ] Không có stale detail response làm sai thông tin công trình đang chọn.
-- [ ] Có integration tests hoặc E2E checklist được thực thi và lưu kết quả.
+- [x] E2E checklist đã được thực thi theo xác nhận của người dùng; cần bổ sung kết quả chi tiết từng scenario để lưu evidence đầy đủ.
 - [ ] Frontend build và các kiểm thử liên quan thành công.
 
 ## 7. Deliverables
@@ -339,10 +339,24 @@ P1-10's successful CI and browser checks do not automatically complete P1-11. P1
 - [x] Automated tests added for selected-entity removal detection and GeoJSON identity/coordinate preservation.
 - [x] Local isolated Node.js 22.16 test run: 11/11 frontend unit tests passed; this is preliminary evidence, not a substitute for the repository CI run.
 - [x] Browser checklist created.
-- [ ] GitHub Actions run for this branch must pass before code verification is complete.
-- [ ] Live Backend + PostGIS + browser scenarios MAP-01..MAP-15 remain pending; do not infer browser success from unit tests.
-- [ ] Record actual dataset count, browser/network evidence and any remaining limitations after manual execution.
+- [x] GitHub Actions run #43717359720 passed all 4 required jobs: API integration tests (Testcontainers PostGIS), frontend lint/unit tests/production build, Rust format/Clippy/tests + Docker build, and Docker Compose + PostGIS migration verification. Manual deploy job was skipped as expected.
+- [x] Live Backend + PostGIS + browser E2E checklist MAP-01..MAP-15 đã được người dùng xác nhận đã thực thi.
+- [ ] Bổ sung kết quả pass/fail và bằng chứng browser/network theo từng MAP scenario, actual dataset count và các giới hạn còn lại; chưa có chi tiết này trong plan.
 
 ### 12.4 Known boundary
 
 No Playwright/Cypress dependency or production-only debug UI was added. Browser lifecycle scenarios MAP-11/MAP-12 are to be exercised using a temporary local debugging breakpoint or controlled development fixture, as described in the checklist. The current dataset count is dynamic and must be read from API pagination metadata.
+
+
+### 12.5 E2E and CI verification update (2026-11-15)
+
+- [x] Người dùng xác nhận đã thực hiện kiểm thử E2E trên luồng bản đồ.
+- [x] GitHub Actions run [#43717359720](https://github.com/kakashianh/labs/actions/runs/43717359720) passed 4/4 required jobs.
+- [x] Backend API integration tests với Testcontainers PostGIS.
+- [x] Frontend lint, unit tests và production build.
+- [x] Rust formatting, Clippy, unit tests và Docker backend image build.
+- [x] Docker Compose stack và PostGIS extension/migration verification.
+- [ ] Bổ sung kết quả cụ thể MAP-01..MAP-15 (pass/fail, ghi chú và bằng chứng nếu có) để người khác có thể audit và chạy lại.
+- [ ] Browser E2E evidence chi tiết chưa được đính kèm trong plan; không suy diễn kết quả từng scenario chỉ từ trạng thái CI hoặc xác nhận tổng quát.
+
+**Verification boundary:** CI xanh xác nhận các automated checks nêu trên; xác nhận E2E của người dùng được ghi nhận riêng. Hai loại bằng chứng không thay thế cho nhau.
