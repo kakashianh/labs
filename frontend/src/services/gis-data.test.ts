@@ -3,6 +3,7 @@ import test from 'node:test'
 import {
   buildingsToFeatureCollection,
   fetchAllBuildingPages,
+  isSelectedEntityRemoved,
 } from './gis-data.ts'
 import type { Building, BuildingListResponse } from '../types/gis.ts'
 
@@ -94,8 +95,10 @@ test('converts API geometries to Features and preserves UUID/properties', () => 
   assert.equal(result.featureCollection.type, 'FeatureCollection')
   assert.equal(result.featureCollection.features[0].id, 'building-uuid')
   assert.equal(result.featureCollection.features[0].properties.buildingId, 'building-uuid')
+  assert.equal(result.featureCollection.features[0].properties.regionId, building('building-uuid').region_id)
   assert.equal(result.featureCollection.features[0].properties.externalId, 'way/123')
   assert.equal(result.featureCollection.features[0].geometry.type, 'MultiPolygon')
+  assert.deepEqual(result.featureCollection.features[0].geometry.coordinates, geometry.coordinates)
 })
 
 test('skips malformed geometry without losing the remaining buildings', () => {
@@ -110,4 +113,13 @@ test('skips malformed geometry without losing the remaining buildings', () => {
   assert.deepEqual(result.featureCollection.features.map((feature) => feature.id), [
     'valid-uuid',
   ])
+})
+
+test('detects when the selected entity is removed from its collection', () => {
+  const selected = { id: 'selected' }
+  const other = { id: 'other' }
+
+  assert.equal(isSelectedEntityRemoved(selected, [other, selected]), true)
+  assert.equal(isSelectedEntityRemoved(selected, [other]), false)
+  assert.equal(isSelectedEntityRemoved(undefined, [selected]), false)
 })
