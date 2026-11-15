@@ -70,13 +70,14 @@ pub fn simulate(input: SirInput) -> Result<SirResult, SirError> {
 
     for time_step in 1..=input.steps {
         // Both flows are computed from the same beginning-of-step state.
-        let infection_flow = (input.beta * (susceptible / input.population) * infected * input.dt)
-            .min(susceptible);
-        let recovery_flow = (input.gamma * infected * input.dt).min(infected);
-
-        if !infection_flow.is_finite() || !recovery_flow.is_finite() {
+        let raw_infection_flow =
+            input.beta * (susceptible / input.population) * infected * input.dt;
+        let raw_recovery_flow = input.gamma * infected * input.dt;
+        if !raw_infection_flow.is_finite() || !raw_recovery_flow.is_finite() {
             return Err(SirError::NumericalInstability);
         }
+        let infection_flow = raw_infection_flow.min(susceptible);
+        let recovery_flow = raw_recovery_flow.min(infected);
 
         susceptible -= infection_flow;
         infected += infection_flow - recovery_flow;
