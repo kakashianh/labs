@@ -168,20 +168,20 @@ Không cần giữ đúng tên enum minh họa nếu project đã có error conv
 
 ### Step 1 – Inspect Backend Structure and Define SIR Module Boundary
 
-- [ ] Kiểm tra cấu trúc Rust Backend hiện tại.
-- [ ] Xác định vị trí module simulation độc lập.
-- [ ] Kiểm tra error/result conventions của project.
-- [ ] Đảm bảo simulation engine không phụ thuộc Axum request/response types.
-- [ ] Xác định nơi đặt unit tests và tài liệu công thức.
+- [x] Kiểm tra cấu trúc Rust Backend hiện tại: crate `backend` có `src/lib.rs`, dùng `thiserror`; unit tests đặt cùng module.
+- [x] Xác định module `backend/src/simulation/sir.rs`, export qua `backend::simulation`.
+- [x] Dùng error enum riêng `SirError` với `thiserror`, không phụ thuộc AppError/Axum.
+- [x] Simulation engine không phụ thuộc Axum request/response types hoặc database.
+- [x] Tài liệu công thức đặt tại `backend/docs/sir-model.md`.
 
 ### Step 2 – Define Input, Output and Error Types
 
-- [ ] Tạo SirInput.
-- [ ] Tạo SirPoint cho kết quả từng time step.
-- [ ] Tạo SirResult.
-- [ ] Định nghĩa error types cho input không hợp lệ.
-- [ ] Chốt cách biểu diễn thời gian: time = step × dt.
-- [ ] Chốt output bao gồm trạng thái ban đầu tại time_step = 0 và các bước tiếp theo.
+- [x] Tạo SirInput (dùng `recovered`, không đặt tên `R0` để tránh nhầm Basic Reproduction Number).
+- [x] Tạo SirPoint cho kết quả từng time step.
+- [x] Tạo SirResult.
+- [x] Định nghĩa SirError bằng thiserror.
+- [x] Chốt cách biểu diễn thời gian: time = step × dt.
+- [x] Output bao gồm trạng thái ban đầu tại time_step = 0 và các bước tiếp theo.
 
 ### Step 3 – Implement Input Validation
 
@@ -196,26 +196,22 @@ Quy tắc:
 - steps phải lớn hơn 0 và không vượt giới hạn bảo vệ tài nguyên được thống nhất.
 - Không nhận NaN hoặc infinity ở bất kỳ numeric input nào.
 
-- [ ] Implement validation cho population.
-- [ ] Implement validation cho S0/I0/R0.
-- [ ] Kiểm tra tổng dân số với floating-point tolerance.
-- [ ] Implement validation cho beta/gamma.
-- [ ] Implement validation cho dt.
-- [ ] Implement validation cho steps và maximum allowed steps.
-- [ ] Trả lỗi có ý nghĩa, không panic khi input sai.
+- [x] Implement validation cho population và S/I/R.
+- [x] Kiểm tra tổng dân số với tolerance `1e-9 + 1e-9 × N`.
+- [x] Implement validation cho beta/gamma (finite, không âm; không áp đặt upper bound 1 vì đây là rate).
+- [x] Implement validation cho dt (finite, > 0).
+- [x] Giới hạn steps trong 1..=100,000 và tổng thời lượng `dt × steps` không vượt 10,000 đơn vị thời gian.
+- [x] Trả SirError có ý nghĩa, không panic khi input sai.
 
 ### Step 4 – Implement Discrete SIR Calculation
 
-- [ ] Khởi tạo trạng thái tại time_step = 0.
-- [ ] Tính infection flow từ S_t, I_t, N, beta và dt.
-- [ ] Tính recovery flow từ I_t, gamma và dt.
-- [ ] Giới hạn infection flow trong [0, S_t].
-- [ ] Giới hạn recovery flow trong [0, I_t].
-- [ ] Cập nhật S, I, R đồng thời từ trạng thái đầu bước.
-- [ ] Kiểm tra và xử lý sai số số học rất nhỏ ở biên theo tolerance.
-- [ ] Lưu kết quả tại từng time_step.
-- [ ] Không làm tròn S/I/R giữa các bước.
-- [ ] Đảm bảo engine trả result deterministic với cùng input.
+- [x] Khởi tạo trạng thái tại time_step = 0.
+- [x] Tính infection/recovery flow từ trạng thái đầu bước; kiểm tra intermediate finite trước khi clamp.
+- [x] Giới hạn infection flow trong [0, S_t] và recovery flow trong [0, I_t].
+- [x] Cập nhật S, I, R đồng thời từ trạng thái đầu bước.
+- [x] Kiểm tra finite, non-negative và population conservation sau mỗi bước; chỉ clamp sai số âm rất nhỏ.
+- [x] Lưu kết quả tại từng time_step, không làm tròn giữa các bước.
+- [x] Cùng input cho output deterministic.
 
 ### Step 5 – Enforce Invariants and Numerical Safety
 
@@ -228,10 +224,10 @@ Tại mỗi time step cần đảm bảo:
 - Infection flow không lớn hơn S.
 - Recovery flow không lớn hơn I tại đầu bước.
 
-- [ ] Kiểm tra các invariants sau mỗi lần cập nhật.
-- [ ] Xử lý floating-point drift nhỏ bằng chiến lược có tài liệu, không âm thầm thay đổi kết quả lớn.
-- [ ] Trả simulation error nếu xuất hiện NaN/infinity hoặc vi phạm conservation ngoài tolerance.
-- [ ] Không sử dụng integer rounding trong vòng lặp mô phỏng.
+- [x] Kiểm tra invariants sau mỗi lần cập nhật.
+- [x] Xử lý drift bằng tolerance đã công bố; không âm thầm sửa sai lệch lớn.
+- [x] Trả NumericalInstability nếu intermediate/output không finite hoặc conservation vượt tolerance.
+- [x] Không sử dụng integer rounding trong vòng lặp mô phỏng.
 
 ### Step 6 – Add Unit Tests
 
@@ -268,13 +264,12 @@ Các nhóm test tối thiểu:
 
 ### Step 7 – Document Formula and Usage
 
-- [ ] Ghi công thức SIR liên tục.
-- [ ] Ghi công thức explicit Euler rời rạc.
-- [ ] Giải thích đơn vị của beta, gamma và dt.
-- [ ] Ghi rõ initial state được trả ở time_step = 0.
-- [ ] Ghi rõ tolerance cho kiểm tra tổng dân số.
-- [ ] Thêm ví dụ input/output.
-- [ ] Ghi giới hạn của mô hình SIR cơ bản và việc lựa chọn dt.
+- [x] Ghi công thức SIR liên tục và explicit Euler rời rạc.
+- [x] Giải thích đơn vị beta/gamma/dt và f64 là aggregate/expected counts.
+- [x] Ghi rõ initial state được trả ở time_step = 0.
+- [x] Ghi rõ tolerance, maximum steps và maximum duration.
+- [x] Ghi giới hạn mô hình và quy ước lựa chọn dt.
+- [ ] Bổ sung ví dụ input/output cụ thể (có thể hoàn thiện cùng review cuối).
 
 ## 7. Acceptance Criteria
 
@@ -315,3 +310,15 @@ docs(simulation): document SIR equations and time convention
 KAN-18 hoàn thành khi Rust simulation module có thể nhận trạng thái ban đầu và tham số hợp lệ, tạo chuỗi kết quả S/I/R theo từng time step, từ chối input không hợp lệ, bảo toàn tổng dân số trong sai số số học cho phép và có unit tests cùng tài liệu công thức.
 
 Đây là SIR cơ bản ở quy mô tổng thể; chưa có mô hình lây nhiễm giữa các công trình hoặc các yếu tố không gian của Phase 2.
+
+
+## 11. Implementation progress (2026-11-15)
+
+- Branch: `feat/p1-12-sir-simulation-engine`
+- Base: `feat/p1-11-map-e2e-integration`
+- Added `backend/src/simulation/sir.rs`, `backend/src/simulation/mod.rs`, and exported `backend::simulation` from `backend/src/lib.rs`.
+- Added standalone technical notes at `backend/docs/sir-model.md`.
+- Implemented validation, explicit Euler integration, per-step invariants, overflow checks, deterministic output, and unit tests.
+- Policy decisions: population tolerance = `1e-9 + 1e-9 × N`; max steps = `100,000`; max duration = `10,000` caller-defined time units; fractional f64 values are expected/aggregate counts.
+- CI and local cargo test evidence are pending; do not mark test/acceptance checkboxes complete until the workflow is green.
+
