@@ -3,7 +3,7 @@ import * as Cesium from 'cesium'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
 import BuildingInfoPanel from './BuildingInfoPanel'
 import { fetchBuildingDetail, fetchAllBuildings, fetchRegions } from '../../services/gis-api'
-import { buildingsToFeatureCollection } from '../../services/gis-data'
+import { buildingsToFeatureCollection, isSelectedEntityRemoved } from '../../services/gis-data'
 import type { Building } from '../../types/gis'
 
 type LoadState = 'loading' | 'ready' | 'empty' | 'error'
@@ -174,7 +174,7 @@ export default function CesiumViewer() {
           _added: Cesium.Entity[],
           removed: Cesium.Entity[],
         ) => {
-          if (selectedEntity && removed.includes(selectedEntity)) clearSelection()
+          if (isSelectedEntityRemoved(selectedEntity, removed)) clearSelection()
         }
         const handleDataSourceRemoved = (
           _collection: Cesium.DataSourceCollection,
