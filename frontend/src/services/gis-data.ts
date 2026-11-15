@@ -27,6 +27,14 @@ export async function fetchAllBuildingPages(
   return buildings
 }
 
+/** Returns true when the active Cesium entity is included in a removal event. */
+export function isSelectedEntityRemoved<T>(
+  selectedEntity: T | undefined,
+  removedEntities: readonly T[],
+): boolean {
+  return selectedEntity !== undefined && removedEntities.includes(selectedEntity)
+}
+
 function isValidMultiPolygon(geometry: Building['geometry']): boolean {
   return (
     geometry?.type === 'MultiPolygon' &&
