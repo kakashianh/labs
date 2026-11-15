@@ -269,7 +269,7 @@ Các nhóm test tối thiểu:
 - [x] Ghi rõ initial state được trả ở time_step = 0.
 - [x] Ghi rõ tolerance, maximum steps và maximum duration.
 - [x] Ghi giới hạn mô hình và quy ước lựa chọn dt.
-- [ ] Bổ sung ví dụ input/output cụ thể (có thể hoàn thiện cùng review cuối).
+- [x] Bổ sung ví dụ input/output một bước trong `backend/docs/sir-model.md`.
 
 ## 7. Acceptance Criteria
 
