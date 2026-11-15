@@ -66,7 +66,13 @@ pub fn simulate(input: SirInput) -> Result<SirResult, SirError> {
     let mut recovered = input.recovered;
     let mut points = Vec::with_capacity(input.steps.saturating_add(1));
 
-    points.push(SirPoint { time_step: 0, time: 0.0, susceptible, infected, recovered });
+    points.push(SirPoint {
+        time_step: 0,
+        time: 0.0,
+        susceptible,
+        infected,
+        recovered,
+    });
 
     for time_step in 1..=input.steps {
         // Both flows are computed from the same beginning-of-step state.
@@ -102,10 +108,19 @@ pub fn simulate(input: SirInput) -> Result<SirResult, SirError> {
         if !time.is_finite() {
             return Err(SirError::NumericalInstability);
         }
-        points.push(SirPoint { time_step, time, susceptible, infected, recovered });
+        points.push(SirPoint {
+            time_step,
+            time,
+            susceptible,
+            infected,
+            recovered,
+        });
     }
 
-    Ok(SirResult { population: input.population, points })
+    Ok(SirResult {
+        population: input.population,
+        points,
+    })
 }
 
 pub fn validate(input: SirInput) -> Result<(), SirError> {
@@ -129,7 +144,8 @@ pub fn validate(input: SirInput) -> Result<(), SirError> {
         return Err(SirError::InitialPopulationMismatch);
     }
 
-    if !input.beta.is_finite() || !input.gamma.is_finite() || input.beta < 0.0 || input.gamma < 0.0 {
+    if !input.beta.is_finite() || !input.gamma.is_finite() || input.beta < 0.0 || input.gamma < 0.0
+    {
         return Err(SirError::InvalidRate);
     }
     if !input.dt.is_finite() || input.dt <= 0.0 {
@@ -192,15 +208,8 @@ mod tests {
     #[test]
     fn normal_run_preserves_population_and_non_negative_values() {
         for point in simulate(input()).unwrap().points {
-            assert!(
-                point.susceptible >= 0.0
-                    && point.infected >= 0.0
-                    && point.recovered >= 0.0
-            );
-            assert!(
-                (point.susceptible + point.infected + point.recovered - 1_000.0).abs()
-                    < 1e-6
-            );
+            assert!(point.susceptible >= 0.0 && point.infected >= 0.0 && point.recovered >= 0.0);
+            assert!((point.susceptible + point.infected + point.recovered - 1_000.0).abs() < 1e-6);
         }
     }
 
@@ -230,25 +239,21 @@ mod tests {
         let mut value = input();
         value.susceptible = 1_000.0;
         value.infected = 0.0;
-        assert!(
-            simulate(value)
-                .unwrap()
-                .points
-                .iter()
-                .all(|p| p.infected == 0.0 && p.recovered == 0.0)
-        );
+        assert!(simulate(value)
+            .unwrap()
+            .points
+            .iter()
+            .all(|p| p.infected == 0.0 && p.recovered == 0.0));
 
         value = input();
         value.susceptible = 0.0;
         value.infected = 10.0;
         value.recovered = 990.0;
-        assert!(
-            simulate(value)
-                .unwrap()
-                .points
-                .iter()
-                .all(|p| p.susceptible == 0.0)
-        );
+        assert!(simulate(value)
+            .unwrap()
+            .points
+            .iter()
+            .all(|p| p.susceptible == 0.0));
     }
 
     #[test]
@@ -257,24 +262,20 @@ mod tests {
         value.susceptible = 0.0;
         value.infected = 0.0;
         value.recovered = 1_000.0;
-        assert!(
-            simulate(value)
-                .unwrap()
-                .points
-                .iter()
-                .all(|p| p.recovered == 1_000.0)
-        );
+        assert!(simulate(value)
+            .unwrap()
+            .points
+            .iter()
+            .all(|p| p.recovered == 1_000.0));
 
         value = input();
         value.beta = 0.0;
         value.gamma = 0.0;
-        assert!(
-            simulate(value)
-                .unwrap()
-                .points
-                .iter()
-                .all(|p| p.susceptible == 990.0 && p.infected == 10.0 && p.recovered == 0.0)
-        );
+        assert!(simulate(value)
+            .unwrap()
+            .points
+            .iter()
+            .all(|p| p.susceptible == 990.0 && p.infected == 10.0 && p.recovered == 0.0));
     }
 
     #[test]
