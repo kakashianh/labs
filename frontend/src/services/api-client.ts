@@ -4,7 +4,7 @@ const configuredBaseUrl = import.meta.env?.VITE_API_BASE_URL?.trim()
 // explicitly configured API origin.
 export const API_BASE_URL = import.meta.env?.DEV
   ? ''
-  : (configuredBaseUrl || 'http://localhost:8000').replace(/\\/+$/, '')
+  : (configuredBaseUrl || 'http://localhost:8000').replace(/\/+$/, '')
 
 export class ApiRequestError extends Error {
   public readonly status: number
@@ -17,7 +17,7 @@ export class ApiRequestError extends Error {
 }
 
 async function readErrorMessage(response: Response): Promise<string> {
-  let message = `API request failed with status ${response.status}`
+  let message = \`API request failed with status \${response.status}\`
 
   try {
     const body: unknown = await response.json()
@@ -37,7 +37,7 @@ async function readErrorMessage(response: Response): Promise<string> {
 }
 
 export async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(\`\${API_BASE_URL}\${path}\`, {
     method: 'GET',
     headers: { Accept: 'application/json' },
     signal,
@@ -55,7 +55,7 @@ export async function postJson<TRequest, TResponse>(
   body: TRequest,
   signal?: AbortSignal,
 ): Promise<TResponse> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(\`\${API_BASE_URL}\${path}\`, {
     method: 'POST',
     headers: {
       Accept: 'application/json',
