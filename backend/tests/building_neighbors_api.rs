@@ -191,24 +191,28 @@ async fn building_neighbor_api_uses_metric_footprint_distance_and_batch_adjacenc
         .iter()
         .any(|item| item["building_id"] == near.to_string()));
 
+    let mut plan_tx = pool.begin().await.expect("begin query-plan transaction");
+    sqlx::query("SET LOCAL enable_seqscan = OFF")
+        .execute(&mut *plan_tx)
+        .await
+        .expect("prefer index scans for index-availability assertion");
     let query_plan: Value = sqlx::query_scalar(
         r#"
         EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
-        WITH valid_buildings AS MATERIALIZED (
-            SELECT id, footprint
-            FROM public.buildings
-            WHERE id <> $1
-              AND ST_SRID(footprint) = 4326
-              AND NOT ST_IsEmpty(footprint)
-              AND ST_IsValid(footprint)
-        )
         SELECT neighbor.id AS building_id,
                ST_Distance(center.footprint::geography,
                            neighbor.footprint::geography) AS distance_m
         FROM public.buildings AS center
-        JOIN valid_buildings AS neighbor
-          ON ST_DWithin(center.footprint::geography,
-                        neighbor.footprint::geography, $2)
+        JOIN LATERAL (
+            SELECT candidate.id, candidate.footprint
+            FROM public.buildings AS candidate
+            WHERE candidate.id <> center.id
+              AND ST_SRID(candidate.footprint) = 4326
+              AND NOT ST_IsEmpty(candidate.footprint)
+              AND ST_IsValid(candidate.footprint)
+              AND ST_DWithin(center.footprint::geography,
+                             candidate.footprint::geography, $2)
+        ) AS neighbor ON TRUE
         WHERE center.id = $1
         ORDER BY distance_m ASC, neighbor.id ASC
         LIMIT $3
@@ -217,10 +221,14 @@ async fn building_neighbor_api_uses_metric_footprint_distance_and_batch_adjacenc
     .bind(center)
     .bind(20.0_f64)
     .bind(10_i64)
-    .fetch_one(&pool)
+    .fetch_one(&mut *plan_tx)
     .await
     .expect("EXPLAIN ANALYZE neighbor query");
+    plan_tx.commit().await.expect("commit query-plan transaction");
     assert!(query_plan[0]["Plan"].is_object());
+    assert!(query_plan
+        .to_string()
+        .contains("buildings_footprint_geography_gist_idx"));
     println!("PostGIS neighbor EXPLAIN ANALYZE: {query_plan}");
 
     // The batch graph is undirected: each pair occurs once and invalid geometries
