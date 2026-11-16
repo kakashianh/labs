@@ -167,6 +167,7 @@ mod tests {
 
         for (index, point) in points.iter().enumerate() {
             assert_eq!(point["time_step"], index);
+            assert!((point["time"].as_f64().unwrap() - index as f64 * 0.1).abs() < 1e-12);
             let susceptible = point["susceptible"].as_f64().unwrap();
             let infected = point["infected"].as_f64().unwrap();
             let recovered = point["recovered"].as_f64().unwrap();
@@ -261,6 +262,33 @@ mod tests {
             assert_eq!(point["susceptible"], 990.0);
             assert_eq!(point["infected"], 10.0);
             assert_eq!(point["recovered"], 0.0);
+        }
+    }
+
+    #[tokio::test]
+    async fn valid_json_with_invalid_population_state_and_time_parameters_returns_bad_request() {
+        let mut invalid_population = valid_request();
+        invalid_population["population"] = serde_json::json!(0.0);
+
+        let mut invalid_initial_total = valid_request();
+        invalid_initial_total["susceptible"] = serde_json::json!(989.0);
+
+        let mut invalid_dt = valid_request();
+        invalid_dt["dt"] = serde_json::json!(0.0);
+
+        let mut invalid_steps = valid_request();
+        invalid_steps["steps"] = serde_json::json!(0);
+
+        for invalid in [
+            invalid_population,
+            invalid_initial_total,
+            invalid_dt,
+            invalid_steps,
+        ] {
+            let response = post_json(&invalid.to_string()).await;
+            assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+            let body = response_json(response).await;
+            assert!(body["error"].is_string());
         }
     }
 
