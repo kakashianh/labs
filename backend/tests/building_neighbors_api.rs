@@ -87,7 +87,7 @@ async fn building_neighbor_api_uses_metric_footprint_distance_and_batch_adjacenc
         &pool,
         region_id,
         "way/neighbor-near",
-        "MULTIPOLYGON(((106.0021 10,106.0031 10,106.0031 10.001,106.0021 10.001,106.0021 10)))",
+        "MULTIPOLYGON(((106.0011 10,106.0021 10,106.0021 10.001,106.0011 10.001,106.0011 10)))",
     )
     .await;
     let far = insert_building(
