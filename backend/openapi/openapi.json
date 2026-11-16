@@ -357,7 +357,7 @@
                 },
                 "example": {
                   "population": 10000,
-                  "point_count": 3,
+                  "point_count": 2,
                   "points": [
                     {
                       "time_step": 0,
@@ -372,13 +372,6 @@
                       "susceptible": 9987.003,
                       "infected": 11.997,
                       "recovered": 1
-                    },
-                    {
-                      "time_step": 2,
-                      "time": 2,
-                      "susceptible": 9983.408,
-                      "infected": 14.392,
-                      "recovered": 2.2
                     }
                   ]
                 }
