@@ -36,6 +36,13 @@ export default defineConfig({
     CESIUM_BASE_URL: JSON.stringify('/cesium/'),
   },
   server: {
+    // Allow tunneling hosts (ngrok, Codespaces) to reach the dev server.
+    allowedHosts: [
+      '6931-23-97-62-136.ngrok-free.app',
+      '.ngrok-free.app',
+      '.ngrok.app',
+      '.ngrok.io',
+    ],
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:8000',
