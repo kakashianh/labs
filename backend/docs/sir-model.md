@@ -45,7 +45,7 @@ Clamping a flow prevents it from exceeding the compartment available at the begi
 
 ## Rust usage
 
-Call backend::simulation::sir::simulate(SirInput { ... }) from domain/application code. The module has no Axum request/response or database dependency. HTTP exposure belongs to the later API integration task.
+Call `backend::simulation::sir::simulate(SirInput { ... })` from domain/application code. The module has no Axum request/response or database dependency. The HTTP adapter is implemented separately in `backend::routes::simulations`, which maps the API DTO to `SirInput` and maps `SirResult` back to the response contract.
 
 ## Limitations
 
