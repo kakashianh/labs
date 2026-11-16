@@ -13,7 +13,6 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-const DEFAULT_RADIUS_M: f64 = 100.0;
 const MAX_RADIUS_M: f64 = 5_000.0;
 const DEFAULT_LIMIT: i64 = 100;
 const MAX_LIMIT: i64 = 500;
@@ -41,12 +40,11 @@ pub struct BuildingNeighborsResponse {
 
 impl NeighborQuery {
     fn validate(self) -> Result<(f64, i64)> {
-        let radius_m = match self.radius_m {
-            Some(value) => value
-                .parse::<f64>()
-                .map_err(|_| AppError::BadRequest("radius_m must be a finite number".into()))?,
-            None => DEFAULT_RADIUS_M,
-        };
+        let radius_m = self
+            .radius_m
+            .ok_or_else(|| AppError::BadRequest("radius_m is required".into()))?
+            .parse::<f64>()
+            .map_err(|_| AppError::BadRequest("radius_m must be a finite number".into()))?;
         if !radius_m.is_finite() || radius_m <= 0.0 || radius_m > MAX_RADIUS_M {
             return Err(AppError::BadRequest(format!(
                 "radius_m must be greater than 0 and no greater than {MAX_RADIUS_M}"
@@ -115,10 +113,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn defaults_are_applied() {
+    fn radius_is_required_and_limit_default_is_applied() {
         assert_eq!(
-            NeighborQuery::default().validate().unwrap(),
-            (DEFAULT_RADIUS_M, DEFAULT_LIMIT)
+            NeighborQuery::default().validate().unwrap_err().to_string(),
+            "Bad request: radius_m is required"
+        );
+        assert_eq!(
+            NeighborQuery {
+                radius_m: Some("250".into()),
+                ..Default::default()
+            }
+            .validate()
+            .unwrap(),
+            (250.0, DEFAULT_LIMIT)
         );
     }
 
