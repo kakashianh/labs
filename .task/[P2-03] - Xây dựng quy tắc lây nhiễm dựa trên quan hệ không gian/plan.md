@@ -124,3 +124,35 @@ Neighbor record tối thiểu:
 ## 9. Definition of Done
 
 KAN-23 hoàn thành khi có quy tắc lây nhiễm cấp building đã được duyệt, sử dụng neighbor distance và infected state, có tests và interface rõ ràng để KAN-24 tích hợp.
+
+## 10. Approved Infection Model (2026-11-16)
+
+Người dùng đã duyệt các lựa chọn: **local infection = yes**, **alpha = 1**, **distance = footprint-to-footprint**. Dùng baseline dưới đây làm contract implementation; không thay công thức tùy ý trong KAN-24.
+
+Với building i và neighbor j:
+
+- p_local_i = I_i / N_i
+- w_ij = max(0, 1 - d_ij / radius_m)
+- p_neighbor_i = sum(w_ij * (I_j / N_j)) / sum(w_ij) khi tổng weight > 0; nếu không thì bằng 0.
+- lambda_i = beta * (p_local_i + 1.0 * p_neighbor_i)
+
+Trong đó:
+- d_ij là khoảng cách ngắn nhất footprint-to-footprint theo mét (KAN-21).
+- Neighbor chỉ được xét khi d_ij <= radius_m; tại đúng radius, weight bằng 0.
+- Local prevalence luôn được tính, kể cả building không có neighbors.
+- alpha = 1.0 là giá trị đã duyệt, nhưng nên biểu diễn thành config rõ ràng để dễ sensitivity analysis; không rải literal trong code.
+- beta và dt dùng cùng time unit như KAN-18; lambda_i có đơn vị nghịch đảo thời gian.
+- Nếu tổng neighbor weight bằng 0, p_neighbor_i = 0; không NaN/divide-by-zero.
+- Mô hình này là giả định mô phỏng học thuật cấp building, không phải mô hình đã hiệu chuẩn dịch tễ hay khuyến nghị y tế.
+
+New infection flow cho mỗi bước được KAN-24 tính theo min(S_i, lambda_i * S_i * dt). Recovery flow là min(I_i, gamma * I_i * dt). Cả hai flow được tính từ cùng snapshot đầu bước; áp dụng đồng thời để tạo state tiếp theo.
+
+### Additional review checklist
+- [ ] Xóa trạng thái “approval required” cũ; công thức ở mục này là baseline đã được duyệt.
+- [ ] Xác nhận radius_m > 0, beta/gamma finite và không âm, dt finite và dương.
+- [ ] Test local-only khi không có neighbors.
+- [ ] Test neighbor infected, neighbor uninfected, distance tăng, distance = radius và ngoài radius.
+- [ ] Test weighted prevalence không vượt [0,1] khi input state hợp lệ.
+- [ ] Test alpha=1.0 được cấu hình tập trung, không hard-code rải rác.
+- [ ] Test zero total weight và empty neighbors không phát sinh NaN.
+- [ ] Đối chiếu kết quả với tính toán độc lập bằng fixture nhỏ.
