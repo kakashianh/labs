@@ -1,0 +1,363 @@
+.sir-result-panel {
+  position: absolute;
+  z-index: 15;
+  right: 16px;
+  bottom: 16px;
+  width: min(720px, calc(100% - 32px));
+  max-height: min(72vh, 620px);
+  overflow: auto;
+  padding: 18px;
+  border: 1px solid rgb(148 163 184 / 28%);
+  border-radius: 14px;
+  background: rgb(15 23 42 / 95%);
+  color: #e2e8f0;
+  box-shadow: 0 16px 40px rgb(0 0 0 / 38%);
+  backdrop-filter: blur(14px);
+}
+
+.sir-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.sir-panel-header h2 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 18px;
+}
+
+.sir-eyebrow {
+  margin: 0 0 4px;
+  color: #93c5fd;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .12em;
+}
+
+.sir-status {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border: 1px solid rgb(148 163 184 / 25%);
+  border-radius: 999px;
+  color: #cbd5e1;
+  font-size: 11px;
+}
+
+.sir-state {
+  margin: 12px 0 4px;
+  color: #cbd5e1;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.sir-state-error {
+  color: #fecaca;
+}
+
+.sir-chart-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.sir-chart {
+  display: block;
+  width: 100%;
+  min-width: 420px;
+  height: auto;
+  overflow: visible;
+}
+
+.sir-chart-grid {
+  stroke: rgb(148 163 184 / 16%);
+  stroke-dasharray: 3 5;
+}
+
+.sir-chart-axis {
+  stroke: rgb(148 163 184 / 55%);
+}
+
+.sir-chart-cursor {
+  stroke: #f8fafc;
+  stroke-width: 1.3;
+  stroke-dasharray: 4 4;
+  opacity: .75;
+}
+
+.sir-chart-axis-label {
+  fill: #94a3b8;
+  font-size: 10px;
+}
+
+.sir-chart-axis-title {
+  fill: #cbd5e1;
+  font-size: 10px;
+}
+
+.sir-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  padding: 0 0 12px 46px;
+}
+
+.sir-chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #cbd5e1;
+  font-size: 11px;
+}
+
+.sir-chart-legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.sir-chart-point-buttons {
+  display: flex;
+  gap: 2px;
+  height: 5px;
+  margin: 0 18px 14px 48px;
+}
+
+.sir-chart-point-buttons button {
+  flex: 1;
+  min-width: 2px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: rgb(148 163 184 / 24%);
+  cursor: pointer;
+}
+
+.sir-chart-point-buttons button.is-selected {
+  background: #f8fafc;
+}
+
+.sir-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 8px 0 14px;
+}
+
+.sir-metric {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid rgb(148 163 184 / 18%);
+  border-radius: 9px;
+  background: rgb(30 41 59 / 76%);
+}
+
+.sir-metric span {
+  color: #94a3b8;
+  font-size: 10px;
+}
+
+.sir-metric strong {
+  overflow-wrap: anywhere;
+  color: #f8fafc;
+  font-size: clamp(13px, 2vw, 17px);
+  font-variant-numeric: tabular-nums;
+}
+
+.sir-metric small {
+  color: #94a3b8;
+  font-size: 10px;
+}
+
+.sir-metric-s { border-top: 2px solid #38bdf8; }
+.sir-metric-i { border-top: 2px dashed #fb7185; }
+.sir-metric-r { border-top: 2px dotted #34d399; }
+
+.sir-playback label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 7px;
+  color: #cbd5e1;
+  font-size: 12px;
+}
+
+.sir-playback output {
+  font-variant-numeric: tabular-nums;
+}
+
+.sir-playback input[type="range"] {
+  display: block;
+  width: 100%;
+  accent-color: #60a5fa;
+  cursor: pointer;
+}
+
+.sir-playback-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.sir-playback-actions button {
+  min-width: 78px;
+  padding: 8px 14px;
+  border: 1px solid #3b82f6;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.sir-playback-actions button:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+.sir-playback-actions .sir-button-secondary {
+  border-color: rgb(148 163 184 / 35%);
+  background: transparent;
+  color: #cbd5e1;
+}
+
+@media (max-width: 640px) {
+  .sir-result-panel {
+    right: 10px;
+    bottom: 10px;
+    width: calc(100% - 20px);
+    max-height: 54vh;
+    padding: 13px;
+  }
+
+  .sir-panel-header h2 { font-size: 15px; }
+  .sir-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sir-chart-legend { gap: 8px 12px; padding-left: 8px; }
+  .sir-chart { min-width: 360px; }
+}
+
+.sir-config-panel {
+  position: absolute;
+  z-index: 16;
+  top: 16px;
+  right: 16px;
+  width: min(360px, calc(100% - 32px));
+  max-height: min(58vh, 560px);
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid rgb(148 163 184 / 28%);
+  border-radius: 14px;
+  background: rgb(15 23 42 / 95%);
+  color: #e2e8f0;
+  box-shadow: 0 16px 40px rgb(0 0 0 / 34%);
+  backdrop-filter: blur(14px);
+}
+
+.sir-config-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.sir-config-header h2 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 17px;
+}
+
+.sir-config-method {
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  border: 1px solid rgb(148 163 184 / 25%);
+  border-radius: 7px;
+  color: #cbd5e1;
+  font-size: 10px;
+}
+
+.sir-config-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sir-config-field {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  color: #cbd5e1;
+  font-size: 11px;
+}
+
+.sir-config-field input {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid rgb(148 163 184 / 32%);
+  border-radius: 7px;
+  outline: none;
+  background: rgb(30 41 59 / 90%);
+  color: #f8fafc;
+  font: inherit;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sir-config-field input:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 2px rgb(96 165 250 / 18%);
+}
+
+.sir-config-hint {
+  margin: 12px 0;
+  color: #94a3b8;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.sir-config-error {
+  margin: 8px 0;
+  color: #fecaca;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.sir-config-submit {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #3b82f6;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.sir-config-submit:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.sir-config-submit:disabled {
+  opacity: .55;
+  cursor: wait;
+}
+
+@media (max-width: 640px) {
+  .sir-config-panel {
+    top: 68px;
+    right: 10px;
+    width: min(340px, calc(100% - 20px));
+    max-height: 38vh;
+    padding: 12px;
+  }
+
+  .sir-config-header h2 { font-size: 15px; }
+  .sir-config-fields { gap: 8px; }
+  .sir-config-field input { padding: 7px; }
+}
