@@ -10,12 +10,14 @@ pub fn router(state: AppState) -> Router {
     let building_detail_routes = routes::building_detail::router().with_state(state.clone());
     let region_routes = routes::regions::router().with_state(state.clone());
     let openapi_routes = routes::openapi::router().with_state(state.clone());
+    let simulation_routes = routes::simulations::router().with_state(state.clone());
     Router::new()
         .merge(health_routes)
         .merge(building_routes)
         .merge(building_detail_routes)
         .merge(region_routes)
         .merge(openapi_routes)
+        .merge(simulation_routes)
         .with_state(state)
         .layer(tower_http::cors::CorsLayer::permissive())
         .layer(tracing_layer())
