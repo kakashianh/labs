@@ -1,4 +1,5 @@
 //! Database helpers.
+pub mod building_neighbors;
 pub mod buildings;
 pub mod regions;
 use sqlx::PgPool;
