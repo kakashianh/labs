@@ -149,9 +149,9 @@ Nếu phát hiện implementation không khớp các quy tắc trên, ghi nhận
 - [x] Có test cho time-series invariants nếu chưa được KAN-19 bao phủ.
 - [x] Có test deterministic và request isolation.
 - [x] Có test cho các failure path còn thiếu đã xác định ở Step 5.
-- [ ] Chạy test liên quan đến simulation/API.
-- [ ] Chạy toàn bộ Backend test suite.
-- [ ] Chạy formatter và Clippy theo CI workflow của repository.
+- [x] Chạy test liên quan đến simulation/API (CI run [#43788308499](https://github.com/kakashianh/labs/actions/runs/43788308499) thành công).
+- [x] Chạy toàn bộ Backend test suite (CI run #43788308499 thành công).
+- [x] Chạy formatter và Clippy theo CI workflow của repository (CI run #43788308499 thành công).
 
 ### Step 7 – Documentation Reconciliation
 - [x] Rà soát `backend/docs/sir-api.md` đã mô tả đúng request/response hiện tại.
@@ -179,7 +179,7 @@ Nếu phát hiện implementation không khớp các quy tắc trên, ghi nhận
 - Branch: `feat/p1-14-sir-integration-verification`.
 - Base branch: `project/3D-map-medical` at `0b457bffc8b331a2dbd7fb505a89938e49ed3b39`.
 - Changes: API-level repeated-request determinism/isolation test; API time mapping assertion; API validation tests for invalid population, initial total, dt and steps; domain tests for non-finite numeric inputs; corrected outdated Rust usage note in `backend/docs/sir-model.md`.
-- CI: pending for latest commit `93c4e04f9f248a0b35b1960fd17bfefa2d315f09`.
+- CI: **success** — [run #43788308499](https://github.com/kakashianh/labs/actions/runs/43788308499), commit `3c33d74eac6d52bb190c01b0c0a1274aa1486af4`. All required jobs passed: Rust fmt/Clippy/tests, Axum API integration tests with Testcontainers PostGIS, frontend lint/unit tests/build, Docker image build, and Docker Compose + PostGIS migration verification. Manual Render deployment was skipped as configured.
 
 ## 9. Deliverables
 
