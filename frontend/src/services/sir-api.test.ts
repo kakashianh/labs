@@ -92,3 +92,23 @@ test('simulateSir forwards request cancellation', async () => {
     globalThis.fetch = originalFetch
   }
 })
+
+import { validateSirRequest } from './sir-api.ts'
+
+test('validateSirRequest accepts valid parameters', () => {
+  assert.equal(validateSirRequest(request), null)
+})
+
+test('validateSirRequest rejects a mismatched initial population', () => {
+  assert.match(
+    validateSirRequest({ ...request, susceptible: 989 }),
+    /tổng Susceptible/i,
+  )
+})
+
+test('validateSirRequest rejects invalid rates, time steps and duration', () => {
+  assert.match(validateSirRequest({ ...request, beta: -0.1 }), /Beta/)
+  assert.match(validateSirRequest({ ...request, dt: 0 }), /dt/)
+  assert.match(validateSirRequest({ ...request, steps: 1.5 }), /Steps/)
+  assert.match(validateSirRequest({ ...request, dt: 101, steps: 100 }), /10.000/)
+})
