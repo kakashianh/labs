@@ -143,21 +143,25 @@ async fn building_neighbor_api_uses_metric_footprint_distance_and_batch_adjacenc
 
     // The batch graph is undirected: each pair occurs once and invalid geometries
     // never enter the graph.
-    let edges = db::building_neighbors::build_building_adjacency(
+    let missing_building = Uuid::new_v4();
+    let adjacency = db::building_neighbors::build_building_adjacency(
         &pool,
-        &[center, touching, near, far, invalid],
+        &[center, touching, near, far, invalid, missing_building],
         20.0,
     )
     .await
     .expect("build adjacency");
-    assert!(edges.len() >= 2);
-    assert!(edges
+    assert!(adjacency.edges.len() >= 2);
+    assert_eq!(adjacency.excluded_invalid_geometry_count, 1);
+    assert_eq!(adjacency.missing_building_count, 1);
+    assert!(adjacency
+        .edges
         .iter()
         .all(|edge| edge.building_a_id < edge.building_b_id));
-    assert!(edges
-        .iter()
-        .all(|edge| { edge.building_a_id != invalid && edge.building_b_id != invalid }));
-    assert!(edges.iter().any(|edge| {
+    assert!(adjacency.edges.iter().all(|edge| {
+        edge.building_a_id != invalid && edge.building_b_id != invalid
+    }));
+    assert!(adjacency.edges.iter().any(|edge| {
         edge.building_a_id == center && edge.building_b_id == touching
             || edge.building_a_id == touching && edge.building_b_id == center
     }));
