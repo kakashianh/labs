@@ -42,9 +42,9 @@ pub struct BuildingNeighborsResponse {
 impl NeighborQuery {
     fn validate(self) -> Result<(f64, i64)> {
         let radius_m = match self.radius_m {
-            Some(value) => value.parse::<f64>().map_err(|_| {
-                AppError::BadRequest("radius_m must be a finite number".into())
-            })?,
+            Some(value) => value
+                .parse::<f64>()
+                .map_err(|_| AppError::BadRequest("radius_m must be a finite number".into()))?,
             None => DEFAULT_RADIUS_M,
         };
         if !radius_m.is_finite() || radius_m <= 0.0 || radius_m > MAX_RADIUS_M {
@@ -54,9 +54,9 @@ impl NeighborQuery {
         }
 
         let limit = match self.limit {
-            Some(value) => value.parse::<i64>().map_err(|_| {
-                AppError::BadRequest("limit must be a positive integer".into())
-            })?,
+            Some(value) => value
+                .parse::<i64>()
+                .map_err(|_| AppError::BadRequest("limit must be a positive integer".into()))?,
             None => DEFAULT_LIMIT,
         };
         if !(1..=MAX_LIMIT).contains(&limit) {
@@ -84,17 +84,15 @@ pub async fn get_building_neighbors(
         .map_err(|_| AppError::BadRequest("building_id must be a valid UUID".into()))?;
     let (radius_m, limit) = query.validate()?;
 
-    let result = building_neighbors::find_building_neighbors(
-        &state.db, center_id, radius_m, limit,
-    )
-    .await
-    .map_err(|error| match error {
-        NeighborSearchError::NotFound => AppError::NotFound,
-        NeighborSearchError::InvalidCenterGeometry => AppError::BadRequest(
-            "center building footprint must be valid, non-empty EPSG:4326 geometry".into(),
-        ),
-        NeighborSearchError::Database(error) => AppError::Database(error),
-    })?;
+    let result = building_neighbors::find_building_neighbors(&state.db, center_id, radius_m, limit)
+        .await
+        .map_err(|error| match error {
+            NeighborSearchError::NotFound => AppError::NotFound,
+            NeighborSearchError::InvalidCenterGeometry => AppError::BadRequest(
+                "center building footprint must be valid, non-empty EPSG:4326 geometry".into(),
+            ),
+            NeighborSearchError::Database(error) => AppError::Database(error),
+        })?;
 
     Ok(Json(BuildingNeighborsResponse {
         center_building_id: center_id,
@@ -127,12 +125,30 @@ mod tests {
     #[test]
     fn invalid_radius_and_limit_are_rejected() {
         for query in [
-            NeighborQuery { radius_m: Some("NaN".into()), ..Default::default() },
-            NeighborQuery { radius_m: Some("0".into()), ..Default::default() },
-            NeighborQuery { radius_m: Some("5000.1".into()), ..Default::default() },
-            NeighborQuery { limit: Some("0".into()), ..Default::default() },
-            NeighborQuery { limit: Some("501".into()), ..Default::default() },
-            NeighborQuery { limit: Some("many".into()), ..Default::default() },
+            NeighborQuery {
+                radius_m: Some("NaN".into()),
+                ..Default::default()
+            },
+            NeighborQuery {
+                radius_m: Some("0".into()),
+                ..Default::default()
+            },
+            NeighborQuery {
+                radius_m: Some("5000.1".into()),
+                ..Default::default()
+            },
+            NeighborQuery {
+                limit: Some("0".into()),
+                ..Default::default()
+            },
+            NeighborQuery {
+                limit: Some("501".into()),
+                ..Default::default()
+            },
+            NeighborQuery {
+                limit: Some("many".into()),
+                ..Default::default()
+            },
         ] {
             assert!(query.validate().is_err());
         }
