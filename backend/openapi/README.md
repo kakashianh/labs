@@ -62,3 +62,10 @@ The repository also exposes db::building_neighbors::build_building_adjacency for
 Example:
 
     curl "http://localhost:8000/api/v1/buildings/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/neighbors?radius_m=100&limit=100"
+
+
+### Spatial index and performance notes
+
+The base buildings_footprint_gist_idx is a GiST index on geometry and is not applicable to ST_DWithin(footprint::geography, ...). Migration 20261116000000_add_building_footprint_geography_gist_index.sql adds a partial GiST expression index on (footprint::geography), limited to valid, non-empty EPSG:4326 footprints. Neighbor lookup and batch adjacency use LATERAL candidate scans so PostgreSQL can apply that expression index to the candidate side.
+
+Live-data review on 2026-11-16 found 431 buildings, all EPSG:4326 and valid/non-empty. Before the geography expression index, the materialized all-pairs adjacency query used sequential scans and took about 5.44 seconds for 21,387 edges at a 250 m radius. The existing geometry GiST index was not used after geography casting. The new migration is part of this branch and has not been applied to the live Supabase database. Re-run EXPLAIN (ANALYZE, BUFFERS) after deployment against the live dataset to verify planner choice and latency; the integration test forces index scans only to prove the index is usable, not that PostgreSQL should always choose it for tiny tables.
