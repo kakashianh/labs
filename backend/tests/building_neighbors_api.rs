@@ -311,6 +311,10 @@ async fn building_neighbor_api_uses_metric_footprint_distance_and_batch_adjacenc
         edge.building_a_id == center && edge.building_b_id == touching
             || edge.building_a_id == touching && edge.building_b_id == center
     }));
+    assert!(matches!(
+        db::building_neighbors::build_building_adjacency(&pool, &[center], 0.0).await,
+        Err(db::building_neighbors::BuildingAdjacencyError::InvalidRadius)
+    ));
 
     for (uri, expected) in [
         (
