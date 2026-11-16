@@ -15,11 +15,11 @@ API chịu trách nhiệm tiếp nhận request, điều phối module tính to�
 
 ## 2. Dependencies and Preconditions
 
-- [ ] KAN-18 / P1-12 (SIR simulation engine) được merge vào branch `project/3D-map-medical` trước khi triển khai KAN-19.
-- [ ] Sau khi merge, xác nhận public interface có thể import từ `simulation::sir`, gồm `simulate`, `SirInput`, `SirError` và kiểu kết quả tương ứng.
-- [ ] Xác nhận các variant hiện có của `SirError` và giới hạn đầu vào trực tiếp từ source KAN-18; không tự định nghĩa lại domain rules trong API.
+- [x] KAN-18 / P1-12 (SIR simulation engine) đã có trong branch `project/3D-map-medical` trước khi triển khai KAN-19.
+- [x] Xác nhận public interface import từ `simulation::sir`: `simulate`, `SirInput`, `SirError`, `SirResult`.
+- [x] Xác nhận các variant `SirError`, giới hạn `MAX_STEPS = 100_000` và `MAX_SIMULATION_DURATION = 10_000` trực tiếp từ source KAN-18.
 
-**Dependency note:** Tại thời điểm lập plan, SIR engine mới nằm trên feature branch KAN-18 và chưa có trong `project/3D-map-medical`. Không copy hoặc viết lại engine trong KAN-19. Nếu KAN-18 chưa merge thì dừng phần tích hợp handler cho tới khi dependency sẵn sàng.
+**Dependency note:** Dependency KAN-18 đã được tích hợp vào base branch. KAN-19 dùng trực tiếp `backend/src/simulation/sir.rs`, không copy hoặc viết lại engine.
 
 ## 3. Scope
 
@@ -129,48 +129,48 @@ Không tạo envelope `code/message/details` riêng cho endpoint này. Nếu mu�
 ## 6. Implementation Plan
 
 ### Step 1 – Verify Dependency, SIR Engine and API Conventions
-- [ ] Xác nhận KAN-18 đã merge vào `project/3D-map-medical`.
-- [ ] Kiểm tra public interface `simulation::sir::{simulate, SirInput, SirError}` và kiểu kết quả thực tế.
-- [ ] Kiểm tra đầy đủ các variant của `SirError` để phân loại lỗi validation và numerical instability.
-- [ ] Kiểm tra Axum router, route prefix và JSON extractor.
-- [ ] Kiểm tra `AppError` và error response hiện tại (`{"error":"..."}`).
-- [ ] Xác nhận giới hạn steps và các quy tắc validation từ SIR engine.
-- [ ] Không sao chép công thức hoặc domain validation vào handler.
+- [x] Xác nhận KAN-18 đã merge vào `project/3D-map-medical`.
+- [x] Kiểm tra public interface `simulation::sir::{simulate, SirInput, SirError}` và kiểu kết quả thực tế.
+- [x] Kiểm tra đầy đủ các variant của `SirError` để phân loại lỗi validation và numerical instability.
+- [x] Kiểm tra Axum router, route prefix và JSON extractor.
+- [x] Kiểm tra `AppError` và error response hiện tại (`{"error":"..."}`).
+- [x] Xác nhận giới hạn steps và các quy tắc validation từ SIR engine.
+- [x] Không sao chép công thức hoặc domain validation vào handler.
 
 ### Step 2 – Define Request and Response DTOs
-- [ ] Tạo request DTO gồm population, susceptible, infected, recovered, beta, gamma, dt và steps.
-- [ ] Tạo response point DTO gồm time_step, time, susceptible, infected, recovered.
-- [ ] Tạo response DTO chứa population, `point_count` và points.
-- [ ] Dùng `point_count` để diễn đạt chính xác số phần tử trong points (`steps + 1`), không dùng tên gây nhầm với số bước mô phỏng.
-- [ ] Giữ DTO độc lập với internal implementation details của engine.
-- [ ] Không expose trực tiếp domain error hoặc internal error details ra HTTP response.
+- [x] Tạo request DTO gồm population, susceptible, infected, recovered, beta, gamma, dt và steps.
+- [x] Tạo response point DTO gồm time_step, time, susceptible, infected, recovered.
+- [x] Tạo response DTO chứa population, `point_count` và points.
+- [x] Dùng `point_count` để diễn đạt chính xác số phần tử trong points (`steps + 1`), không dùng tên gây nhầm với số bước mô phỏng.
+- [x] Giữ DTO độc lập với internal implementation details của engine.
+- [x] Không expose trực tiếp domain error hoặc internal error details ra HTTP response.
 
 ### Step 3 – Implement Domain Mapping and Error Mapping
-- [ ] Map request DTO sang `SirInput` của KAN-18.
-- [ ] Gọi `simulate()` làm điểm vào domain; không gọi lặp `validate()` nếu `simulate()` đã tự validate.
-- [ ] Map các lỗi input/domain validation của `SirError` sang `AppError::BadRequest` (HTTP 400).
-- [ ] Map `SirError::NumericalInstability` hoặc lỗi tính toán nội bộ sang `AppError::Internal` (HTTP 500), không trả chi tiết nội bộ.
-- [ ] Không gom tất cả `SirError` thành HTTP 400; phân biệt lỗi client và lỗi tính toán.
-- [ ] Tái sử dụng giới hạn steps và các ràng buộc từ domain engine, không tạo bộ validation trùng lặp.
-- [ ] Xác minh JSON deserialization xử lý missing fields, wrong types và malformed JSON như thế nào; nếu cần custom extractor/rejection mapping thì giữ thay đổi trong phạm vi route này.
+- [x] Map request DTO sang `SirInput` của KAN-18.
+- [x] Gọi `simulate()` làm điểm vào domain; không gọi lặp `validate()` nếu `simulate()` đã tự validate.
+- [x] Map các lỗi input/domain validation của `SirError` sang `AppError::BadRequest` (HTTP 400).
+- [x] Map `SirError::NumericalInstability` hoặc lỗi tính toán nội bộ sang `AppError::Internal` (HTTP 500), không trả chi tiết nội bộ.
+- [x] Không gom tất cả `SirError` thành HTTP 400; phân biệt lỗi client và lỗi tính toán.
+- [x] Tái sử dụng giới hạn steps và các ràng buộc từ domain engine, không tạo bộ validation trùng lặp.
+- [x] Xác minh JSON deserialization xử lý missing fields, wrong types và malformed JSON như thế nào; nếu cần custom extractor/rejection mapping thì giữ thay đổi trong phạm vi route này.
 
 ### Step 4 – Implement Handler and Route
-- [ ] Tạo `backend/src/routes/simulations.rs` cho POST `/api/v1/simulations/sir`.
-- [ ] Handler chỉ deserialize request, map sang domain input, gọi `simulate()`, map result/error và trả response.
-- [ ] Gọi SIR engine một lần cho mỗi request hợp lệ.
-- [ ] Map domain result thành response DTO.
-- [ ] Trả points theo thứ tự `time_step` tăng dần.
-- [ ] Đảm bảo response gồm trạng thái ban đầu và đủ `steps + 1` points.
-- [ ] Đăng ký module trong `backend/src/routes/mod.rs` và merge route trong `backend/src/router.rs` theo convention hiện tại.
-- [ ] Không truy cập database/Redis nếu không có yêu cầu lưu kết quả.
-- [ ] Không đặt logic tính toán trong HTTP handler.
+- [x] Tạo `backend/src/routes/simulations.rs` cho POST `/api/v1/simulations/sir`.
+- [x] Handler chỉ deserialize request, map sang domain input, gọi `simulate()`, map result/error và trả response.
+- [x] Gọi SIR engine một lần cho mỗi request hợp lệ.
+- [x] Map domain result thành response DTO.
+- [x] Trả points theo thứ tự `time_step` tăng dần.
+- [x] Đảm bảo response gồm trạng thái ban đầu và đủ `steps + 1` points.
+- [x] Đăng ký module trong `backend/src/routes/mod.rs` và merge route trong `backend/src/router.rs` theo convention hiện tại.
+- [x] Không truy cập database/Redis nếu không có yêu cầu lưu kết quả.
+- [x] Không đặt logic tính toán trong HTTP handler.
 
 ### Step 5 – Normalize HTTP and Error Handling
-- [ ] Dùng `AppError` hiện có để giữ error envelope nhất quán.
-- [ ] Phân biệt lỗi deserialize/request, domain validation và numerical/internal error.
-- [ ] Chốt status code thực tế cho malformed JSON/missing field/wrong type và ghi rõ trong API docs.
-- [ ] Đảm bảo lỗi 500 không tiết lộ chi tiết nội bộ.
-- [ ] Không trả panic/stack trace hoặc chi tiết triển khai cho client.
+- [x] Dùng `AppError` hiện có để giữ error envelope nhất quán.
+- [x] Phân biệt lỗi deserialize/request, domain validation và numerical/internal error.
+- [x] Chốt status code thực tế cho malformed JSON/missing field/wrong type và ghi rõ trong API docs.
+- [x] Đảm bảo lỗi 500 không tiết lộ chi tiết nội bộ.
+- [x] Không trả panic/stack trace hoặc chi tiết triển khai cho client.
 
 ### Step 6 – Add Router-level API and Integration Tests
 - [ ] Dùng `tower::ServiceExt::oneshot` gửi request qua Axum router thực tế; không chỉ test DTO hoặc helper mapping.
@@ -186,22 +186,22 @@ Không tạo envelope `code/message/details` riêng cho endpoint này. Nếu mu�
 - [ ] Không cần Testcontainers/PostGIS cho endpoint này nếu router test có thể khởi tạo state tối thiểu mà không truy cập DB.
 
 ### Step 7 – Document API
-- [ ] Ghi endpoint, method, content type và request fields.
-- [ ] Ghi rõ beta/gamma là rate, dt/time dùng cùng đơn vị thời gian và đơn vị do caller quy ước.
-- [ ] Ghi response schema, ý nghĩa `point_count`, `time_step` và `time`.
-- [ ] Ghi error envelope thực tế, error mapping và HTTP status đã kiểm chứng.
-- [ ] Thêm ví dụ curl request và response.
-- [ ] Ghi rõ API chỉ chạy SIR tổng thể, chưa có dữ liệu theo công trình.
-- [ ] Cập nhật OpenAPI nếu dự án đang duy trì OpenAPI contract cho các endpoint hiện có.
+- [x] Ghi endpoint, method, content type và request fields.
+- [x] Ghi rõ beta/gamma là rate, dt/time dùng cùng đơn vị thời gian và đơn vị do caller quy ước.
+- [x] Ghi response schema, ý nghĩa `point_count`, `time_step` và `time`.
+- [x] Ghi error envelope thực tế, error mapping và HTTP status đã kiểm chứng.
+- [x] Thêm ví dụ curl request và response.
+- [x] Ghi rõ API chỉ chạy SIR tổng thể, chưa có dữ liệu theo công trình.
+- [x] Cập nhật OpenAPI nếu dự án đang duy trì OpenAPI contract cho các endpoint hiện có.
 
 ## 7. Acceptance Criteria
 
-- [ ] KAN-18 đã được merge và KAN-19 sử dụng trực tiếp SIR engine đó.
-- [ ] Có endpoint POST khởi chạy mô phỏng SIR.
-- [ ] Request hợp lệ gọi module KAN-18 và trả chuỗi kết quả theo thời gian.
-- [ ] Response chứa time_step, time, S, I, R theo thứ tự.
-- [ ] Response bao gồm trạng thái ban đầu và đúng `steps + 1` points.
-- [ ] API tái sử dụng domain validation và không lặp lại thuật toán.
+- [x] KAN-18 đã được merge và KAN-19 sử dụng trực tiếp SIR engine đó.
+- [x] Có endpoint POST khởi chạy mô phỏng SIR.
+- [x] Request hợp lệ gọi module KAN-18 và trả chuỗi kết quả theo thời gian.
+- [x] Response chứa time_step, time, S, I, R theo thứ tự.
+- [x] Response bao gồm trạng thái ban đầu và đúng `steps + 1` points.
+- [x] API tái sử dụng domain validation và không lặp lại thuật toán.
 - [ ] Lỗi validation trả HTTP 400 theo error envelope hiện có; numerical/internal error trả HTTP 500 và không lộ chi tiết nội bộ.
 - [ ] Có router-level API/integration tests cho success, malformed request, validation failure và internal failure mapping.
 - [ ] Có tài liệu endpoint, units và ví dụ request/response.
