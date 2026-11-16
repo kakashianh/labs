@@ -43,10 +43,10 @@ mod tests {
             .as_array()
             .expect("neighbor query parameters");
         assert!(neighbor_parameters.iter().any(|parameter| {
-            parameter["name"] == "radius_m" && parameter["required"] == true
+            parameter["name"] == "radius_m" && parameter["required"].as_bool() == Some(true)
         }));
         assert!(neighbor_parameters.iter().any(|parameter| {
-            parameter["name"] == "limit" && parameter["required"] == false
+            parameter["name"] == "limit" && parameter["required"].as_bool() == Some(false)
         }));
         assert!(spec["paths"]["/api/v1/simulations/sir"]["post"].is_object());
         assert!(spec["components"]["schemas"]["SirSimulationRequest"].is_object());
