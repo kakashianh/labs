@@ -364,6 +364,33 @@ mod tests {
     }
 
     #[test]
+    fn rejects_non_finite_values_for_every_numeric_input_group() {
+        let mut value = input();
+        value.population = f64::NAN;
+        assert_eq!(validate(value), Err(SirError::InvalidPopulation));
+
+        value = input();
+        value.susceptible = f64::INFINITY;
+        assert_eq!(validate(value), Err(SirError::InvalidInitialState));
+
+        value = input();
+        value.recovered = f64::NAN;
+        assert_eq!(validate(value), Err(SirError::InvalidInitialState));
+
+        value = input();
+        value.beta = f64::INFINITY;
+        assert_eq!(validate(value), Err(SirError::InvalidRate));
+
+        value = input();
+        value.gamma = f64::NAN;
+        assert_eq!(validate(value), Err(SirError::InvalidRate));
+
+        value = input();
+        value.dt = f64::INFINITY;
+        assert_eq!(validate(value), Err(SirError::InvalidTimeStep));
+    }
+
+    #[test]
     fn rejects_overflowing_intermediate() {
         let mut value = input();
         value.beta = f64::MAX;
