@@ -26,7 +26,10 @@ async fn building_neighbor_api_uses_metric_footprint_distance_and_batch_adjacenc
         .start()
         .await
         .expect("start PostGIS container");
-    let port = container.get_host_port_ipv4(5432).await.expect("mapped port");
+    let port = container
+        .get_host_port_ipv4(5432)
+        .await
+        .expect("mapped port");
     let url = format!("postgres://gis_test:gis_test@127.0.0.1:{port}/gis_test");
     let pool = PgPoolOptions::new()
         .max_connections(5)
@@ -130,8 +133,12 @@ async fn building_neighbor_api_uses_metric_footprint_distance_and_batch_adjacenc
     assert_eq!(neighbors[1]["building_id"], near.to_string());
     let near_distance = neighbors[1]["distance_m"].as_f64().unwrap();
     assert!(near_distance > 10.0 && near_distance < 12.0);
-    assert!(!neighbors.iter().any(|item| item["building_id"] == far.to_string()));
-    assert!(!neighbors.iter().any(|item| item["building_id"] == invalid.to_string()));
+    assert!(!neighbors
+        .iter()
+        .any(|item| item["building_id"] == far.to_string()));
+    assert!(!neighbors
+        .iter()
+        .any(|item| item["building_id"] == invalid.to_string()));
 
     // The batch graph is undirected: each pair occurs once and invalid geometries
     // never enter the graph.
@@ -143,26 +150,51 @@ async fn building_neighbor_api_uses_metric_footprint_distance_and_batch_adjacenc
     .await
     .expect("build adjacency");
     assert!(edges.len() >= 2);
-    assert!(edges.iter().all(|edge| edge.building_a_id < edge.building_b_id));
-    assert!(edges.iter().all(|edge| {
-        edge.building_a_id != invalid && edge.building_b_id != invalid
-    }));
+    assert!(edges
+        .iter()
+        .all(|edge| edge.building_a_id < edge.building_b_id));
+    assert!(edges
+        .iter()
+        .all(|edge| { edge.building_a_id != invalid && edge.building_b_id != invalid }));
     assert!(edges.iter().any(|edge| {
         edge.building_a_id == center && edge.building_b_id == touching
             || edge.building_a_id == touching && edge.building_b_id == center
     }));
 
     for (uri, expected) in [
-        (format!("/api/v1/buildings/{center}/neighbors?radius_m=0"), StatusCode::BAD_REQUEST),
-        (format!("/api/v1/buildings/{center}/neighbors?radius_m=5001"), StatusCode::BAD_REQUEST),
-        (format!("/api/v1/buildings/{center}/neighbors?limit=501"), StatusCode::BAD_REQUEST),
-        ("/api/v1/buildings/not-a-uuid/neighbors".to_string(), StatusCode::BAD_REQUEST),
-        (format!("/api/v1/buildings/{invalid}/neighbors"), StatusCode::BAD_REQUEST),
-        (format!("/api/v1/buildings/{Uuid::new_v4()}/neighbors"), StatusCode::NOT_FOUND),
+        (
+            format!("/api/v1/buildings/{center}/neighbors?radius_m=0"),
+            StatusCode::BAD_REQUEST,
+        ),
+        (
+            format!("/api/v1/buildings/{center}/neighbors?radius_m=5001"),
+            StatusCode::BAD_REQUEST,
+        ),
+        (
+            format!("/api/v1/buildings/{center}/neighbors?limit=501"),
+            StatusCode::BAD_REQUEST,
+        ),
+        (
+            "/api/v1/buildings/not-a-uuid/neighbors".to_string(),
+            StatusCode::BAD_REQUEST,
+        ),
+        (
+            format!("/api/v1/buildings/{invalid}/neighbors"),
+            StatusCode::BAD_REQUEST,
+        ),
+        (
+            format!("/api/v1/buildings/{Uuid::new_v4()}/neighbors"),
+            StatusCode::NOT_FOUND,
+        ),
     ] {
         let response = app
             .clone()
-            .oneshot(Request::builder().uri(uri.clone()).body(Body::empty()).unwrap())
+            .oneshot(
+                Request::builder()
+                    .uri(uri.clone())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
             .await
             .unwrap();
         assert_eq!(response.status(), expected, "{uri}");
