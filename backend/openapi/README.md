@@ -41,3 +41,24 @@ cargo test --test buildings_api -- --nocapture
 ```
 
 The integration test starts an isolated `postgis/postgis:17-3.5` container with Testcontainers, applies the backend SQLx migrations, seeds deterministic fixtures, and exercises the Axum HTTP route. It does not connect to Supabase and requires no Supabase secrets.
+
+
+## Building neighbors
+
+GET /api/v1/buildings/{building_id}/neighbors?radius_m=100&limit=100 returns nearby buildings using minimum footprint-to-footprint distance, not centroid distance.
+
+| Parameter | Default | Constraint |
+|---|---:|---|
+| building_id | — | Internal building UUID |
+| radius_m | 100 m | Finite, greater than 0 and at most 5,000 m |
+| limit | 100 | Integer from 1 to 500 |
+
+The source footprint is geometry(MultiPolygon, 4326). Both ST_DWithin and ST_Distance cast footprints to PostGIS geography, so the predicate and returned distance_m use the same metric semantics. The center building is excluded from its own neighbor list. Results are ordered by distance ascending and then UUID ascending. A building exactly on the radius boundary is included because ST_DWithin is inclusive.
+
+The response includes excluded_invalid_geometry_count. Neighbor candidates with an unexpected SRID, empty footprint, or invalid footprint are excluded and counted. A center building with such a footprint returns HTTP 400. A missing center returns HTTP 404. No neighbors is HTTP 200 with data: [].
+
+The repository also exposes db::building_neighbors::build_building_adjacency for a batch of UUIDs. It returns each undirected pair once, ordered by UUID, for later simulation graph construction. Invalid geometries are excluded by the batch query; callers should use data preflight to detect invalid input records.
+
+Example:
+
+    curl "http://localhost:8000/api/v1/buildings/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/neighbors?radius_m=100&limit=100"
