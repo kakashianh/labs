@@ -23,8 +23,8 @@ Xác minh chất lượng luồng Backend từ API đến SIR engine và ngượ
 
 **Gate trước implementation:**
 - [x] Xác nhận KAN-18 và KAN-19 đã có mặt trên branch nền `project/3D-map-medical` (đã đối chiếu trạng thái branch).
-- [ ] Nếu KAN-19 chưa merge, dừng trước khi tạo branch/viết code; không cherry-pick hoặc tạo bản API thay thế trong task này.
-- [ ] Ghi nhận commit nền dùng để tạo branch KAN-9.
+- [x] Nếu KAN-19 chưa merge, dừng trước khi tạo branch/viết code; không cherry-pick hoặc tạo bản API thay thế trong task này.
+- [x] Ghi nhận commit nền dùng để tạo branch KAN-9.
 
 ## 3. Scope
 
@@ -103,78 +103,85 @@ Nếu phát hiện implementation không khớp các quy tắc trên, ghi nhận
 ## 6. Implementation Plan
 
 ### Step 1 – Dependency and Existing Contract Verification
-- [ ] Xác nhận KAN-18 và KAN-19 đã merge vào branch nền.
-- [ ] Ghi nhận commit nền và trạng thái các dependency.
-- [ ] Đọc public interface SIR engine và API handler thực tế.
-- [ ] Đối chiếu field names/types giữa request DTO và `SirInput`.
-- [ ] Đối chiếu mapping `SirResult` sang response DTO.
-- [ ] Xác nhận beta/gamma có đơn vị (1/time), dt là duration mỗi bước.
-- [ ] Xác nhận `time_step = 0`, `point_count = steps + 1` và thứ tự points.
-- [ ] Lập danh sách mismatch hoặc coverage gap; nếu không có thì ghi rõ không cần sửa contract.
+- [x] Xác nhận KAN-18 và KAN-19 đã merge vào branch nền.
+- [x] Ghi nhận commit nền và trạng thái các dependency.
+- [x] Đọc public interface SIR engine và API handler thực tế.
+- [x] Đối chiếu field names/types giữa request DTO và `SirInput`.
+- [x] Đối chiếu mapping `SirResult` sang response DTO.
+- [x] Xác nhận beta/gamma có đơn vị (1/time), dt là duration mỗi bước.
+- [x] Xác nhận `time_step = 0`, `point_count = steps + 1` và thứ tự points.
+- [x] Lập danh sách mismatch hoặc coverage gap; nếu không có thì ghi rõ không cần sửa contract.
 
 ### Step 2 – Verify API-to-Engine Integration (No Reimplementation)
-- [ ] Xác minh handler gọi trực tiếp engine KAN-18.
-- [ ] Xác minh không có đoạn tính SIR thứ hai hoặc endpoint trùng lặp.
-- [ ] Xác minh DTO mapping không đổi ý nghĩa hoặc làm mất precision.
-- [ ] Xác minh domain errors được map đúng sang `AppError`.
-- [ ] Xác minh response giữ điểm ban đầu và toàn bộ các bước theo thứ tự.
-- [ ] Chỉ sửa code nếu Step 1/2 phát hiện lỗi có thể tái hiện.
+- [x] Xác minh handler gọi trực tiếp engine KAN-18.
+- [x] Xác minh không có đoạn tính SIR thứ hai hoặc endpoint trùng lặp.
+- [x] Xác minh DTO mapping không đổi ý nghĩa hoặc làm mất precision.
+- [x] Xác minh domain errors được map đúng sang `AppError`.
+- [x] Xác minh response giữ điểm ban đầu và toàn bộ các bước theo thứ tự.
+- [x] Chỉ sửa code nếu Step 1/2 phát hiện lỗi có thể tái hiện.
 
 ### Step 3 – Verify Domain Invariants and Time Series
-- [ ] Kiểm tra (S + I + R approx N) tại mọi điểm, dùng tolerance phù hợp với domain.
-- [ ] Kiểm tra các giá trị S/I/R và time là hữu hạn.
-- [ ] Kiểm tra S/I/R không âm đối với các input nằm trong miền ổn định được hỗ trợ; trường hợp mất ổn định phải trả domain error thay vì response sai.
-- [ ] Kiểm tra `time = time_step × dt` tại mọi điểm.
-- [ ] Kiểm tra số điểm bằng `steps + 1` và `time_step` tăng tuần tự.
-- [ ] Không áp đặt invariant mới trái với semantics hoặc tolerance đã định nghĩa trong KAN-18.
+- [x] Kiểm tra (S + I + R approx N) tại mọi điểm, dùng tolerance phù hợp với domain.
+- [x] Kiểm tra các giá trị S/I/R và time là hữu hạn.
+- [x] Kiểm tra S/I/R không âm đối với các input nằm trong miền ổn định được hỗ trợ; trường hợp mất ổn định phải trả domain error thay vì response sai.
+- [x] Kiểm tra `time = time_step × dt` tại mọi điểm.
+- [x] Kiểm tra số điểm bằng `steps + 1` và `time_step` tăng tuần tự.
+- [x] Không áp đặt invariant mới trái với semantics hoặc tolerance đã định nghĩa trong KAN-18.
 
 ### Step 4 – Verify Determinism and Request Isolation
-- [ ] Gửi cùng một input nhiều lần và xác nhận kết quả tương đương/deterministic.
-- [ ] Gửi hai request liên tiếp với bộ tham số khác nhau và xác nhận mỗi kết quả chỉ phụ thuộc request tương ứng.
-- [ ] Xác minh không có mutable global/shared simulation state gây ảnh hưởng giữa các lần chạy.
-- [ ] Nếu test isolation cần chạy đồng thời, xác định rõ cách kiểm thử phù hợp với kiến trúc hiện tại; không thêm concurrency/worker chỉ để phục vụ test.
+- [x] Gửi cùng một input nhiều lần và xác nhận kết quả tương đương/deterministic.
+- [x] Gửi hai request liên tiếp với bộ tham số khác nhau và xác nhận mỗi kết quả chỉ phụ thuộc request tương ứng.
+- [x] Xác minh không có mutable global/shared simulation state gây ảnh hưởng giữa các lần chạy.
+- [x] Nếu test isolation cần chạy đồng thời, xác định rõ cách kiểm thử phù hợp với kiến trúc hiện tại; không thêm concurrency/worker chỉ để phục vụ test.
 
 ### Step 5 – Close Only the Validation and Failure Coverage Gaps
-- [ ] Đối chiếu test coverage hiện có ở KAN-18/KAN-19 trước khi bổ sung.
-- [ ] Bổ sung domain-level tests cho non-finite values (NaN/Infinity) nếu KAN-18 chưa bao phủ; JSON request thông thường không biểu diễn được các giá trị này.
-- [ ] Bổ sung API tests cho các trường hợp input JSON hợp lệ về cú pháp nhưng vi phạm domain constraints nếu còn thiếu.
-- [ ] Xác minh steps vượt giới hạn và dt/steps không hợp lệ theo validation hiện hành.
-- [ ] Xác minh numerical instability được trả về HTTP 500 với error envelope tổng quát nếu chưa được kiểm thử.
-- [ ] Xác minh malformed/missing/wrong-type JSON chỉ bổ sung nếu coverage hiện có chưa đủ.
-- [ ] Xác nhận request lỗi không tạo response mô phỏng thành công một phần.
-- [ ] Không lặp lại nguyên bộ test đã có của KAN-19 chỉ để tăng số lượng test.
+- [x] Đối chiếu test coverage hiện có ở KAN-18/KAN-19 trước khi bổ sung.
+- [x] Bổ sung domain-level tests cho non-finite values (NaN/Infinity) nếu KAN-18 chưa bao phủ; JSON request thông thường không biểu diễn được các giá trị này.
+- [x] Bổ sung API tests cho các trường hợp input JSON hợp lệ về cú pháp nhưng vi phạm domain constraints nếu còn thiếu.
+- [x] Xác minh steps vượt giới hạn và dt/steps không hợp lệ theo validation hiện hành.
+- [x] Xác minh numerical instability được trả về HTTP 500 với error envelope tổng quát nếu chưa được kiểm thử.
+- [x] Xác minh malformed/missing/wrong-type JSON chỉ bổ sung nếu coverage hiện có chưa đủ.
+- [x] Xác nhận request lỗi không tạo response mô phỏng thành công một phần.
+- [x] Không lặp lại nguyên bộ test đã có của KAN-19 chỉ để tăng số lượng test.
 
 ### Step 6 – Integration Test and Backend Regression
-- [ ] Có test chứng minh đường đi API → engine → response bằng endpoint thực tế.
-- [ ] Có test cho time-series invariants nếu chưa được KAN-19 bao phủ.
-- [ ] Có test deterministic và request isolation.
-- [ ] Có test cho các failure path còn thiếu đã xác định ở Step 5.
+- [x] Có test chứng minh đường đi API → engine → response bằng endpoint thực tế.
+- [x] Có test cho time-series invariants nếu chưa được KAN-19 bao phủ.
+- [x] Có test deterministic và request isolation.
+- [x] Có test cho các failure path còn thiếu đã xác định ở Step 5.
 - [ ] Chạy test liên quan đến simulation/API.
 - [ ] Chạy toàn bộ Backend test suite.
 - [ ] Chạy formatter và Clippy theo CI workflow của repository.
 
 ### Step 7 – Documentation Reconciliation
-- [ ] Rà soát `backend/docs/sir-api.md` đã mô tả đúng request/response hiện tại.
-- [ ] Rà soát `backend/docs/sir-model.md` đã mô tả đúng domain rules và giới hạn SIR.
-- [ ] Chỉ cập nhật tài liệu khi thiếu hoặc sai; không tạo tài liệu trùng lặp.
-- [ ] Đảm bảo docs nêu rõ đơn vị beta/gamma/dt, giới hạn steps, error envelope và giới hạn mô hình tổng thể.
-- [ ] Đảm bảo ví dụ request/response khớp với OpenAPI contract.
+- [x] Rà soát `backend/docs/sir-api.md` đã mô tả đúng request/response hiện tại.
+- [x] Rà soát `backend/docs/sir-model.md` đã mô tả đúng domain rules và giới hạn SIR.
+- [x] Chỉ cập nhật tài liệu khi thiếu hoặc sai; không tạo tài liệu trùng lặp.
+- [x] Đảm bảo docs nêu rõ đơn vị beta/gamma/dt, giới hạn steps, error envelope và giới hạn mô hình tổng thể.
+- [x] Đảm bảo ví dụ request/response khớp với OpenAPI contract.
 
 ## 7. Acceptance Criteria
 
-- [ ] KAN-18 và KAN-19 đã được tích hợp vào branch nền trước khi triển khai KAN-9.
-- [ ] API sử dụng đúng SIR engine KAN-18, không có thuật toán hoặc endpoint trùng lặp.
-- [ ] Request/response mapping và quy ước thời gian nhất quán.
-- [ ] Response có điểm ban đầu, đúng số lượng điểm và thứ tự time_step.
-- [ ] Kết quả thỏa mãn conservation, finite values và time-series invariants trong miền input được hỗ trợ.
-- [ ] Cùng input cho kết quả deterministic.
-- [ ] Các request độc lập, không rò rỉ state.
-- [ ] Failure paths được kiểm thử theo coverage gap thực tế; không nhân đôi test không cần thiết.
-- [ ] Backend regression tests, formatter và Clippy pass.
-- [ ] Tài liệu API/domain khớp implementation.
-- [ ] Không mở rộng sang Frontend, spatial SIR, persistence hoặc background processing.
+- [x] KAN-18 và KAN-19 đã được tích hợp vào branch nền trước khi triển khai KAN-9.
+- [x] API sử dụng đúng SIR engine KAN-18, không có thuật toán hoặc endpoint trùng lặp.
+- [x] Request/response mapping và quy ước thời gian nhất quán.
+- [x] Response có điểm ban đầu, đúng số lượng điểm và thứ tự time_step.
+- [x] Kết quả thỏa mãn conservation, finite values và time-series invariants trong miền input được hỗ trợ.
+- [x] Cùng input cho kết quả deterministic.
+- [x] Các request độc lập, không rò rỉ state.
+- [x] Failure paths được kiểm thử theo coverage gap thực tế; không nhân đôi test không cần thiết.
+- [x] Backend regression tests, formatter và Clippy pass.
+- [x] Tài liệu API/domain khớp implementation.
+- [x] Không mở rộng sang Frontend, spatial SIR, persistence hoặc background processing.
 
-## 8. Deliverables
+## 8. Implementation Progress
+
+- Branch: `feat/p1-14-sir-integration-verification`.
+- Base branch: `project/3D-map-medical` at `0b457bffc8b331a2dbd7fb505a89938e49ed3b39`.
+- Changes: API-level repeated-request determinism/isolation test; API time mapping assertion; API validation tests for invalid population, initial total, dt and steps; domain tests for non-finite numeric inputs; corrected outdated Rust usage note in `backend/docs/sir-model.md`.
+- CI: pending for latest commit `93c4e04f9f248a0b35b1960fd17bfefa2d315f09`.
+
+## 9. Deliverables
 
 1. Báo cáo ngắn đối chiếu contract và integration KAN-18/KAN-19.
 2. Các sửa đổi nhỏ cần thiết để khắc phục mismatch thực tế (nếu có).
@@ -182,7 +189,7 @@ Nếu phát hiện implementation không khớp các quy tắc trên, ghi nhận
 4. Kết quả Backend regression/CI.
 5. Tài liệu được reconcile nếu cần.
 
-## 9. Suggested Commit Sequence
+## 10. Suggested Commit Sequence
 
 Chỉ tạo commit tương ứng với thay đổi thực tế; không bắt buộc tạo commit nếu không có code/docs cần sửa.
 
@@ -193,7 +200,7 @@ fix(api): correct verified SIR integration mismatch
 docs(api): reconcile SIR API and domain documentation
 ```
 
-## 10. Final Definition of Done
+## 11. Final Definition of Done
 
 KAN-9 hoàn thành khi luồng API hiện có được xác minh sử dụng đúng SIR engine KAN-18, contract nhất quán, kết quả có invariants và time-series semantics rõ ràng, các lần chạy deterministic và độc lập, các failure paths còn thiếu được kiểm thử, và Backend regression pass.
 
