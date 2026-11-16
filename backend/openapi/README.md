@@ -45,17 +45,17 @@ The integration test starts an isolated `postgis/postgis:17-3.5` container with 
 
 ## Building neighbors
 
-GET /api/v1/buildings/{building_id}/neighbors?radius_m=100&limit=100 returns nearby buildings using minimum footprint-to-footprint distance, not centroid distance.
+GET /api/v1/buildings/{building_id}/neighbors?radius_m=250&limit=100 returns nearby buildings using minimum footprint-to-footprint distance, not centroid distance.
 
 | Parameter | Default | Constraint |
 |---|---:|---|
 | building_id | — | Internal building UUID |
-| radius_m | 100 m | Finite, greater than 0 and at most 5,000 m |
+| radius_m | Required | Finite, greater than 0 and at most 5,000 m |
 | limit | 100 | Integer from 1 to 500 |
 
 The source footprint is geometry(MultiPolygon, 4326). Both ST_DWithin and ST_Distance cast footprints to PostGIS geography, so the predicate and returned distance_m use the same metric semantics. The center building is excluded from its own neighbor list. Results are ordered by distance ascending and then UUID ascending. A building exactly on the radius boundary is included because ST_DWithin is inclusive.
 
-The response includes excluded_invalid_geometry_count. Neighbor candidates with an unexpected SRID, empty footprint, or invalid footprint are excluded and counted. A center building with such a footprint returns HTTP 400. A missing center returns HTTP 404. No neighbors is HTTP 200 with data: [].
+The response includes excluded_invalid_geometry_count, the total number of invalid, empty, or non-EPSG:4326 footprints in public.buildings. Such records are excluded from neighbor candidates. A center building with such a footprint returns HTTP 400. A missing center returns HTTP 404. No neighbors is HTTP 200 with data: [].
 
 The repository also exposes db::building_neighbors::build_building_adjacency for a batch of UUIDs. It returns each undirected pair once, ordered by UUID, plus excluded_invalid_geometry_count and missing_building_count so simulation setup can reject or report incomplete input instead of silently treating it as a complete graph.
 
