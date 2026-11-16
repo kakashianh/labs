@@ -131,3 +131,22 @@ Không hard-code endpoint path trước khi đối chiếu convention routes hi�
 ## 9. Definition of Done
 
 KAN-21 hoàn thành khi backend truy vấn được building neighbors bằng PostGIS với bán kính mét chính xác, trả định danh và khoảng cách, có kiểm thử CRS/edge cases và không làm sai schema dữ liệu nền.
+
+## 10. Approved Decisions and Review Additions (2026-11-16)
+
+Các quyết định đã được người dùng duyệt và là contract bắt buộc cho implementation:
+
+- **Distance semantics:** footprint-to-footprint, không dùng centroid thay thế.
+- **Metric:** đo trên geography hoặc giải pháp metric tương đương; filter và distance output phải cùng semantics.
+- **Geometry:** kiểm tra SRID, validity và empty geometry. Geometry không hợp lệ phải được xử lý có chủ đích, không âm thầm trả kết quả sai.
+- **Adjacency:** ngoài truy vấn một building trung tâm, cung cấp khả năng tạo adjacency cho tập buildings của một simulation run để KAN-23/KAN-24 không phải gọi API N lần.
+- **Index review:** buildings_footprint_gist_idx hiện là GiST trên geometry. Nếu truy vấn cast footprint sang geography, không mặc định index geometry hiện tại sẽ được dùng; benchmark và EXPLAIN trước khi quyết định expression index geography hoặc phương án metric khác.
+- **Boundary:** ST_DWithin dùng inclusive boundary (distance <= radius). Weight tại đúng radius có thể bằng 0 theo KAN-23, vì vậy building ở biên được trả trong kết quả spatial query nhưng không tạo neighbor pressure theo linear kernel.
+
+### Additional review checklist
+- [ ] Xác nhận footprint MultiPolygon 4326 và kiểm tra invalid/empty records.
+- [ ] Implement footprint-to-footprint distance bằng cùng biểu thức metric cho filter và output.
+- [ ] Có query/batch contract để dựng adjacency cho toàn bộ simulation building set.
+- [ ] Test polygon giao nhau/chạm nhau (distance 0), sát biên, đúng biên và ngoài biên.
+- [ ] Chạy EXPLAIN ANALYZE; ghi nhận index được dùng hay sequential scan hợp lý trên dataset nhỏ.
+- [ ] Không thêm index migration nếu chưa có evidence về query plan/workload.
