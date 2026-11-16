@@ -79,21 +79,20 @@ pub async fn find_building_neighbors(
 
     let rows = sqlx::query(
         r#"
-        WITH valid_buildings AS MATERIALIZED (
-            SELECT id, footprint
-            FROM public.buildings
-            WHERE id <> $1
-              AND ST_SRID(footprint) = 4326
-              AND NOT ST_IsEmpty(footprint)
-              AND ST_IsValid(footprint)
-        )
         SELECT neighbor.id AS building_id,
                ST_Distance(center.footprint::geography,
                            neighbor.footprint::geography) AS distance_m
         FROM public.buildings AS center
-        JOIN valid_buildings AS neighbor
-          ON ST_DWithin(center.footprint::geography,
-                        neighbor.footprint::geography, $2)
+        JOIN LATERAL (
+            SELECT candidate.id, candidate.footprint
+            FROM public.buildings AS candidate
+            WHERE candidate.id <> center.id
+              AND ST_SRID(candidate.footprint) = 4326
+              AND NOT ST_IsEmpty(candidate.footprint)
+              AND ST_IsValid(candidate.footprint)
+              AND ST_DWithin(center.footprint::geography,
+                             candidate.footprint::geography, $2)
+        ) AS neighbor ON TRUE
         WHERE center.id = $1
         ORDER BY distance_m ASC, neighbor.id ASC
         LIMIT $3
@@ -162,7 +161,7 @@ pub async fn build_building_adjacency(
 
     let rows = sqlx::query(
         r#"
-        WITH valid_buildings AS MATERIALIZED (
+        WITH selected_buildings AS MATERIALIZED (
             SELECT id, footprint
             FROM public.buildings
             WHERE id = ANY($1::uuid[])
@@ -174,11 +173,17 @@ pub async fn build_building_adjacency(
                b.id AS building_b_id,
                ST_Distance(a.footprint::geography,
                            b.footprint::geography) AS distance_m
-        FROM valid_buildings AS a
-        JOIN valid_buildings AS b
-          ON a.id < b.id
-         AND ST_DWithin(a.footprint::geography,
-                        b.footprint::geography, $2)
+        FROM selected_buildings AS a
+        JOIN LATERAL (
+            SELECT candidate.id, candidate.footprint
+            FROM public.buildings AS candidate
+            WHERE candidate.id > a.id
+              AND ST_SRID(candidate.footprint) = 4326
+              AND NOT ST_IsEmpty(candidate.footprint)
+              AND ST_IsValid(candidate.footprint)
+              AND ST_DWithin(a.footprint::geography,
+                             candidate.footprint::geography, $2)
+        ) AS b ON TRUE
         ORDER BY a.id ASC, b.id ASC
         "#,
     )
