@@ -256,8 +256,14 @@ mod tests {
         assert_eq!(repeated_response.status(), StatusCode::OK);
         let repeated_body = response_json(repeated_response).await;
 
-        assert_eq!(first_body, repeated_body, "same input must produce the same series");
-        assert_ne!(first_body, second_body, "different inputs must produce independent series");
+        assert_eq!(
+            first_body, repeated_body,
+            "same input must produce the same series"
+        );
+        assert_ne!(
+            first_body, second_body,
+            "different inputs must produce independent series"
+        );
         for point in second_body["points"].as_array().unwrap() {
             assert_eq!(point["susceptible"], 990.0);
             assert_eq!(point["infected"], 10.0);
