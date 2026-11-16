@@ -334,11 +334,11 @@ async fn building_neighbor_api_uses_metric_footprint_distance_and_batch_adjacenc
             StatusCode::BAD_REQUEST,
         ),
         (
-            format!("/api/v1/buildings/{invalid}/neighbors"),
+            format!("/api/v1/buildings/{invalid}/neighbors?radius_m=20"),
             StatusCode::BAD_REQUEST,
         ),
         (
-            format!("/api/v1/buildings/{missing_id}/neighbors"),
+            format!("/api/v1/buildings/{missing_id}/neighbors?radius_m=20"),
             StatusCode::NOT_FOUND,
         ),
     ] {
