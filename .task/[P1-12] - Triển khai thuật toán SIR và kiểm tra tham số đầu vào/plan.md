@@ -234,33 +234,33 @@ Tại mỗi time step cần đảm bảo:
 Các nhóm test tối thiểu:
 
 **Normal cases**
-- [ ] S > 0, I > 0, R = 0 với beta/gamma dương.
-- [ ] Có cả ba nhóm S/I/R ban đầu.
-- [ ] Nhiều time steps cho kết quả liên tục và hữu hạn.
+- [x] S > 0, I > 0, R = 0 với beta/gamma dương.
+- [ ] Có cả ba nhóm S/I/R ban đầu (chưa có test riêng với cả S, I, R đều dương).
+- [x] Nhiều time steps cho kết quả liên tục và hữu hạn.
 
 **Boundary cases**
-- [ ] I0 = 0: không phát sinh ca nhiễm mới từ mô hình SIR này.
-- [ ] S0 = 0: không có susceptible để phát sinh infection flow.
-- [ ] R0 = N, S0 = I0 = 0.
-- [ ] beta = 0: không có lây nhiễm mới.
-- [ ] gamma = 0: không có hồi phục.
-- [ ] steps = 1.
-- [ ] dt có giá trị nhỏ hợp lệ.
+- [x] I0 = 0: không phát sinh ca nhiễm mới từ mô hình SIR này.
+- [x] S0 = 0: không có susceptible để phát sinh infection flow.
+- [x] R0 = N, S0 = I0 = 0.
+- [x] beta = 0: không có lây nhiễm mới.
+- [x] gamma = 0: không có hồi phục.
+- [x] steps = 1.
+- [x] dt có giá trị nhỏ hợp lệ.
 
 **Invalid inputs**
-- [ ] N <= 0.
-- [ ] S0/I0/R0 âm.
-- [ ] Tổng S0 + I0 + R0 không bằng N ngoài tolerance.
-- [ ] beta hoặc gamma âm.
-- [ ] dt <= 0.
-- [ ] steps = 0 hoặc vượt maximum.
-- [ ] Numeric input là NaN hoặc infinity.
+- [x] N <= 0.
+- [x] S0/I0/R0 âm.
+- [x] Tổng S0 + I0 + R0 không bằng N ngoài tolerance.
+- [x] beta hoặc gamma âm.
+- [x] dt <= 0.
+- [x] steps = 0 hoặc vượt maximum.
+- [x] Numeric input là NaN hoặc infinity (đã cover đại diện ở state, rate, dt và intermediate).
 
 **Invariant tests**
-- [ ] S/I/R luôn không âm.
-- [ ] S + I + R được bảo toàn qua mọi bước.
-- [ ] Kết quả không chứa NaN/infinity.
-- [ ] Cùng input cho cùng output.
+- [x] S/I/R luôn không âm.
+- [x] S + I + R được bảo toàn qua mọi bước.
+- [x] Kết quả không chứa NaN/infinity.
+- [x] Cùng input cho cùng output.
 
 ### Step 7 – Document Formula and Usage
 
@@ -273,15 +273,15 @@ Các nhóm test tối thiểu:
 
 ## 7. Acceptance Criteria
 
-- [ ] Simulation engine nhận input hợp lệ và trả chuỗi S/I/R theo time step.
-- [ ] Công thức và quy ước rời rạc hóa được thống nhất, ghi tài liệu.
-- [ ] Từ chối input âm, NaN/infinity, tham số ngoài miền cho phép hoặc initial state không nhất quán.
-- [ ] S, I, R không âm ở tất cả các bước.
-- [ ] Tổng S + I + R được bảo toàn trong tolerance đã định nghĩa.
-- [ ] Kết quả không bị làm tròn từng bước.
-- [ ] Logic tính toán độc lập với Axum/HTTP layer.
-- [ ] Có unit tests cho normal, boundary, invalid input và invariants.
-- [ ] Không có lây nhiễm phụ thuộc khoảng cách hoặc giữa các công trình trong ticket này.
+- [x] Simulation engine nhận input hợp lệ và trả chuỗi S/I/R theo time step.
+- [x] Công thức và quy ước rời rạc hóa được thống nhất, ghi tài liệu.
+- [x] Từ chối input âm, NaN/infinity, tham số ngoài miền cho phép hoặc initial state không nhất quán.
+- [x] S, I, R không âm ở tất cả các bước.
+- [x] Tổng S + I + R được bảo toàn trong tolerance đã định nghĩa.
+- [x] Kết quả không bị làm tròn từng bước.
+- [x] Logic tính toán độc lập với Axum/HTTP layer.
+- [x] Có unit tests cho normal, boundary, invalid input và invariants.
+- [x] Không có lây nhiễm phụ thuộc khoảng cách hoặc giữa các công trình trong ticket này.
 
 ## 8. Deliverables
 
@@ -320,5 +320,18 @@ KAN-18 hoàn thành khi Rust simulation module có thể nhận trạng thái ba
 - Added standalone technical notes at `backend/docs/sir-model.md`.
 - Implemented validation, explicit Euler integration, per-step invariants, overflow checks, deterministic output, and unit tests.
 - Policy decisions: population tolerance = `1e-9 + 1e-9 × N`; max steps = `100,000`; max duration = `10,000` caller-defined time units; fractional f64 values are expected/aggregate counts.
-- CI and local cargo test evidence are pending; do not mark test/acceptance checkboxes complete until the workflow is green.
+- CI verification: [workflow run #43726465661](https://github.com/kakashianh/labs/actions/runs/43726465661) completed successfully on commit `29c766081191d323dd24c58c24076966da4b9c3b`. Axum API integration tests, frontend lint/unit/build, Rust format + Clippy + tests + Docker image build, and Docker Compose + PostGIS migration verification all passed. Render deployment was skipped because it is manual.
 
+
+
+## 12. CI verification and test checklist update (2026-11-16)
+
+- Confirmed workflow run #43726465661 completed with conclusion `success`.
+- Passed jobs:
+  - Axum API integration tests with Testcontainers PostGIS.
+  - Frontend lint, unit tests and production build.
+  - Rust formatting, Clippy, unit tests and backend Docker image build.
+  - Docker Compose + PostGIS migration verification.
+- Render deployment job was skipped by design because deployment is manual; it is not a CI failure.
+- Checked Step 6 and Acceptance Criteria against the implemented tests and CI evidence. The dedicated test for an initial state where all three S/I/R compartments are positive remains unchecked; existing normal-case test uses R = 0.
+- CI verifies the committed branch state; no manual deployment or production runtime verification is claimed.
