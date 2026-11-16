@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { ApiRequestError } from './api-client.ts'
-import { simulateSir } from './sir-api.ts'
+import { simulateSir, validateSirRequest } from './sir-api.ts'
 import type { SirSimulationRequest, SirSimulationResult } from '../types/sir.ts'
 
 const request: SirSimulationRequest = {
@@ -93,7 +93,6 @@ test('simulateSir forwards request cancellation', async () => {
   }
 })
 
-import { validateSirRequest } from './sir-api.ts'
 
 test('validateSirRequest accepts valid parameters', () => {
   assert.equal(validateSirRequest(request), null)
