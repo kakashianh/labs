@@ -158,7 +158,7 @@ async fn building_neighbor_api_uses_metric_footprint_distance_and_batch_adjacenc
         .oneshot(
             Request::builder()
                 .uri(format!(
-                    "/api/v1/buildings/{center}/neighbors?radius_m={exact_radius_m:.15}"
+                    "/api/v1/buildings/{center}/neighbors?radius_m={exact_radius_m}"
                 ))
                 .body(Body::empty())
                 .unwrap(),
