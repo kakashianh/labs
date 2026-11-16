@@ -22,6 +22,13 @@ pub struct NeighborSearchResult {
     pub excluded_invalid_geometry_count: i64,
 }
 
+#[derive(Debug)]
+pub struct BuildingAdjacencyResult {
+    pub edges: Vec<BuildingAdjacencyRecord>,
+    pub excluded_invalid_geometry_count: i64,
+    pub missing_building_count: i64,
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum NeighborSearchError {
     #[error("Building not found")]
@@ -121,11 +128,37 @@ pub async fn build_building_adjacency(
     pool: &PgPool,
     building_ids: &[Uuid],
     radius_m: f64,
-) -> Result<Vec<BuildingAdjacencyRecord>, sqlx::Error> {
+) -> Result<BuildingAdjacencyResult, sqlx::Error> {
     let mut tx = pool.begin().await?;
     sqlx::query("SET LOCAL search_path TO public, extensions")
         .execute(&mut *tx)
         .await?;
+
+    let diagnostics = sqlx::query(
+        r#"
+        WITH requested AS (
+            SELECT DISTINCT unnest($1::uuid[]) AS id
+        )
+        SELECT
+            COUNT(*) FILTER (WHERE b.id IS NULL) AS missing_building_count,
+            COUNT(*) FILTER (
+                WHERE b.id IS NOT NULL
+                  AND (
+                      ST_SRID(b.footprint) <> 4326
+                      OR ST_IsEmpty(b.footprint)
+                      OR NOT ST_IsValid(b.footprint)
+                  )
+            ) AS excluded_invalid_geometry_count
+        FROM requested r
+        LEFT JOIN public.buildings b ON b.id = r.id
+        "#,
+    )
+    .bind(building_ids)
+    .fetch_one(&mut *tx)
+    .await?;
+    let missing_building_count: i64 = diagnostics.try_get("missing_building_count")?;
+    let excluded_invalid_geometry_count: i64 =
+        diagnostics.try_get("excluded_invalid_geometry_count")?;
 
     let rows = sqlx::query(
         r#"
@@ -166,5 +199,9 @@ pub async fn build_building_adjacency(
         .collect::<Result<Vec<_>, sqlx::Error>>()?;
 
     tx.commit().await?;
-    Ok(edges)
+    Ok(BuildingAdjacencyResult {
+        edges,
+        excluded_invalid_geometry_count,
+        missing_building_count,
+    })
 }
