@@ -426,14 +426,13 @@
           {
             "name": "radius_m",
             "in": "query",
-            "required": false,
+            "required": true,
             "description": "Search radius in meters.",
             "schema": {
               "type": "number",
               "format": "double",
               "exclusiveMinimum": 0,
-              "maximum": 5000,
-              "default": 100
+              "maximum": 5000
             }
           },
           {
@@ -951,7 +950,7 @@
           "excluded_invalid_geometry_count": {
             "type": "integer",
             "minimum": 0,
-            "description": "Count of invalid, empty, or non-EPSG:4326 building footprints excluded from neighbor candidates."
+            "description": "Total count of invalid, empty, or non-EPSG:4326 building footprints in public.buildings; these records are excluded from neighbor candidates."
           },
           "data": {
             "type": "array",
