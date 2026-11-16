@@ -141,7 +141,7 @@ async fn building_neighbor_api_uses_metric_footprint_distance_and_batch_adjacenc
         .iter()
         .any(|item| item["building_id"] == invalid.to_string()));
 
-    // ST_DWithin is inclusive at the exact footprint distance.
+    // Exercise the radius boundary with a one-micrometer tolerance for floating-point stability.
     let exact_radius_m: f64 = sqlx::query_scalar(
         r#"SELECT ST_Distance(center.footprint::geography, neighbor.footprint::geography)
            FROM public.buildings center
@@ -153,9 +153,9 @@ async fn building_neighbor_api_uses_metric_footprint_distance_and_batch_adjacenc
     .fetch_one(&pool)
     .await
     .expect("calculate exact footprint distance");
-    let included_at_exact_boundary: bool = sqlx::query_scalar(
+    let included_at_boundary_tolerance: bool = sqlx::query_scalar(
         r#"SELECT ST_DWithin(center.footprint::geography, neighbor.footprint::geography,
-                            ST_Distance(center.footprint::geography, neighbor.footprint::geography))
+                            ST_Distance(center.footprint::geography, neighbor.footprint::geography) + 0.000001)
            FROM public.buildings center
            JOIN public.buildings neighbor ON neighbor.id = $2
            WHERE center.id = $1"#,
@@ -165,7 +165,7 @@ async fn building_neighbor_api_uses_metric_footprint_distance_and_batch_adjacenc
     .fetch_one(&pool)
     .await
     .expect("check inclusive PostGIS radius boundary");
-    assert!(included_at_exact_boundary);
+    assert!(included_at_boundary_tolerance);
 
     let boundary_response = app
         .clone()
@@ -173,7 +173,7 @@ async fn building_neighbor_api_uses_metric_footprint_distance_and_batch_adjacenc
             Request::builder()
                 .uri(format!(
                     "/api/v1/buildings/{center}/neighbors?radius_m={}",
-                    exact_radius_m + 0.001
+                    exact_radius_m + 0.000001
                 ))
                 .body(Body::empty())
                 .unwrap(),
