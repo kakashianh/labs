@@ -231,6 +231,58 @@ async fn building_neighbor_api_uses_metric_footprint_distance_and_batch_adjacenc
         .contains("buildings_footprint_geography_gist_idx"));
     println!("PostGIS neighbor EXPLAIN ANALYZE: {query_plan}");
 
+    let mut batch_plan_tx = pool
+        .begin()
+        .await
+        .expect("begin batch query-plan transaction");
+    sqlx::query("SET LOCAL enable_seqscan = OFF")
+        .execute(&mut *batch_plan_tx)
+        .await
+        .expect("prefer index scans for batch index-availability assertion");
+    let batch_query_plan: Value = sqlx::query_scalar(
+        r#"
+        EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
+        WITH selected_buildings AS MATERIALIZED (
+            SELECT id, footprint
+            FROM public.buildings
+            WHERE id = ANY($1::uuid[])
+              AND ST_SRID(footprint) = 4326
+              AND NOT ST_IsEmpty(footprint)
+              AND ST_IsValid(footprint)
+        )
+        SELECT a.id AS building_a_id,
+               b.id AS building_b_id,
+               ST_Distance(a.footprint::geography,
+                           b.footprint::geography) AS distance_m
+        FROM selected_buildings AS a
+        JOIN LATERAL (
+            SELECT candidate.id, candidate.footprint
+            FROM public.buildings AS candidate
+            WHERE candidate.id > a.id
+              AND ST_SRID(candidate.footprint) = 4326
+              AND NOT ST_IsEmpty(candidate.footprint)
+              AND ST_IsValid(candidate.footprint)
+              AND ST_DWithin(a.footprint::geography,
+                             candidate.footprint::geography, $2)
+        ) AS b ON TRUE
+        ORDER BY a.id ASC, b.id ASC
+        "#,
+    )
+    .bind(&[center, touching, near, far, invalid][..])
+    .bind(20.0_f64)
+    .fetch_one(&mut *batch_plan_tx)
+    .await
+    .expect("EXPLAIN ANALYZE batch adjacency query");
+    batch_plan_tx
+        .commit()
+        .await
+        .expect("commit batch query-plan transaction");
+    assert!(batch_query_plan[0]["Plan"].is_object());
+    assert!(batch_query_plan
+        .to_string()
+        .contains("buildings_footprint_geography_gist_idx"));
+    println!("PostGIS batch adjacency EXPLAIN ANALYZE: {batch_query_plan}");
+
     // The batch graph is undirected: each pair occurs once and invalid geometries
     // never enter the graph.
     let missing_building = Uuid::new_v4();
