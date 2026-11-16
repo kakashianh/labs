@@ -248,6 +248,6 @@ Phạm vi chỉ là kết quả SIR tổng thể của Phase 1; không gắn d�
 ## 12. Implementation Notes and Remaining Integration
 
 - Đã thêm `SirResultPanel`, SVG chart, current metrics, slider/playback và validation helper; component nhận `result/loading/error` qua props, không tự gọi API.
-- HomePage hiện tại trước task chỉ render CesiumViewer và chưa có form cấu hình/request SIR hoặc state quản lý response. Vì vậy panel được mount với `result={null}` để thể hiện empty state; không tạo dữ liệu mô phỏng giả. Kết nối response thật cần parent flow từ KAN-10 hoặc task tích hợp tương ứng.
+- Ở implementation ban đầu, HomePage chỉ mount panel với `result={null}` vì chưa có request flow. Phần tiếp nối P1-16 đã bổ sung form cấu hình và kết nối API ở parent; chi tiết request lifecycle và E2E được theo dõi tại `.task/P1-16 - Tích hợp end-to-end luồng mô phỏng SIR/plan.md`.
 - Test runner hiện hữu là Node built-in; đã thêm unit tests cho validation helper. Vitest + React Testing Library + jsdom và component interaction tests vẫn là phần còn thiếu, không đánh dấu hoàn thành.
-- Không đánh dấu KAN-20 Done cho tới khi parent truyền được response thật và các component interaction tests được bổ sung.
+- Không đánh dấu KAN-20 Done cho tới khi component interaction tests và kiểm thử playback lifecycle được bổ sung.
