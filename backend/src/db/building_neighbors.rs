@@ -3,6 +3,8 @@
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
+pub const MAX_NEIGHBOR_RADIUS_M: f64 = 5_000.0;
+
 #[derive(Debug)]
 pub struct BuildingNeighborRecord {
     pub building_id: Uuid,
@@ -27,6 +29,14 @@ pub struct BuildingAdjacencyResult {
     pub edges: Vec<BuildingAdjacencyRecord>,
     pub excluded_invalid_geometry_count: i64,
     pub missing_building_count: i64,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum BuildingAdjacencyError {
+    #[error("radius_m must be finite, greater than 0, and no greater than 5000")]
+    InvalidRadius,
+    #[error("Database query failed: {0}")]
+    Database(#[from] sqlx::Error),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -127,7 +137,11 @@ pub async fn build_building_adjacency(
     pool: &PgPool,
     building_ids: &[Uuid],
     radius_m: f64,
-) -> Result<BuildingAdjacencyResult, sqlx::Error> {
+) -> Result<BuildingAdjacencyResult, BuildingAdjacencyError> {
+    if !radius_m.is_finite() || radius_m <= 0.0 || radius_m > MAX_NEIGHBOR_RADIUS_M {
+        return Err(BuildingAdjacencyError::InvalidRadius);
+    }
+
     let mut tx = pool.begin().await?;
     sqlx::query("SET LOCAL search_path TO public, extensions")
         .execute(&mut *tx)
