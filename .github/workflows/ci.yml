@@ -165,6 +165,10 @@ jobs:
               RAISE EXCEPTION 'buildings GiST index is missing';
             END IF;
 
+            IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='buildings_footprint_geography_gist_idx') THEN
+              RAISE EXCEPTION 'buildings geography GiST index is missing';
+            END IF;
+
             IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='buildings_region_id_idx') THEN
               RAISE EXCEPTION 'buildings.region_id B-tree index is missing';
             END IF;
