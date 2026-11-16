@@ -168,20 +168,20 @@ Không cần giữ đúng tên enum minh họa nếu project đã có error conv
 
 ### Step 1 – Inspect Backend Structure and Define SIR Module Boundary
 
-- [ ] Kiểm tra cấu trúc Rust Backend hiện tại.
-- [ ] Xác định vị trí module simulation độc lập.
-- [ ] Kiểm tra error/result conventions của project.
-- [ ] Đảm bảo simulation engine không phụ thuộc Axum request/response types.
-- [ ] Xác định nơi đặt unit tests và tài liệu công thức.
+- [x] Kiểm tra cấu trúc Rust Backend hiện tại: crate `backend` có `src/lib.rs`, dùng `thiserror`; unit tests đặt cùng module.
+- [x] Xác định module `backend/src/simulation/sir.rs`, export qua `backend::simulation`.
+- [x] Dùng error enum riêng `SirError` với `thiserror`, không phụ thuộc AppError/Axum.
+- [x] Simulation engine không phụ thuộc Axum request/response types hoặc database.
+- [x] Tài liệu công thức đặt tại `backend/docs/sir-model.md`.
 
 ### Step 2 – Define Input, Output and Error Types
 
-- [ ] Tạo SirInput.
-- [ ] Tạo SirPoint cho kết quả từng time step.
-- [ ] Tạo SirResult.
-- [ ] Định nghĩa error types cho input không hợp lệ.
-- [ ] Chốt cách biểu diễn thời gian: time = step × dt.
-- [ ] Chốt output bao gồm trạng thái ban đầu tại time_step = 0 và các bước tiếp theo.
+- [x] Tạo SirInput (dùng `recovered`, không đặt tên `R0` để tránh nhầm Basic Reproduction Number).
+- [x] Tạo SirPoint cho kết quả từng time step.
+- [x] Tạo SirResult.
+- [x] Định nghĩa SirError bằng thiserror.
+- [x] Chốt cách biểu diễn thời gian: time = step × dt.
+- [x] Output bao gồm trạng thái ban đầu tại time_step = 0 và các bước tiếp theo.
 
 ### Step 3 – Implement Input Validation
 
@@ -196,26 +196,22 @@ Quy tắc:
 - steps phải lớn hơn 0 và không vượt giới hạn bảo vệ tài nguyên được thống nhất.
 - Không nhận NaN hoặc infinity ở bất kỳ numeric input nào.
 
-- [ ] Implement validation cho population.
-- [ ] Implement validation cho S0/I0/R0.
-- [ ] Kiểm tra tổng dân số với floating-point tolerance.
-- [ ] Implement validation cho beta/gamma.
-- [ ] Implement validation cho dt.
-- [ ] Implement validation cho steps và maximum allowed steps.
-- [ ] Trả lỗi có ý nghĩa, không panic khi input sai.
+- [x] Implement validation cho population và S/I/R.
+- [x] Kiểm tra tổng dân số với tolerance `1e-9 + 1e-9 × N`.
+- [x] Implement validation cho beta/gamma (finite, không âm; không áp đặt upper bound 1 vì đây là rate).
+- [x] Implement validation cho dt (finite, > 0).
+- [x] Giới hạn steps trong 1..=100,000 và tổng thời lượng `dt × steps` không vượt 10,000 đơn vị thời gian.
+- [x] Trả SirError có ý nghĩa, không panic khi input sai.
 
 ### Step 4 – Implement Discrete SIR Calculation
 
-- [ ] Khởi tạo trạng thái tại time_step = 0.
-- [ ] Tính infection flow từ S_t, I_t, N, beta và dt.
-- [ ] Tính recovery flow từ I_t, gamma và dt.
-- [ ] Giới hạn infection flow trong [0, S_t].
-- [ ] Giới hạn recovery flow trong [0, I_t].
-- [ ] Cập nhật S, I, R đồng thời từ trạng thái đầu bước.
-- [ ] Kiểm tra và xử lý sai số số học rất nhỏ ở biên theo tolerance.
-- [ ] Lưu kết quả tại từng time_step.
-- [ ] Không làm tròn S/I/R giữa các bước.
-- [ ] Đảm bảo engine trả result deterministic với cùng input.
+- [x] Khởi tạo trạng thái tại time_step = 0.
+- [x] Tính infection/recovery flow từ trạng thái đầu bước; kiểm tra intermediate finite trước khi clamp.
+- [x] Giới hạn infection flow trong [0, S_t] và recovery flow trong [0, I_t].
+- [x] Cập nhật S, I, R đồng thời từ trạng thái đầu bước.
+- [x] Kiểm tra finite, non-negative và population conservation sau mỗi bước; chỉ clamp sai số âm rất nhỏ.
+- [x] Lưu kết quả tại từng time_step, không làm tròn giữa các bước.
+- [x] Cùng input cho output deterministic.
 
 ### Step 5 – Enforce Invariants and Numerical Safety
 
@@ -228,65 +224,64 @@ Tại mỗi time step cần đảm bảo:
 - Infection flow không lớn hơn S.
 - Recovery flow không lớn hơn I tại đầu bước.
 
-- [ ] Kiểm tra các invariants sau mỗi lần cập nhật.
-- [ ] Xử lý floating-point drift nhỏ bằng chiến lược có tài liệu, không âm thầm thay đổi kết quả lớn.
-- [ ] Trả simulation error nếu xuất hiện NaN/infinity hoặc vi phạm conservation ngoài tolerance.
-- [ ] Không sử dụng integer rounding trong vòng lặp mô phỏng.
+- [x] Kiểm tra invariants sau mỗi lần cập nhật.
+- [x] Xử lý drift bằng tolerance đã công bố; không âm thầm sửa sai lệch lớn.
+- [x] Trả NumericalInstability nếu intermediate/output không finite hoặc conservation vượt tolerance.
+- [x] Không sử dụng integer rounding trong vòng lặp mô phỏng.
 
 ### Step 6 – Add Unit Tests
 
 Các nhóm test tối thiểu:
 
 **Normal cases**
-- [ ] S > 0, I > 0, R = 0 với beta/gamma dương.
-- [ ] Có cả ba nhóm S/I/R ban đầu.
-- [ ] Nhiều time steps cho kết quả liên tục và hữu hạn.
+- [x] S > 0, I > 0, R = 0 với beta/gamma dương.
+- [ ] Có cả ba nhóm S/I/R ban đầu (chưa có test riêng với cả S, I, R đều dương).
+- [x] Nhiều time steps cho kết quả liên tục và hữu hạn.
 
 **Boundary cases**
-- [ ] I0 = 0: không phát sinh ca nhiễm mới từ mô hình SIR này.
-- [ ] S0 = 0: không có susceptible để phát sinh infection flow.
-- [ ] R0 = N, S0 = I0 = 0.
-- [ ] beta = 0: không có lây nhiễm mới.
-- [ ] gamma = 0: không có hồi phục.
-- [ ] steps = 1.
-- [ ] dt có giá trị nhỏ hợp lệ.
+- [x] I0 = 0: không phát sinh ca nhiễm mới từ mô hình SIR này.
+- [x] S0 = 0: không có susceptible để phát sinh infection flow.
+- [x] R0 = N, S0 = I0 = 0.
+- [x] beta = 0: không có lây nhiễm mới.
+- [x] gamma = 0: không có hồi phục.
+- [x] steps = 1.
+- [x] dt có giá trị nhỏ hợp lệ.
 
 **Invalid inputs**
-- [ ] N <= 0.
-- [ ] S0/I0/R0 âm.
-- [ ] Tổng S0 + I0 + R0 không bằng N ngoài tolerance.
-- [ ] beta hoặc gamma âm.
-- [ ] dt <= 0.
-- [ ] steps = 0 hoặc vượt maximum.
-- [ ] Numeric input là NaN hoặc infinity.
+- [x] N <= 0.
+- [x] S0/I0/R0 âm.
+- [x] Tổng S0 + I0 + R0 không bằng N ngoài tolerance.
+- [x] beta hoặc gamma âm.
+- [x] dt <= 0.
+- [x] steps = 0 hoặc vượt maximum.
+- [x] Numeric input là NaN hoặc infinity (đã cover đại diện ở state, rate, dt và intermediate).
 
 **Invariant tests**
-- [ ] S/I/R luôn không âm.
-- [ ] S + I + R được bảo toàn qua mọi bước.
-- [ ] Kết quả không chứa NaN/infinity.
-- [ ] Cùng input cho cùng output.
+- [x] S/I/R luôn không âm.
+- [x] S + I + R được bảo toàn qua mọi bước.
+- [x] Kết quả không chứa NaN/infinity.
+- [x] Cùng input cho cùng output.
 
 ### Step 7 – Document Formula and Usage
 
-- [ ] Ghi công thức SIR liên tục.
-- [ ] Ghi công thức explicit Euler rời rạc.
-- [ ] Giải thích đơn vị của beta, gamma và dt.
-- [ ] Ghi rõ initial state được trả ở time_step = 0.
-- [ ] Ghi rõ tolerance cho kiểm tra tổng dân số.
-- [ ] Thêm ví dụ input/output.
-- [ ] Ghi giới hạn của mô hình SIR cơ bản và việc lựa chọn dt.
+- [x] Ghi công thức SIR liên tục và explicit Euler rời rạc.
+- [x] Giải thích đơn vị beta/gamma/dt và f64 là aggregate/expected counts.
+- [x] Ghi rõ initial state được trả ở time_step = 0.
+- [x] Ghi rõ tolerance, maximum steps và maximum duration.
+- [x] Ghi giới hạn mô hình và quy ước lựa chọn dt.
+- [x] Bổ sung ví dụ input/output một bước trong `backend/docs/sir-model.md`.
 
 ## 7. Acceptance Criteria
 
-- [ ] Simulation engine nhận input hợp lệ và trả chuỗi S/I/R theo time step.
-- [ ] Công thức và quy ước rời rạc hóa được thống nhất, ghi tài liệu.
-- [ ] Từ chối input âm, NaN/infinity, tham số ngoài miền cho phép hoặc initial state không nhất quán.
-- [ ] S, I, R không âm ở tất cả các bước.
-- [ ] Tổng S + I + R được bảo toàn trong tolerance đã định nghĩa.
-- [ ] Kết quả không bị làm tròn từng bước.
-- [ ] Logic tính toán độc lập với Axum/HTTP layer.
-- [ ] Có unit tests cho normal, boundary, invalid input và invariants.
-- [ ] Không có lây nhiễm phụ thuộc khoảng cách hoặc giữa các công trình trong ticket này.
+- [x] Simulation engine nhận input hợp lệ và trả chuỗi S/I/R theo time step.
+- [x] Công thức và quy ước rời rạc hóa được thống nhất, ghi tài liệu.
+- [x] Từ chối input âm, NaN/infinity, tham số ngoài miền cho phép hoặc initial state không nhất quán.
+- [x] S, I, R không âm ở tất cả các bước.
+- [x] Tổng S + I + R được bảo toàn trong tolerance đã định nghĩa.
+- [x] Kết quả không bị làm tròn từng bước.
+- [x] Logic tính toán độc lập với Axum/HTTP layer.
+- [x] Có unit tests cho normal, boundary, invalid input và invariants.
+- [x] Không có lây nhiễm phụ thuộc khoảng cách hoặc giữa các công trình trong ticket này.
 
 ## 8. Deliverables
 
@@ -315,3 +310,28 @@ docs(simulation): document SIR equations and time convention
 KAN-18 hoàn thành khi Rust simulation module có thể nhận trạng thái ban đầu và tham số hợp lệ, tạo chuỗi kết quả S/I/R theo từng time step, từ chối input không hợp lệ, bảo toàn tổng dân số trong sai số số học cho phép và có unit tests cùng tài liệu công thức.
 
 Đây là SIR cơ bản ở quy mô tổng thể; chưa có mô hình lây nhiễm giữa các công trình hoặc các yếu tố không gian của Phase 2.
+
+
+## 11. Implementation progress (2026-11-15)
+
+- Branch: `feat/p1-12-sir-simulation-engine`
+- Base: `feat/p1-11-map-e2e-integration`
+- Added `backend/src/simulation/sir.rs`, `backend/src/simulation/mod.rs`, and exported `backend::simulation` from `backend/src/lib.rs`.
+- Added standalone technical notes at `backend/docs/sir-model.md`.
+- Implemented validation, explicit Euler integration, per-step invariants, overflow checks, deterministic output, and unit tests.
+- Policy decisions: population tolerance = `1e-9 + 1e-9 × N`; max steps = `100,000`; max duration = `10,000` caller-defined time units; fractional f64 values are expected/aggregate counts.
+- CI verification: [workflow run #43726465661](https://github.com/kakashianh/labs/actions/runs/43726465661) completed successfully on commit `29c766081191d323dd24c58c24076966da4b9c3b`. Axum API integration tests, frontend lint/unit/build, Rust format + Clippy + tests + Docker image build, and Docker Compose + PostGIS migration verification all passed. Render deployment was skipped because it is manual.
+
+
+
+## 12. CI verification and test checklist update (2026-11-16)
+
+- Confirmed workflow run #43726465661 completed with conclusion `success`.
+- Passed jobs:
+  - Axum API integration tests with Testcontainers PostGIS.
+  - Frontend lint, unit tests and production build.
+  - Rust formatting, Clippy, unit tests and backend Docker image build.
+  - Docker Compose + PostGIS migration verification.
+- Render deployment job was skipped by design because deployment is manual; it is not a CI failure.
+- Checked Step 6 and Acceptance Criteria against the implemented tests and CI evidence. The dedicated test for an initial state where all three S/I/R compartments are positive remains unchecked; existing normal-case test uses R = 0.
+- CI verifies the committed branch state; no manual deployment or production runtime verification is claimed.
