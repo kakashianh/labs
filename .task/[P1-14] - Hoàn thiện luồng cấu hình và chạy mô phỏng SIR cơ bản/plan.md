@@ -79,14 +79,14 @@ Luồng trên là luồng cần xác minh, không phải yêu cầu viết lại
 ## 5. Contract and Domain Rules
 
 ### Request contract hiện tại
-- `population`: tổng dân số (N), hữu hạn và lớn hơn 0.
-- `susceptible`, `infected`, `recovered`: trạng thái ban đầu (S_0, I_0, R_0), không âm và tổng khớp (N) theo tolerance của domain.
-- `beta`, `gamma`: hệ số tốc độ, đơn vị (1/time), hữu hạn và không âm.
+- `population`: tổng dân số N, hữu hạn và lớn hơn 0.
+- `susceptible`, `infected`, `recovered`: trạng thái ban đầu S0, I0, R0, không âm và tổng khớp N theo tolerance của domain.
+- `beta`, `gamma`: hệ số tốc độ, đơn vị 1/time, hữu hạn và không âm.
 - `dt`: độ dài một bước thời gian, hữu hạn và lớn hơn 0.
 - `steps`: số bước mô phỏng, trong giới hạn domain công bố.
 
 ### Time-series contract
-- Điểm đầu tiên có `time_step = 0), thể hiện trạng thái ban đầu.
+- Điểm đầu tiên có `time_step = 0`, thể hiện trạng thái ban đầu.
 - Tổng số điểm là `steps + 1`.
 - Các điểm được trả theo thứ tự tăng dần của `time_step`.
 - `time = time_step × dt`.
