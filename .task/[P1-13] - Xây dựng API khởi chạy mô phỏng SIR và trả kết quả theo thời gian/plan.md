@@ -205,6 +205,7 @@ Không tạo envelope `code/message/details` riêng cho endpoint này. Nếu mu�
 - [x] Lỗi validation trả HTTP 400 theo error envelope hiện có; numerical/internal error trả HTTP 500 và không lộ chi tiết nội bộ.
 - [x] Có router-level API/integration tests cho success, malformed request, validation failure và internal failure mapping.
 - [x] Có tài liệu endpoint, units và ví dụ request/response.
+- [x] CI workflow hoàn tất success, bao gồm backend Docker image build.
 
 ## 8. Deliverables
 
@@ -234,7 +235,7 @@ API tái sử dụng SIR engine của KAN-18, không triển khai lại thuật 
 
 ## 11. Verification
 
-- CI run [#43781923654](https://github.com/kakashianh/labs/actions/runs/43781923654): Rust formatting, Clippy, `cargo test --lib --all-features`, Testcontainers API integration tests và frontend lint/unit/build đã pass tại lần kiểm tra gần nhất.
-- Docker image build của run trên vẫn đang chạy tại thời điểm cập nhật plan; chưa đánh dấu toàn bộ workflow là success.
+- [x] CI run [#43781923654](https://github.com/kakashianh/labs/actions/runs/43781923654) hoàn tất với conclusion `success`.
+- [x] Rust formatting, Clippy, `cargo test --lib --all-features`, Testcontainers API integration tests, frontend lint/unit/production build và backend Docker image build đều pass.
 - Các router-level tests trong `routes/simulations.rs` kiểm tra success response, initial point, point count/order, conservation, malformed/missing/wrong-type JSON, domain validation và numerical instability.
 - Chưa thực hiện deploy hoặc kiểm thử endpoint trên môi trường Render.
