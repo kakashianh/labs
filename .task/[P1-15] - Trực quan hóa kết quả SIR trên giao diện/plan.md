@@ -71,7 +71,7 @@ interface SirResultPanelProps {
 ~~~
 
 Responsibilities:
-- Parent hiện có chịu trách nhiệm gọi API và truyền result, loading, error xuống panel.
+- Parent/page chịu trách nhiệm gọi API và truyền result, loading, error xuống panel. Đây là integration contract; HomePage trước task này chưa có luồng request SIR.
 - SirResultPanel điều phối selectedTimeStep và playback state.
 - SirResultChart, SirCurrentMetrics và SirPlaybackControls nhận dữ liệu/trạng thái qua props.
 - Visualization component không tự gọi API, không chứa request lifecycle và không chạy lại SIR.
