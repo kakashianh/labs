@@ -3,7 +3,7 @@
   "info": {
     "title": "GIS 3D Backend API",
     "version": "1.0.0",
-    "description": "API for querying GIS region and building data. Includes KAN-15 building list and P1-08 region/building detail endpoints."
+    "description": "API for GIS region/building data and aggregate SIR simulation."
   },
   "servers": [
     {
@@ -321,6 +321,91 @@
           }
         }
       }
+    },
+    "/api/v1/simulations/sir": {
+      "post": {
+        "operationId": "runSirSimulation",
+        "summary": "Run aggregate SIR simulation",
+        "description": "Runs the deterministic aggregate SIR engine synchronously. The response includes the initial state (time_step 0) and one point for each requested integration step. beta and gamma are rates in inverse time units; dt uses that same caller-defined time unit.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SirSimulationRequest"
+              },
+              "example": {
+                "population": 10000,
+                "susceptible": 9990,
+                "infected": 10,
+                "recovered": 0,
+                "beta": 0.3,
+                "gamma": 0.1,
+                "dt": 1,
+                "steps": 100
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Simulation completed. point_count equals steps + 1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SirSimulationResponse"
+                },
+                "example": {
+                  "population": 10000,
+                  "point_count": 2,
+                  "points": [
+                    {
+                      "time_step": 0,
+                      "time": 0,
+                      "susceptible": 9990,
+                      "infected": 10,
+                      "recovered": 0
+                    },
+                    {
+                      "time_step": 1,
+                      "time": 1,
+                      "susceptible": 9987.003,
+                      "infected": 11.997,
+                      "recovered": 1
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed JSON, missing/incorrect fields, or invalid SIR parameters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "invalid JSON request body"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Numerical instability or unexpected internal error. Internal details are not exposed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -575,6 +660,128 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/BuildingDetail"
+          }
+        }
+      },
+      "SirSimulationRequest": {
+        "type": "object",
+        "required": [
+          "population",
+          "susceptible",
+          "infected",
+          "recovered",
+          "beta",
+          "gamma",
+          "dt",
+          "steps"
+        ],
+        "properties": {
+          "population": {
+            "type": "number",
+            "format": "double",
+            "exclusiveMinimum": 0,
+            "description": "Total population; finite and greater than zero."
+          },
+          "susceptible": {
+            "type": "number",
+            "format": "double",
+            "minimum": 0
+          },
+          "infected": {
+            "type": "number",
+            "format": "double",
+            "minimum": 0
+          },
+          "recovered": {
+            "type": "number",
+            "format": "double",
+            "minimum": 0
+          },
+          "beta": {
+            "type": "number",
+            "format": "double",
+            "minimum": 0,
+            "description": "Transmission rate in inverse caller-defined time units."
+          },
+          "gamma": {
+            "type": "number",
+            "format": "double",
+            "minimum": 0,
+            "description": "Recovery rate in inverse caller-defined time units."
+          },
+          "dt": {
+            "type": "number",
+            "format": "double",
+            "exclusiveMinimum": 0,
+            "description": "Integration interval in the same time unit as beta and gamma."
+          },
+          "steps": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000
+          }
+        },
+        "description": "Initial susceptible + infected + recovered must equal population within the domain tolerance. dt × steps must not exceed 10,000 caller-defined time units."
+      },
+      "SirSimulationPoint": {
+        "type": "object",
+        "required": [
+          "time_step",
+          "time",
+          "susceptible",
+          "infected",
+          "recovered"
+        ],
+        "properties": {
+          "time_step": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "time": {
+            "type": "number",
+            "format": "double",
+            "minimum": 0,
+            "description": "time_step × dt."
+          },
+          "susceptible": {
+            "type": "number",
+            "format": "double",
+            "minimum": 0
+          },
+          "infected": {
+            "type": "number",
+            "format": "double",
+            "minimum": 0
+          },
+          "recovered": {
+            "type": "number",
+            "format": "double",
+            "minimum": 0
+          }
+        }
+      },
+      "SirSimulationResponse": {
+        "type": "object",
+        "required": [
+          "population",
+          "point_count",
+          "points"
+        ],
+        "properties": {
+          "population": {
+            "type": "number",
+            "format": "double"
+          },
+          "point_count": {
+            "type": "integer",
+            "minimum": 2,
+            "description": "Number of returned points; always steps + 1, including the initial state."
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SirSimulationPoint"
+            }
           }
         }
       }

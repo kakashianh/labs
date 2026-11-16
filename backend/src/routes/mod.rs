@@ -4,3 +4,4 @@ pub mod buildings;
 pub mod health;
 pub mod openapi;
 pub mod regions;
+pub mod simulations;
