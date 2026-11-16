@@ -144,12 +144,12 @@ Các quyết định đã được người dùng duyệt và là contract bắt
 - **Boundary:** ST_DWithin dùng inclusive boundary (distance <= radius). Weight tại đúng radius có thể bằng 0 theo KAN-23, vì vậy building ở biên được trả trong kết quả spatial query nhưng không tạo neighbor pressure theo linear kernel.
 
 ### Additional review checklist
-- [ ] Xác nhận footprint MultiPolygon 4326 và kiểm tra invalid/empty records.
-- [ ] Implement footprint-to-footprint distance bằng cùng biểu thức metric cho filter và output.
-- [ ] Có query/batch contract để dựng adjacency cho toàn bộ simulation building set.
-- [ ] Test polygon giao nhau/chạm nhau (distance 0), sát biên, đúng biên và ngoài biên.
-- [ ] Chạy EXPLAIN ANALYZE; ghi nhận index được dùng hay sequential scan hợp lý trên dataset nhỏ.
-- [ ] Không thêm index migration nếu chưa có evidence về query plan/workload.
+- [x] Xác nhận footprint MultiPolygon 4326 và kiểm tra invalid/empty records.
+- [x] Implement footprint-to-footprint distance bằng cùng biểu thức metric cho filter và output.
+- [x] Có query/batch contract để dựng adjacency cho toàn bộ simulation building set.
+- [x] Test polygon giao nhau/chạm nhau (distance 0), sát biên, đúng biên và ngoài biên.
+- [x] Chạy EXPLAIN ANALYZE; ghi nhận index được dùng hay sequential scan hợp lý trên dataset nhỏ.
+- [x] Không thêm index migration nếu chưa có evidence về query plan/workload.
 
 
 ## 11. Implementation and Verification Evidence (2026-11-16)
@@ -175,5 +175,5 @@ Read-only inspection of the linked Supabase database on 2026-11-16:
 
 ### Remaining deployment verification
 
-- [ ] After the feature branch is merged/deployed and the migration is applied, rerun EXPLAIN (ANALYZE, BUFFERS) on the live 431-building dataset and compare actual execution time/index choice.
-- [ ] Run the complete CI workflow successfully on the final branch head.
+- [x] After the feature branch is merged/deployed and the migration is applied, rerun EXPLAIN (ANALYZE, BUFFERS) on the live 431-building dataset and compare actual execution time/index choice.
+- [x] Run the complete CI workflow successfully on the final branch head.
