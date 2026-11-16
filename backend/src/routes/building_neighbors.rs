@@ -13,7 +13,6 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-const MAX_RADIUS_M: f64 = 5_000.0;
 const DEFAULT_LIMIT: i64 = 100;
 const MAX_LIMIT: i64 = 500;
 
@@ -45,9 +44,9 @@ impl NeighborQuery {
             .ok_or_else(|| AppError::BadRequest("radius_m is required".into()))?
             .parse::<f64>()
             .map_err(|_| AppError::BadRequest("radius_m must be a finite number".into()))?;
-        if !radius_m.is_finite() || radius_m <= 0.0 || radius_m > MAX_RADIUS_M {
+        if !radius_m.is_finite() || radius_m <= 0.0 || radius_m > building_neighbors::MAX_NEIGHBOR_RADIUS_M {
             return Err(AppError::BadRequest(format!(
-                "radius_m must be greater than 0 and no greater than {MAX_RADIUS_M}"
+                "radius_m must be greater than 0 and no greater than {building_neighbors::MAX_NEIGHBOR_RADIUS_M}"
             )));
         }
 
