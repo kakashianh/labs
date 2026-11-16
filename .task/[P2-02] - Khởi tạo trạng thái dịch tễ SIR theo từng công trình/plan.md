@@ -126,3 +126,23 @@ Không tạo bảng trùng nếu schema/branch đã có cấu trúc tương đư
 ## 9. Definition of Done
 
 KAN-22 hoàn thành khi mỗi building đủ điều kiện được khởi tạo S/I/R hợp lệ, có nguồn population rõ ràng, seed infections cấu hình được và trạng thái được lưu an toàn theo simulation run.
+
+## 10. Approved Decisions and Review Additions (2026-11-16)
+
+Các quyết định đã được người dùng duyệt:
+
+- **Population source:** nhập thủ công (manual) theo từng building trong cấu hình simulation run. Không suy luận từ footprint, số tầng, loại công trình hoặc OSM metadata.
+- **Numeric representation:** giữ f64/expected aggregate counts tương thích với SirInput và Phase 1. Không tự chuyển sang integer trong schema hoặc service.
+- **Missing population:** building không được cung cấp population hợp lệ sẽ bị loại khỏi tập eligible và phải có exclusion reason trong kết quả khởi tạo; không tự gán mặc định.
+- **Initial state:** N_i và I0_i phải được cung cấp/xác định rõ; R0_i chỉ mặc định 0 theo contract nếu không có recovered seed. Tính S0_i = N_i - I0_i - R0_i. Không tự mặc định infected seed cho building bất kỳ.
+- **Validation:** N_i > 0, mọi giá trị finite/non-negative, I0_i + R0_i <= N_i; S+I+R=N theo tolerance tương thích Phase 1.
+- **No fabricated data:** lưu source/method là manual input và thời điểm tạo run để có thể audit cấu hình.
+
+### Additional review checklist
+- [ ] API/schema nhận population manual gắn với building UUID, không nhận theo array index hoặc display name.
+- [ ] Xử lý duplicate building IDs và unknown building IDs.
+- [ ] Validate missing, zero, negative, NaN/Infinity (nếu đi qua serialization/domain) và over-population.
+- [ ] Response phân biệt eligible buildings với excluded buildings và lý do loại.
+- [ ] Persist initial values bằng kiểu dữ liệu tương thích f64 của Phase 1.
+- [ ] Test rollback toàn transaction nếu contract yêu cầu atomic initialization và có một building input invalid.
+- [ ] Không tạo population mặc định hoặc seed infection ngầm.
