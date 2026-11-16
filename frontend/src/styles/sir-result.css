@@ -238,3 +238,126 @@
   .sir-chart-legend { gap: 8px 12px; padding-left: 8px; }
   .sir-chart { min-width: 360px; }
 }
+
+.sir-config-panel {
+  position: absolute;
+  z-index: 16;
+  top: 16px;
+  right: 16px;
+  width: min(360px, calc(100% - 32px));
+  max-height: min(58vh, 560px);
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid rgb(148 163 184 / 28%);
+  border-radius: 14px;
+  background: rgb(15 23 42 / 95%);
+  color: #e2e8f0;
+  box-shadow: 0 16px 40px rgb(0 0 0 / 34%);
+  backdrop-filter: blur(14px);
+}
+
+.sir-config-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.sir-config-header h2 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 17px;
+}
+
+.sir-config-method {
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  border: 1px solid rgb(148 163 184 / 25%);
+  border-radius: 7px;
+  color: #cbd5e1;
+  font-size: 10px;
+}
+
+.sir-config-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sir-config-field {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  color: #cbd5e1;
+  font-size: 11px;
+}
+
+.sir-config-field input {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid rgb(148 163 184 / 32%);
+  border-radius: 7px;
+  outline: none;
+  background: rgb(30 41 59 / 90%);
+  color: #f8fafc;
+  font: inherit;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sir-config-field input:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 2px rgb(96 165 250 / 18%);
+}
+
+.sir-config-hint {
+  margin: 12px 0;
+  color: #94a3b8;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.sir-config-error {
+  margin: 8px 0;
+  color: #fecaca;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.sir-config-submit {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #3b82f6;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.sir-config-submit:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.sir-config-submit:disabled {
+  opacity: .55;
+  cursor: wait;
+}
+
+@media (max-width: 640px) {
+  .sir-config-panel {
+    top: 68px;
+    right: 10px;
+    width: min(340px, calc(100% - 20px));
+    max-height: 38vh;
+    padding: 12px;
+  }
+
+  .sir-config-header h2 { font-size: 15px; }
+  .sir-config-fields { gap: 8px; }
+  .sir-config-field input { padding: 7px; }
+}
