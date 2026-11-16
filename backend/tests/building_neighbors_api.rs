@@ -105,6 +105,7 @@ async fn building_neighbor_api_uses_metric_footprint_distance_and_batch_adjacenc
     )
     .await;
 
+    let missing_id = Uuid::new_v4();
     let app = router(AppState::new(pool.clone()));
     let response = app
         .clone()
@@ -183,7 +184,7 @@ async fn building_neighbor_api_uses_metric_footprint_distance_and_batch_adjacenc
             StatusCode::BAD_REQUEST,
         ),
         (
-            format!("/api/v1/buildings/{Uuid::new_v4()}/neighbors"),
+            format!("/api/v1/buildings/{missing_id}/neighbors"),
             StatusCode::NOT_FOUND,
         ),
     ] {
