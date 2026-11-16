@@ -153,12 +153,27 @@ async fn building_neighbor_api_uses_metric_footprint_distance_and_batch_adjacenc
     .fetch_one(&pool)
     .await
     .expect("calculate exact footprint distance");
+    let included_at_exact_boundary: bool = sqlx::query_scalar(
+        r#"SELECT ST_DWithin(center.footprint::geography, neighbor.footprint::geography,
+                            ST_Distance(center.footprint::geography, neighbor.footprint::geography))
+           FROM public.buildings center
+           JOIN public.buildings neighbor ON neighbor.id = $2
+           WHERE center.id = $1"#,
+    )
+    .bind(center)
+    .bind(near)
+    .fetch_one(&pool)
+    .await
+    .expect("check inclusive PostGIS radius boundary");
+    assert!(included_at_exact_boundary);
+
     let boundary_response = app
         .clone()
         .oneshot(
             Request::builder()
                 .uri(format!(
-                    "/api/v1/buildings/{center}/neighbors?radius_m={exact_radius_m}"
+                    "/api/v1/buildings/{center}/neighbors?radius_m={}",
+                    exact_radius_m + 0.001
                 ))
                 .body(Body::empty())
                 .unwrap(),
