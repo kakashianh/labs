@@ -141,6 +141,38 @@ async fn building_neighbor_api_uses_metric_footprint_distance_and_batch_adjacenc
         .iter()
         .any(|item| item["building_id"] == invalid.to_string()));
 
+    let query_plan: Value = sqlx::query_scalar(
+        r#"
+        EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
+        WITH valid_buildings AS MATERIALIZED (
+            SELECT id, footprint
+            FROM public.buildings
+            WHERE id <> $1
+              AND ST_SRID(footprint) = 4326
+              AND NOT ST_IsEmpty(footprint)
+              AND ST_IsValid(footprint)
+        )
+        SELECT neighbor.id AS building_id,
+               ST_Distance(center.footprint::geography,
+                           neighbor.footprint::geography) AS distance_m
+        FROM public.buildings AS center
+        JOIN valid_buildings AS neighbor
+          ON ST_DWithin(center.footprint::geography,
+                        neighbor.footprint::geography, $2)
+        WHERE center.id = $1
+        ORDER BY distance_m ASC, neighbor.id ASC
+        LIMIT $3
+        "#,
+    )
+    .bind(center)
+    .bind(20.0_f64)
+    .bind(10_i64)
+    .fetch_one(&pool)
+    .await
+    .expect("EXPLAIN ANALYZE neighbor query");
+    assert!(query_plan[0]["Plan"].is_object());
+    println!("PostGIS neighbor EXPLAIN ANALYZE: {query_plan}");
+
     // The batch graph is undirected: each pair occurs once and invalid geometries
     // never enter the graph.
     let missing_building = Uuid::new_v4();
