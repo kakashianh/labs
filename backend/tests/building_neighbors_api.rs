@@ -190,9 +190,10 @@ async fn building_neighbor_api_uses_metric_footprint_distance_and_batch_adjacenc
         .edges
         .iter()
         .all(|edge| edge.building_a_id < edge.building_b_id));
-    assert!(adjacency.edges.iter().all(|edge| {
-        edge.building_a_id != invalid && edge.building_b_id != invalid
-    }));
+    assert!(adjacency
+        .edges
+        .iter()
+        .all(|edge| { edge.building_a_id != invalid && edge.building_b_id != invalid }));
     assert!(adjacency.edges.iter().any(|edge| {
         edge.building_a_id == center && edge.building_b_id == touching
             || edge.building_a_id == touching && edge.building_b_id == center
