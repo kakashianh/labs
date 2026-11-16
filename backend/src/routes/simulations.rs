@@ -167,6 +167,7 @@ mod tests {
 
         for (index, point) in points.iter().enumerate() {
             assert_eq!(point["time_step"], index);
+            assert!((point["time"].as_f64().unwrap() - index as f64 * 0.1).abs() < 1e-12);
             let susceptible = point["susceptible"].as_f64().unwrap();
             let infected = point["infected"].as_f64().unwrap();
             let recovered = point["recovered"].as_f64().unwrap();
@@ -200,6 +201,101 @@ mod tests {
         excessive["steps"] = serde_json::json!(100_001);
         let response = post_json(&excessive.to_string()).await;
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn repeated_requests_are_deterministic_and_isolated() {
+        let app = app();
+        let first_request = valid_request();
+
+        let first_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/simulations/sir")
+                    .header("content-type", "application/json")
+                    .body(Body::from(first_request.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(first_response.status(), StatusCode::OK);
+        let first_body = response_json(first_response).await;
+
+        let mut different_request = valid_request();
+        different_request["beta"] = serde_json::json!(0.0);
+        different_request["gamma"] = serde_json::json!(0.0);
+        different_request["steps"] = serde_json::json!(2);
+        let second_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/simulations/sir")
+                    .header("content-type", "application/json")
+                    .body(Body::from(different_request.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(second_response.status(), StatusCode::OK);
+        let second_body = response_json(second_response).await;
+
+        let repeated_response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/simulations/sir")
+                    .header("content-type", "application/json")
+                    .body(Body::from(first_request.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(repeated_response.status(), StatusCode::OK);
+        let repeated_body = response_json(repeated_response).await;
+
+        assert_eq!(
+            first_body, repeated_body,
+            "same input must produce the same series"
+        );
+        assert_ne!(
+            first_body, second_body,
+            "different inputs must produce independent series"
+        );
+        for point in second_body["points"].as_array().unwrap() {
+            assert_eq!(point["susceptible"], 990.0);
+            assert_eq!(point["infected"], 10.0);
+            assert_eq!(point["recovered"], 0.0);
+        }
+    }
+
+    #[tokio::test]
+    async fn valid_json_with_invalid_population_state_and_time_parameters_returns_bad_request() {
+        let mut invalid_population = valid_request();
+        invalid_population["population"] = serde_json::json!(0.0);
+
+        let mut invalid_initial_total = valid_request();
+        invalid_initial_total["susceptible"] = serde_json::json!(989.0);
+
+        let mut invalid_dt = valid_request();
+        invalid_dt["dt"] = serde_json::json!(0.0);
+
+        let mut invalid_steps = valid_request();
+        invalid_steps["steps"] = serde_json::json!(0);
+
+        for invalid in [
+            invalid_population,
+            invalid_initial_total,
+            invalid_dt,
+            invalid_steps,
+        ] {
+            let response = post_json(&invalid.to_string()).await;
+            assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+            let body = response_json(response).await;
+            assert!(body["error"].is_string());
+        }
     }
 
     #[tokio::test]
