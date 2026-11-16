@@ -57,7 +57,7 @@ The source footprint is geometry(MultiPolygon, 4326). Both ST_DWithin and ST_Dis
 
 The response includes excluded_invalid_geometry_count. Neighbor candidates with an unexpected SRID, empty footprint, or invalid footprint are excluded and counted. A center building with such a footprint returns HTTP 400. A missing center returns HTTP 404. No neighbors is HTTP 200 with data: [].
 
-The repository also exposes db::building_neighbors::build_building_adjacency for a batch of UUIDs. It returns each undirected pair once, ordered by UUID, for later simulation graph construction. Invalid geometries are excluded by the batch query; callers should use data preflight to detect invalid input records.
+The repository also exposes db::building_neighbors::build_building_adjacency for a batch of UUIDs. It returns each undirected pair once, ordered by UUID, plus excluded_invalid_geometry_count and missing_building_count so simulation setup can reject or report incomplete input instead of silently treating it as a complete graph.
 
 Example:
 
