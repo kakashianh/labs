@@ -1,3 +1,14 @@
+export interface SirSimulationRequest {
+  population: number
+  susceptible: number
+  infected: number
+  recovered: number
+  beta: number
+  gamma: number
+  dt: number
+  steps: number
+}
+
 export interface SirPoint {
   time_step: number
   time: number
