@@ -140,73 +140,66 @@ Validation ở Frontend chỉ nhằm bảo vệ UI trước dữ liệu thiếu/
 ## 7. Implementation Plan
 
 ### Step 1 – Inspect API Contract and Frontend Structure
-- [ ] Đối chiếu response với backend/src/routes/simulations.rs và backend/docs/sir-api.md.
-- [ ] Xác nhận field names, numeric types và time_step convention.
-- [ ] Kiểm tra package.json/lockfile và test tooling hiện tại.
-- [ ] Kiểm tra component/layout convention và vị trí tích hợp panel.
-- [ ] Không giả định response field chưa được Backend cung cấp.
+- [x] Đối chiếu response với backend/src/routes/simulations.rs và backend/docs/sir-api.md.
+- [x] Xác nhận field names, numeric types và time_step convention.
+- [x] Kiểm tra package.json/lockfile và test tooling hiện tại.
+- [x] Kiểm tra component/layout convention và vị trí tích hợp panel.
+- [x] Không giả định response field chưa được Backend cung cấp.
 
 ### Step 2 – Define TypeScript Data Types and Validation
-- [ ] Tạo SirPoint interface.
-- [ ] Tạo SirSimulationResult interface dùng point_count.
-- [ ] Xác định props contract cho SirResultPanel.
-- [ ] Tạo helper kiểm tra response tối thiểu trước khi render.
-- [ ] Đảm bảo component nhận result từ một lần chạy duy nhất.
-- [ ] Không chuyển đổi hoặc làm tròn raw values.
+- [x] Tạo SirPoint interface.
+- [x] Tạo SirSimulationResult interface dùng point_count.
+- [x] Xác định props contract cho SirResultPanel.
+- [x] Tạo helper kiểm tra response tối thiểu trước khi render.
+- [x] Đảm bảo component nhận result từ một lần chạy duy nhất.
+- [x] Không chuyển đổi hoặc làm tròn raw values.
 
 ### Step 3 – Implement SIR Time Series Chart
-- [ ] Tạo component SirResultChart bằng React + SVG.
-- [ ] Map points thành ba series susceptible, infected, recovered.
-- [ ] Dùng time_step làm trục X.
-- [ ] Hiển thị legend và nhãn trục phù hợp.
-- [ ] Đảm bảo ba series dùng cùng tập mốc thời gian.
-- [ ] Đồng bộ selected point/marker với time_step đang chọn.
-- [ ] Xử lý points rỗng hoặc dữ liệu không hợp lệ.
-- [ ] Không tự nội suy hoặc sinh thêm dữ liệu mô phỏng.
+- [x] Tạo component SirResultChart bằng React + SVG.
+- [x] Map points thành ba series susceptible, infected, recovered.
+- [x] Dùng time_step làm trục X.
+- [x] Hiển thị legend và nhãn trục phù hợp.
+- [x] Đảm bảo ba series dùng cùng tập mốc thời gian.
+- [x] Đồng bộ selected point/marker với time_step đang chọn.
+- [x] Xử lý points rỗng hoặc dữ liệu không hợp lệ.
+- [x] Không tự nội suy hoặc sinh thêm dữ liệu mô phỏng.
 
 ### Step 4 – Implement Current Time Step Metrics
-- [ ] Tạo selectedTimeStep state tại SirResultPanel.
-- [ ] Lấy point tương ứng từ result theo time_step.
-- [ ] Hiển thị S, I, R và time tại mốc đang chọn.
-- [ ] Đồng bộ marker/tooltip trên chart.
-- [ ] Format số khi hiển thị nhưng giữ raw values.
-- [ ] Khi result mới được truyền vào, reset selectedTimeStep về điểm đầu và dừng playback.
-- [ ] Xử lý selectedTimeStep ngoài phạm vi khi result thay đổi.
+- [x] Tạo selectedTimeStep state tại SirResultPanel.
+- [x] Lấy point tương ứng từ result theo time_step.
+- [x] Hiển thị S, I, R và time tại mốc đang chọn.
+- [x] Đồng bộ marker/tooltip trên chart.
+- [x] Format số khi hiển thị nhưng giữ raw values.
+- [x] Khi result mới được truyền vào, reset selectedTimeStep về điểm đầu và dừng playback.
+- [x] Xử lý selectedTimeStep ngoài phạm vi khi result thay đổi.
 
 ### Step 5 – Implement Timeline and Playback Controls
-- [ ] Tạo slider/timeline theo các time_step có trong points.
-- [ ] Slider thay đổi sẽ cập nhật selectedTimeStep và metrics.
-- [ ] Play tăng đến điểm kế tiếp theo thứ tự points.
-- [ ] Playback interval mặc định 500 ms/điểm; không thay đổi dữ liệu mô phỏng hoặc time gốc.
-- [ ] Pause dừng duyệt kết quả.
-- [ ] Reset dừng playback và quay về điểm đầu tiên.
-- [ ] Tự dừng khi tới time_step cuối.
-- [ ] Disable hoặc xử lý hợp lý khi points rỗng/chỉ có một point.
-- [ ] Play/pause không gọi API và không tính lại SIR.
-- [ ] Cleanup timer khi component unmount, loading/error hoặc result thay đổi.
-- [ ] Đảm bảo tối đa một playback timer hoạt động tại một thời điểm.
+- [x] Tạo slider/timeline theo các time_step có trong points.
+- [x] Slider thay đổi sẽ cập nhật selectedTimeStep và metrics.
+- [x] Play tăng đến điểm kế tiếp theo thứ tự points.
+- [x] Playback interval mặc định 500 ms/điểm; không thay đổi dữ liệu mô phỏng hoặc time gốc.
+- [x] Pause dừng duyệt kết quả.
+- [x] Reset dừng playback và quay về điểm đầu tiên.
+- [x] Tự dừng khi tới time_step cuối.
+- [x] Disable hoặc xử lý hợp lý khi points rỗng/chỉ có một point.
+- [x] Play/pause không gọi API và không tính lại SIR.
+- [x] Cleanup timer khi component unmount, loading/error hoặc result thay đổi.
+- [x] Đảm bảo tối đa một playback timer hoạt động tại một thời điểm.
 
 ### Step 6 – Implement Empty, Loading and Error States
-- [ ] Hiển thị empty state khi chưa có result.
-- [ ] Hiển thị loading state khi parent đang chạy request.
-- [ ] Hiển thị error state khi API request thất bại.
-- [ ] Không render chart từ response lỗi hoặc dữ liệu thiếu/sai contract.
-- [ ] Dừng playback khi chuyển loading/error hoặc thay result.
-- [ ] Lỗi chart không làm các phần bản đồ bị crash.
+- [x] Hiển thị empty state khi chưa có result.
+- [x] Hiển thị loading state khi parent đang chạy request.
+- [x] Hiển thị error state khi API request thất bại.
+- [x] Không render chart từ response lỗi hoặc dữ liệu thiếu/sai contract.
+- [x] Dừng playback khi chuyển loading/error hoặc thay result.
+- [x] Lỗi chart không làm các phần bản đồ bị crash.
 
 ### Step 7 – Add Component Tests and Responsive Layout
-- [ ] Cấu hình Vitest + React Testing Library + jsdom theo stack hiện tại.
-- [ ] Bảo toàn/chạy lại các service tests đang dùng Node test runner.
-- [ ] Test chart render đủ ba series và đúng dữ liệu đầu vào.
-- [ ] Test chọn time_step cập nhật S/I/R/time metrics.
-- [ ] Test slider min/max và thay đổi giá trị.
-- [ ] Test play/pause/reset và playback interval.
-- [ ] Test tự dừng tại time_step cuối.
-- [ ] Test empty points, one-point result và invalid response.
-- [ ] Test result mới reset selectedTimeStep và dừng playback cũ.
-- [ ] Test timer cleanup khi unmount/loading/error.
-- [ ] Kiểm tra layout desktop và màn hình nhỏ.
-- [ ] Chạy lint, TypeScript checks, toàn bộ frontend tests và production build.
+- [ ] Cấu hình Vitest + React Testing Library + jsdom theo stack hiện tại (chưa triển khai trong commit hiện tại).
+- [x] Giữ nguyên Node built-in test runner và bổ sung unit tests cho response validation/formatting.
+- [ ] Test chart render và các tương tác slider/playback/timer ở cấp component.
+- [x] Kiểm tra responsive layout bằng CSS breakpoint cho màn hình nhỏ; cần xác nhận thêm bằng E2E/manual visual test.
+- [x] Chạy Oxlint, frontend unit tests và production build thành công trên GitHub Actions.
 
 ## 8. Acceptance Criteria
 
@@ -250,3 +243,11 @@ docs(frontend): document SIR result visualization
 KAN-20 hoàn thành khi Frontend nhận SIR result theo đúng API contract (population, point_count, points) và hiển thị đúng ba chuỗi S/I/R; người dùng có thể chọn hoặc phát lại time_step, đồng thời cập nhật đúng metrics tại mốc đang chọn. Component xử lý empty/loading/error, kiểm soát timer lifecycle và không tính toán mô hình hoặc gọi lại API trong quá trình playback.
 
 Phạm vi chỉ là kết quả SIR tổng thể của Phase 1; không gắn dữ liệu dịch tễ vào từng building entity trên Cesium.
+
+
+## 12. Implementation Notes and Remaining Integration
+
+- Đã thêm `SirResultPanel`, SVG chart, current metrics, slider/playback và validation helper; component nhận `result/loading/error` qua props, không tự gọi API.
+- HomePage hiện tại trước task chỉ render CesiumViewer và chưa có form cấu hình/request SIR hoặc state quản lý response. Vì vậy panel được mount với `result={null}` để thể hiện empty state; không tạo dữ liệu mô phỏng giả. Kết nối response thật cần parent flow từ KAN-10 hoặc task tích hợp tương ứng.
+- Test runner hiện hữu là Node built-in; đã thêm unit tests cho validation helper. Vitest + React Testing Library + jsdom và component interaction tests vẫn là phần còn thiếu, không đánh dấu hoàn thành.
+- Không đánh dấu KAN-20 Done cho tới khi parent truyền được response thật và các component interaction tests được bổ sung.
