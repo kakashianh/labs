@@ -248,8 +248,9 @@ export default function SirResultPanel({ result, loading, error }: SirResultPane
     return () => window.clearInterval(timer)
   }, [playing, loading, error, validResult])
 
-  const point = validResult?.points[selectedTimeStep]
-  const isAtEnd = Boolean(validResult && selectedTimeStep >= validResult.point_count - 1)
+  const effectiveTimeStep = validResult ? Math.min(selectedTimeStep, validResult.point_count - 1) : 0
+  const point = validResult?.points[effectiveTimeStep]
+  const isAtEnd = Boolean(validResult && effectiveTimeStep >= validResult.point_count - 1)
 
   useEffect(() => {
     if (playing && isAtEnd) setPlaying(false)
@@ -293,13 +294,13 @@ export default function SirResultPanel({ result, loading, error }: SirResultPane
       <SirResultChart
         points={validResult.points}
         population={validResult.population}
-        selectedTimeStep={selectedTimeStep}
-        onSelect={setSelectedTimeStep}
+        selectedTimeStep={effectiveTimeStep}
+        onSelect={(timeStep) => { setPlaying(false); setSelectedTimeStep(timeStep) }}
       />
       <SirCurrentMetrics point={point} />
       <SirPlaybackControls
         pointCount={validResult.point_count}
-        selectedTimeStep={selectedTimeStep}
+        selectedTimeStep={effectiveTimeStep}
         playing={playing}
         onSelect={(timeStep) => { setPlaying(false); setSelectedTimeStep(timeStep) }}
         onPlay={() => setPlaying(true)}
