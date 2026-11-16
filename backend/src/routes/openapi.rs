@@ -36,6 +36,8 @@ mod tests {
         assert!(spec["paths"]["/api/v1/regions"]["get"].is_object());
         assert!(spec["paths"]["/api/v1/regions/{region_id}"]["get"].is_object());
         assert!(spec["paths"]["/api/v1/buildings/{building_id}"]["get"].is_object());
+        assert!(spec["paths"]["/api/v1/buildings/{building_id}/neighbors"]["get"].is_object());
+        assert!(spec["components"]["schemas"]["BuildingNeighborsResponse"].is_object());
         assert!(spec["paths"]["/api/v1/simulations/sir"]["post"].is_object());
         assert!(spec["components"]["schemas"]["SirSimulationRequest"].is_object());
         assert!(spec["components"]["schemas"]["SirSimulationResponse"].is_object());
