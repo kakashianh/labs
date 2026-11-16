@@ -199,3 +199,22 @@ The first GitHub Actions run for this implementation is pending. Component tests
 ## 10. Definition of Done
 
 P1-16 is complete only when a user can enter valid SIR parameters, submit them to the real Backend API, and inspect the returned S/I/R series through the visualization controls. Request lifecycle, response contract, component interactions, E2E behavior and CI must all be verified. No fake response may be used to satisfy the flow.
+
+## 11. Live Browser Smoke Test Evidence (2026-11-16)
+
+A read-only browser smoke test was completed against the deployed application at `https://4fff-23-97-62-136.ngrok-free.app/`.
+
+| Check | Observed result |
+|---|---|
+| Application page load | Passed; dashboard and SIR form rendered |
+| Map data | 1 area and 431 buildings reported by the UI |
+| Default SIR configuration | N=1000, S=990, I=10, R=0, beta=0.3, gamma=0.1, dt=0.1, steps=100 |
+| Submit using the real deployed API | Passed; result panel reached success state |
+| Response series | 101 points, timestep 0 through 100 |
+| Initial metrics | S=990, I=10, R=0 |
+| Chart | Three S/I/R series rendered |
+| Playback controls | Slider, Play and Reset controls visible |
+| Visible page/console errors | None observed during this smoke test |
+| Data mutation | None; default values only, no persistence operation |
+
+This is manual browser smoke-test evidence only. It does not replace automated component tests, automated browser E2E, API error-path tests, or CI verification. Keep the related acceptance checkboxes open until those automated checks pass.
