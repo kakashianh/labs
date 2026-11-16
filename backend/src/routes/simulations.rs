@@ -203,6 +203,68 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn repeated_requests_are_deterministic_and_isolated() {
+        let app = app();
+        let first_request = valid_request();
+
+        let first_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/simulations/sir")
+                    .header("content-type", "application/json")
+                    .body(Body::from(first_request.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(first_response.status(), StatusCode::OK);
+        let first_body = response_json(first_response).await;
+
+        let mut different_request = valid_request();
+        different_request["beta"] = serde_json::json!(0.0);
+        different_request["gamma"] = serde_json::json!(0.0);
+        different_request["steps"] = serde_json::json!(2);
+        let second_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/simulations/sir")
+                    .header("content-type", "application/json")
+                    .body(Body::from(different_request.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(second_response.status(), StatusCode::OK);
+        let second_body = response_json(second_response).await;
+
+        let repeated_response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/simulations/sir")
+                    .header("content-type", "application/json")
+                    .body(Body::from(first_request.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(repeated_response.status(), StatusCode::OK);
+        let repeated_body = response_json(repeated_response).await;
+
+        assert_eq!(first_body, repeated_body, "same input must produce the same series");
+        assert_ne!(first_body, second_body, "different inputs must produce independent series");
+        for point in second_body["points"].as_array().unwrap() {
+            assert_eq!(point["susceptible"], 990.0);
+            assert_eq!(point["infected"], 10.0);
+            assert_eq!(point["recovered"], 0.0);
+        }
+    }
+
+    #[tokio::test]
     async fn numerical_instability_returns_generic_internal_error() {
         let mut unstable = valid_request();
         unstable["susceptible"] = serde_json::json!(999.0);
