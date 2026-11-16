@@ -71,42 +71,42 @@ Không hard-code endpoint path trước khi đối chiếu convention routes hi�
 ## 6. Implementation Plan
 
 ### Step 1 – Inspect Existing GIS Schema and Query Conventions
-- [ ] Đọc migration KAN-13 và DB README.
-- [ ] Xác nhận SRID/type thực tế của footprint.
-- [ ] Xác nhận GiST index hiện hữu và dữ liệu invalid/empty.
-- [ ] Kiểm tra query/repository conventions SQLx.
-- [ ] Chốt distance semantics và identifier contract.
+- [x] Đọc migration KAN-13 và DB README.
+- [x] Xác nhận SRID/type thực tế của footprint.
+- [x] Xác nhận GiST index hiện hữu và dữ liệu invalid/empty.
+- [x] Kiểm tra query/repository conventions SQLx.
+- [x] Chốt distance semantics và identifier contract.
 
 ### Step 2 – Design and Verify Spatial SQL
-- [ ] Viết truy vấn ST_DWithin theo đơn vị mét.
-- [ ] Tính distance_m nhất quán với predicate filter.
-- [ ] Loại center building khỏi danh sách neighbor.
-- [ ] Thêm deterministic ordering và result limit.
-- [ ] Chạy EXPLAIN/EXPLAIN ANALYZE với dữ liệu hiện có.
-- [ ] Chỉ thêm expression index/migration nếu có bằng chứng cần thiết.
+- [x] Viết truy vấn ST_DWithin theo đơn vị mét.
+- [x] Tính distance_m nhất quán với predicate filter.
+- [x] Loại center building khỏi danh sách neighbor.
+- [x] Thêm deterministic ordering và result limit.
+- [x] Chạy EXPLAIN/EXPLAIN ANALYZE với dữ liệu hiện có.
+- [x] Chỉ thêm expression index/migration nếu có bằng chứng cần thiết.
 
 ### Step 3 – Implement Repository and Service
-- [ ] Tạo query/repository function có bind parameters.
-- [ ] Xử lý center building không tồn tại.
-- [ ] Xử lý radius/limit ngoài miền cho phép.
-- [ ] Trả empty list khi không có neighbor.
-- [ ] Không nối chuỗi SQL từ user input.
+- [x] Tạo query/repository function có bind parameters.
+- [x] Xử lý center building không tồn tại.
+- [x] Xử lý radius/limit ngoài miền cho phép.
+- [x] Trả empty list khi không có neighbor.
+- [x] Không nối chuỗi SQL từ user input.
 
 ### Step 4 – Expose API
-- [ ] Tạo request/response DTO theo API convention.
-- [ ] Đăng ký route trong router.
-- [ ] Map lỗi sang AppError/error envelope hiện tại.
-- [ ] Cập nhật OpenAPI contract.
-- [ ] Viết tài liệu request/response.
+- [x] Tạo request/response DTO theo API convention.
+- [x] Đăng ký route trong router.
+- [x] Map lỗi sang AppError/error envelope hiện tại.
+- [x] Cập nhật OpenAPI contract.
+- [x] Viết tài liệu request/response.
 
 ### Step 5 – Tests and Verification
-- [ ] Unit test validation radius và limit.
-- [ ] Integration test building gần/trong/ngoài bán kính.
-- [ ] Test khoảng cách đúng đơn vị mét.
-- [ ] Test center không xuất hiện trong neighbors.
-- [ ] Test building không tồn tại và danh sách rỗng.
-- [ ] Test geometry boundary và kết quả ổn định.
-- [ ] Kiểm tra query plan/index usage khi phù hợp.
+- [x] Unit test validation radius và limit.
+- [x] Integration test building gần/trong/ngoài bán kính.
+- [x] Test khoảng cách đúng đơn vị mét.
+- [x] Test center không xuất hiện trong neighbors.
+- [x] Test building không tồn tại và danh sách rỗng.
+- [x] Test geometry boundary và kết quả ổn định.
+- [x] Kiểm tra query plan/index usage khi phù hợp.
 - [ ] Chạy backend fmt, Clippy, tests và CI.
 
 ## 7. Acceptance Criteria
@@ -150,3 +150,30 @@ Các quyết định đã được người dùng duyệt và là contract bắt
 - [ ] Test polygon giao nhau/chạm nhau (distance 0), sát biên, đúng biên và ngoài biên.
 - [ ] Chạy EXPLAIN ANALYZE; ghi nhận index được dùng hay sequential scan hợp lý trên dataset nhỏ.
 - [ ] Không thêm index migration nếu chưa có evidence về query plan/workload.
+
+
+## 11. Implementation and Verification Evidence (2026-11-16)
+
+### Implemented on feat/p2-01-postgis-building-adjacency
+
+- API: GET /api/v1/buildings/{building_id}/neighbors?radius_m=...&limit=...
+- radius_m is required (no hidden epidemiological default), finite, greater than 0, and at most 5,000 m. limit defaults to 100 and is capped at 500.
+- Filter and output both use geography casts: ST_DWithin and ST_Distance. The center is excluded; results are ordered by distance_m then building UUID.
+- Center missing -> 404; invalid/empty/non-4326 center -> 400; no neighbors -> 200 with data: [].
+- Response exposes the total invalid/empty/non-4326 footprint count in public.buildings. Batch adjacency returns unique undirected edges plus excluded_invalid_geometry_count and missing_building_count.
+- Added SQLx migration 20261116000000_add_building_footprint_geography_gist_index.sql: partial GiST expression index on (footprint::geography) for valid, non-empty EPSG:4326 footprints.
+- Both single-neighbor and batch adjacency use LATERAL candidate scans so the planner can use the geography expression index.
+
+### Live dataset query-plan review
+
+Read-only inspection of the linked Supabase database on 2026-11-16:
+- 431 buildings; all 431 have SRID 4326; invalid_or_empty_buildings = 0.
+- Existing buildings_footprint_gist_idx is GiST(footprint) on geometry and is not used by geography-cast ST_DWithin.
+- Before the new expression index, the materialized batch self-join at radius 250 m used sequential scans, evaluated 431 × 431 candidate pairs, and took about 5.44 seconds to return 21,387 edges. This is the evidence for adding the geography expression index.
+- The new migration is committed only in this feature branch. It has NOT been applied to the live Supabase database.
+- Testcontainers integration tests run EXPLAIN ANALYZE for both query shapes and assert that the expression index is usable with enable_seqscan=off. This verifies index compatibility, not that the planner should choose it for every small-table workload.
+
+### Remaining deployment verification
+
+- [ ] After the feature branch is merged/deployed and the migration is applied, rerun EXPLAIN (ANALYZE, BUFFERS) on the live 431-building dataset and compare actual execution time/index choice.
+- [ ] Run the complete CI workflow successfully on the final branch head.
