@@ -135,3 +135,41 @@ Trước implementation:
 ## 9. Definition of Done
 
 KAN-24 hoàn thành khi engine mô phỏng đồng bộ SIR theo từng building, kết hợp infection pressure KAN-23, bảo toàn invariants và persist kết quả có thể truy xuất theo simulation run.
+
+## 10. Approved Cross-building SIR Contract (2026-11-16)
+
+Các quyết định đầu vào đã được chốt:
+- Population nhập thủ công theo building (KAN-22), giữ numeric representation f64 tương thích Phase 1.
+- Có local infection contribution.
+- Neighbor influence alpha = 1.0.
+- Khoảng cách neighbor là footprint-to-footprint theo mét.
+
+### Explicit synchronous Euler update
+
+Tại đầu mỗi timestep t, tạo immutable snapshot chứa S_i(t), I_i(t), R_i(t), N_i của tất cả eligible buildings. Tất cả neighbor prevalence ở timestep này chỉ đọc snapshot; tuyệt đối không đọc state đã cập nhật của building trước đó trong vòng lặp.
+
+Với từng building i:
+
+- p_local_i = I_i(t) / N_i
+- w_ij = max(0, 1 - d_ij / radius_m) cho neighbor trong radius.
+- p_neighbor_i = weighted_mean(I_j(t) / N_j, w_ij); bằng 0 nếu không có tổng weight dương.
+- lambda_i = beta * (p_local_i + p_neighbor_i) vì alpha=1.
+- infection_flow_i = min(S_i(t), lambda_i * S_i(t) * dt).
+- recovery_flow_i = min(I_i(t), gamma * I_i(t) * dt).
+- S_i(t+1) = S_i(t) - infection_flow_i.
+- I_i(t+1) = I_i(t) + infection_flow_i - recovery_flow_i.
+- R_i(t+1) = R_i(t) + recovery_flow_i.
+
+Infection và recovery flows cùng được tính từ snapshot đầu bước, giống convention Phase 1. Mọi building được commit sang next-state set sau khi đã tính xong toàn bộ building trong timestep. Thứ tự iteration không được ảnh hưởng kết quả.
+
+### Review and implementation safeguards
+- [ ] Không gọi Phase 1 simulate() độc lập cho từng building vì cách đó bỏ qua neighbor pressure và không đồng bộ.
+- [ ] Tái sử dụng validation/tolerance/numerical error conventions của Phase 1; không duplicate các constants khác nhau nếu có thể chia sẻ an toàn.
+- [ ] Validate conservation S+I+R=N riêng từng building sau mỗi timestep.
+- [ ] Nếu bất kỳ building nào gặp non-finite/invalid state, fail run; không ghi run completed hoặc trả partial series như kết quả hoàn chỉnh.
+- [ ] Tạo next-state buffer riêng, chỉ swap snapshot sau khi toàn bộ building trong timestep hợp lệ.
+- [ ] Persist timestep 0 cùng các timestep tiếp theo; unique (simulation_id, building_id, time_step).
+- [ ] Enforce resource limits trước khi cấp phát: eligible_buildings × (steps+1), không chỉ giới hạn steps.
+- [ ] Batch persistence có transaction/status semantics rõ; retry không tạo duplicate.
+- [ ] Test permutation invariance: đảo thứ tự building đầu vào không làm thay đổi output tương ứng theo building ID.
+- [ ] Test single-building/no-neighbor behavior khớp baseline local SIR; test multi-building spread theo KAN-23.
