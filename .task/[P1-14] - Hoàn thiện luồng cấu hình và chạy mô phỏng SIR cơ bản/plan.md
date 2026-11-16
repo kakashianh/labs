@@ -18,11 +18,11 @@ Xác minh chất lượng luồng Backend từ API đến SIR engine và ngượ
 | Dependency | Required state | Evidence / note |
 |---|---|---|
 | KAN-18 – SIR simulation engine | Đã merge vào `project/3D-map-medical` | Engine có public API `simulate`, `SirInput`, `SirError`, `SirResult` |
-| KAN-19 – SIR simulation API | Phải merge vào `project/3D-map-medical` trước khi triển khai KAN-9 | Hiện đã triển khai và CI success trên `feat/p1-13-sir-simulation-api`; cần xác nhận PR đã merge trước khi tạo branch KAN-9 |
+| KAN-19 – SIR simulation API | Đã có trong `project/3D-map-medical` | Đối chiếu GitHub compare: `feat/p1-13-sir-simulation-api` không còn commit riêng phía trước branch nền (base ahead 3, head ahead 0); CI success run [#43781923654](https://github.com/kakashianh/labs/actions/runs/43781923654) |
 | KAN-20 – Frontend configuration/chart | Không phải dependency để kiểm thử Backend | Chỉ cần giữ response contract tương thích với Frontend |
 
 **Gate trước implementation:**
-- [ ] Xác nhận KAN-18 và KAN-19 đã có mặt trên branch nền `project/3D-map-medical`.
+- [x] Xác nhận KAN-18 và KAN-19 đã có mặt trên branch nền `project/3D-map-medical` (đã đối chiếu trạng thái branch).
 - [ ] Nếu KAN-19 chưa merge, dừng trước khi tạo branch/viết code; không cherry-pick hoặc tạo bản API thay thế trong task này.
 - [ ] Ghi nhận commit nền dùng để tạo branch KAN-9.
 
