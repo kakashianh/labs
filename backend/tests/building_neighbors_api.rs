@@ -224,7 +224,10 @@ async fn building_neighbor_api_uses_metric_footprint_distance_and_batch_adjacenc
     .fetch_one(&mut *plan_tx)
     .await
     .expect("EXPLAIN ANALYZE neighbor query");
-    plan_tx.commit().await.expect("commit query-plan transaction");
+    plan_tx
+        .commit()
+        .await
+        .expect("commit query-plan transaction");
     assert!(query_plan[0]["Plan"].is_object());
     assert!(query_plan
         .to_string()
