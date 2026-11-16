@@ -173,17 +173,17 @@ Không tạo envelope `code/message/details` riêng cho endpoint này. Nếu mu�
 - [x] Không trả panic/stack trace hoặc chi tiết triển khai cho client.
 
 ### Step 6 – Add Router-level API and Integration Tests
-- [ ] Dùng `tower::ServiceExt::oneshot` gửi request qua Axum router thực tế; không chỉ test DTO hoặc helper mapping.
-- [ ] Test request hợp lệ trả HTTP 200 và JSON response đúng schema.
-- [ ] Test trạng thái ban đầu tại `time_step = 0` khớp request.
-- [ ] Test thứ tự time_step và `point_count = points.len() = steps + 1`.
-- [ ] Test mọi point có S/I/R hữu hạn, không âm và tổng S + I + R được bảo toàn trong tolerance domain.
-- [ ] Test malformed JSON, thiếu field và sai kiểu dữ liệu.
-- [ ] Test domain validation error (ví dụ population/state/rates/dt không hợp lệ) được ánh xạ HTTP 400.
-- [ ] Test steps vượt giới hạn domain được ánh xạ HTTP 400.
-- [ ] Test numerical instability được ánh xạ HTTP 500 và response không tiết lộ internal details.
-- [ ] Test response error không chứa stack trace hoặc panic details.
-- [ ] Không cần Testcontainers/PostGIS cho endpoint này nếu router test có thể khởi tạo state tối thiểu mà không truy cập DB.
+- [x] Dùng `tower::ServiceExt::oneshot` gửi request qua Axum router thực tế; không chỉ test DTO hoặc helper mapping.
+- [x] Test request hợp lệ trả HTTP 200 và JSON response đúng schema.
+- [x] Test trạng thái ban đầu tại `time_step = 0` khớp request.
+- [x] Test thứ tự time_step và `point_count = points.len() = steps + 1`.
+- [x] Test mọi point có S/I/R hữu hạn, không âm và tổng S + I + R được bảo toàn trong tolerance domain.
+- [x] Test malformed JSON, thiếu field và sai kiểu dữ liệu.
+- [x] Test domain validation error (ví dụ population/state/rates/dt không hợp lệ) được ánh xạ HTTP 400.
+- [x] Test steps vượt giới hạn domain được ánh xạ HTTP 400.
+- [x] Test numerical instability được ánh xạ HTTP 500 và response không tiết lộ internal details.
+- [x] Test response error không chứa stack trace hoặc panic details.
+- [x] Không cần Testcontainers/PostGIS cho endpoint này nếu router test có thể khởi tạo state tối thiểu mà không truy cập DB.
 
 ### Step 7 – Document API
 - [x] Ghi endpoint, method, content type và request fields.
@@ -202,9 +202,9 @@ Không tạo envelope `code/message/details` riêng cho endpoint này. Nếu mu�
 - [x] Response chứa time_step, time, S, I, R theo thứ tự.
 - [x] Response bao gồm trạng thái ban đầu và đúng `steps + 1` points.
 - [x] API tái sử dụng domain validation và không lặp lại thuật toán.
-- [ ] Lỗi validation trả HTTP 400 theo error envelope hiện có; numerical/internal error trả HTTP 500 và không lộ chi tiết nội bộ.
-- [ ] Có router-level API/integration tests cho success, malformed request, validation failure và internal failure mapping.
-- [ ] Có tài liệu endpoint, units và ví dụ request/response.
+- [x] Lỗi validation trả HTTP 400 theo error envelope hiện có; numerical/internal error trả HTTP 500 và không lộ chi tiết nội bộ.
+- [x] Có router-level API/integration tests cho success, malformed request, validation failure và internal failure mapping.
+- [x] Có tài liệu endpoint, units và ví dụ request/response.
 
 ## 8. Deliverables
 
@@ -230,3 +230,11 @@ docs(api): document SIR simulation endpoint and units
 KAN-19 hoàn thành khi API client có thể gửi request hợp lệ tới endpoint SIR, nhận chuỗi kết quả S/I/R theo time_step (bao gồm trạng thái ban đầu), và nhận lỗi HTTP rõ ràng theo error contract hiện tại khi payload không hợp lệ hoặc quá trình tính toán gặp lỗi nội bộ.
 
 API tái sử dụng SIR engine của KAN-18, không triển khai lại thuật toán hoặc domain validation. Phạm vi chỉ bao gồm API chạy mô phỏng SIR tổng thể; không lưu scenario/history và không trả trạng thái dịch tễ riêng theo từng công trình.
+
+
+## 11. Verification
+
+- CI run [#43781923654](https://github.com/kakashianh/labs/actions/runs/43781923654): Rust formatting, Clippy, `cargo test --lib --all-features`, Testcontainers API integration tests và frontend lint/unit/build đã pass tại lần kiểm tra gần nhất.
+- Docker image build của run trên vẫn đang chạy tại thời điểm cập nhật plan; chưa đánh dấu toàn bộ workflow là success.
+- Các router-level tests trong `routes/simulations.rs` kiểm tra success response, initial point, point count/order, conservation, malformed/missing/wrong-type JSON, domain validation và numerical instability.
+- Chưa thực hiện deploy hoặc kiểm thử endpoint trên môi trường Render.
