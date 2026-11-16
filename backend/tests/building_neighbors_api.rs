@@ -141,6 +141,41 @@ async fn building_neighbor_api_uses_metric_footprint_distance_and_batch_adjacenc
         .iter()
         .any(|item| item["building_id"] == invalid.to_string()));
 
+    // ST_DWithin is inclusive at the exact footprint distance.
+    let exact_radius_m: f64 = sqlx::query_scalar(
+        r#"SELECT ST_Distance(center.footprint::geography, neighbor.footprint::geography)
+           FROM public.buildings center
+           JOIN public.buildings neighbor ON neighbor.id = $2
+           WHERE center.id = $1"#,
+    )
+    .bind(center)
+    .bind(near)
+    .fetch_one(&pool)
+    .await
+    .expect("calculate exact footprint distance");
+    let boundary_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri(format!(
+                    "/api/v1/buildings/{center}/neighbors?radius_m={exact_radius_m:.15}"
+                ))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(boundary_response.status(), StatusCode::OK);
+    let boundary_body = axum::body::to_bytes(boundary_response.into_body(), 1024 * 1024)
+        .await
+        .unwrap();
+    let boundary_json: Value = serde_json::from_slice(&boundary_body).unwrap();
+    assert!(boundary_json["data"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|item| item["building_id"] == near.to_string()));
+
     let query_plan: Value = sqlx::query_scalar(
         r#"
         EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
