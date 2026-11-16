@@ -236,6 +236,10 @@ async fn building_neighbor_api_uses_metric_footprint_distance_and_batch_adjacenc
 
     for (uri, expected) in [
         (
+            format!("/api/v1/buildings/{center}/neighbors?limit=10"),
+            StatusCode::BAD_REQUEST,
+        ),
+        (
             format!("/api/v1/buildings/{center}/neighbors?radius_m=0"),
             StatusCode::BAD_REQUEST,
         ),
