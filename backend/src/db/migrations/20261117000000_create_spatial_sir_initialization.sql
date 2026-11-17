@@ -19,7 +19,7 @@ CREATE TABLE simulation_building_states (
     initial_r DOUBLE PRECISION NOT NULL CHECK (initial_r >= 0 AND initial_r < 'Infinity'::float8),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (simulation_id, building_id),
-    CONSTRAINT simulation_building_states_population_check
+    CONSTRAINT simulation_building_states_conservation_check
         CHECK (abs((initial_s + initial_i + initial_r) - population)
             <= 1e-9 + 1e-9 * population)
 );
