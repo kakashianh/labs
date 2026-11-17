@@ -91,6 +91,17 @@ async fn spatial_sir_initialization_persists_states_exclusions_and_idempotency()
     assert_eq!(conflict.status(), StatusCode::CONFLICT);
 
     let simulation_uuid = Uuid::parse_str(simulation_id).unwrap();
+    let initialized_summary = app
+        .clone()
+        .oneshot(get_run_request(simulation_uuid))
+        .await
+        .expect("get initialized run");
+    assert_eq!(initialized_summary.status(), StatusCode::OK);
+    let initialized_summary = read_json(initialized_summary).await;
+    assert_eq!(initialized_summary["status"], "initialized");
+    assert_eq!(initialized_summary["eligible_building_count"], 1);
+    assert_eq!(initialized_summary["excluded_building_count"], 1);
+
     let states: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM public.simulation_building_states WHERE simulation_id = $1",
     )
@@ -136,6 +147,17 @@ async fn spatial_sir_initialization_persists_states_exclusions_and_idempotency()
     .await
     .unwrap();
     assert_eq!(persisted, 3);
+    let completed_summary = app
+        .clone()
+        .oneshot(get_run_request(simulation_uuid))
+        .await
+        .expect("get completed run");
+    let completed_summary = read_json(completed_summary).await;
+    assert_eq!(completed_summary["status"], "completed");
+    assert_eq!(completed_summary["result_point_count"], 3);
+    assert_eq!(completed_summary["time_step_count"], 3);
+    assert!(completed_summary["completed_at"].is_string());
+
     let bad_states: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM public.simulation_building_results WHERE simulation_id = $1 AND abs((susceptible + infected + recovered) - 100.0) > 1e-6",
     )
@@ -238,4 +260,12 @@ fn post_run_request(simulation_id: Uuid, payload: Value) -> Request<Body> {
         .header("content-type", "application/json")
         .body(Body::from(payload.to_string()))
         .expect("build run request")
+}
+
+fn get_run_request(simulation_id: Uuid) -> Request<Body> {
+    Request::builder()
+        .method("GET")
+        .uri(format!("/api/v1/simulations/{simulation_id}"))
+        .body(Body::empty())
+        .expect("build get run request")
 }
