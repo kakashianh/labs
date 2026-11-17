@@ -140,7 +140,13 @@ async fn spatial_sir_initialization_persists_states_exclusions_and_idempotency()
         ))
         .await
         .expect("failed persistence request");
-    assert_eq!(failed_run.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    let failed_status = failed_run.status();
+    let failed_body = read_json(failed_run).await;
+    assert_eq!(
+        failed_status,
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "unexpected run error response: {failed_body}"
+    );
     let failed_status: String =
         sqlx::query_scalar("SELECT status FROM public.simulation_runs WHERE id = $1")
             .bind(simulation_uuid)
