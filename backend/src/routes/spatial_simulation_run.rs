@@ -136,7 +136,9 @@ pub async fn run_spatial_sir(
                 .fetch_one(&state.db)
                 .await?;
         return if exists {
-            Err(AppError::BadRequest("simulation has no eligible building states".into()))
+            Err(AppError::BadRequest(
+                "simulation has no eligible building states".into(),
+            ))
         } else {
             Err(AppError::NotFound)
         };
@@ -159,11 +161,8 @@ pub async fn run_spatial_sir(
         .iter()
         .map(|building| building.building_id)
         .collect();
-    let adjacency = building_neighbors::build_building_adjacency(
-        &state.db,
-        &building_ids,
-        request.radius_m,
-    )
+    let adjacency =
+        building_neighbors::build_building_adjacency(&state.db, &building_ids, request.radius_m)
     .await
     .map_err(map_adjacency_error)?;
     if adjacency.missing_building_count != 0 {
