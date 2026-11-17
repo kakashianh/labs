@@ -841,6 +841,192 @@
           }
         }
       }
+    },
+    "/api/v1/simulations/{simulation_id}/risk-classification": {
+      "post": {
+        "operationId": "setSimulationRiskThresholds",
+        "summary": "Set risk classification thresholds for a completed simulation",
+        "description": "Stores a versioned risk_classification snapshot inside simulation_runs.simulation_config without replacing SIR configuration. Defaults are Low <= 5%, Medium <= 15%, High > 15%. These are academic visualization thresholds, not medical standards.",
+        "parameters": [
+          {
+            "name": "simulation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RiskThresholdRequest"
+              },
+              "example": {
+                "risk_low_max": 0.05,
+                "risk_medium_max": 0.15
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Persisted risk thresholds.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskConfigurationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid thresholds."
+          },
+          "404": {
+            "description": "Simulation not found."
+          },
+          "409": {
+            "description": "Simulation is not completed."
+          }
+        }
+      }
+    },
+    "/api/v1/simulations/{simulation_id}/risk-results": {
+      "get": {
+        "operationId": "listBuildingRiskResults",
+        "summary": "List building risk classifications",
+        "parameters": [
+          {
+            "name": "simulation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "time_step",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "region_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Per-building risk classification, including unclassified exclusions.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskResultsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query."
+          },
+          "404": {
+            "description": "Simulation, region, or time step not found."
+          },
+          "409": {
+            "description": "Simulation is not completed."
+          }
+        }
+      }
+    },
+    "/api/v1/simulations/{simulation_id}/risk-aggregate": {
+      "get": {
+        "operationId": "getRegionalRiskAggregate",
+        "summary": "Get regional risk aggregates independent of pagination",
+        "parameters": [
+          {
+            "name": "simulation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "time_step",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "region_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Regional counts, population, infected totals, weighted infection ratio, and risk buckets.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskAggregateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query."
+          },
+          "404": {
+            "description": "Simulation, region, or time step not found."
+          },
+          "409": {
+            "description": "Simulation is not completed."
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1701,6 +1887,290 @@
           "recovered": {
             "type": "number",
             "format": "double"
+          }
+        }
+      },
+      "RiskThresholdRequest": {
+        "type": "object",
+        "properties": {
+          "risk_low_max": {
+            "type": "number",
+            "format": "double",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.05
+          },
+          "risk_medium_max": {
+            "type": "number",
+            "format": "double",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.15
+          }
+        },
+        "description": "Must satisfy 0 <= risk_low_max < risk_medium_max <= 1."
+      },
+      "RiskThresholds": {
+        "type": "object",
+        "required": [
+          "version",
+          "source",
+          "risk_low_max",
+          "risk_medium_max"
+        ],
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "project_default",
+              "request_override"
+            ]
+          },
+          "risk_low_max": {
+            "type": "number",
+            "format": "double"
+          },
+          "risk_medium_max": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "RiskLevel": {
+        "type": "string",
+        "enum": [
+          "low",
+          "medium",
+          "high",
+          "unclassified"
+        ]
+      },
+      "RiskConfigurationResponse": {
+        "type": "object",
+        "required": [
+          "simulation_id",
+          "thresholds"
+        ],
+        "properties": {
+          "simulation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "thresholds": {
+            "$ref": "#/components/schemas/RiskThresholds"
+          }
+        }
+      },
+      "BuildingRisk": {
+        "type": "object",
+        "required": [
+          "building_id",
+          "region_id",
+          "infected",
+          "infection_ratio",
+          "risk_level",
+          "unclassified_reason"
+        ],
+        "properties": {
+          "building_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "region_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "population": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "infected": {
+            "type": "number",
+            "format": "double"
+          },
+          "infection_ratio": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "risk_level": {
+            "$ref": "#/components/schemas/RiskLevel"
+          },
+          "unclassified_reason": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "missing_population",
+              "zero_population",
+              null
+            ]
+          }
+        }
+      },
+      "RiskPagination": {
+        "type": "object",
+        "required": [
+          "page",
+          "page_size",
+          "total",
+          "total_pages"
+        ],
+        "properties": {
+          "page": {
+            "type": "integer"
+          },
+          "page_size": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "total_pages": {
+            "type": "integer"
+          }
+        }
+      },
+      "RiskResultsResponse": {
+        "type": "object",
+        "required": [
+          "simulation_id",
+          "time_step",
+          "thresholds",
+          "data",
+          "pagination"
+        ],
+        "properties": {
+          "simulation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "time_step": {
+            "type": "integer"
+          },
+          "thresholds": {
+            "$ref": "#/components/schemas/RiskThresholds"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BuildingRisk"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/RiskPagination"
+          }
+        }
+      },
+      "RiskBucket": {
+        "type": "object",
+        "required": [
+          "risk_level",
+          "building_count",
+          "population",
+          "infected",
+          "infection_ratio"
+        ],
+        "properties": {
+          "risk_level": {
+            "$ref": "#/components/schemas/RiskLevel"
+          },
+          "building_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "population": {
+            "type": "number",
+            "format": "double"
+          },
+          "infected": {
+            "type": "number",
+            "format": "double"
+          },
+          "infection_ratio": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          }
+        }
+      },
+      "RegionRiskSummary": {
+        "type": "object",
+        "required": [
+          "region_id",
+          "total_building_count",
+          "classified_building_count",
+          "unclassified_building_count",
+          "population",
+          "infected",
+          "infection_ratio",
+          "buckets"
+        ],
+        "properties": {
+          "region_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "total_building_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "classified_building_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "unclassified_building_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "population": {
+            "type": "number",
+            "format": "double"
+          },
+          "infected": {
+            "type": "number",
+            "format": "double"
+          },
+          "infection_ratio": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "buckets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RiskBucket"
+            }
+          }
+        }
+      },
+      "RiskAggregateResponse": {
+        "type": "object",
+        "required": [
+          "simulation_id",
+          "time_step",
+          "thresholds",
+          "data"
+        ],
+        "properties": {
+          "simulation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "time_step": {
+            "type": "integer"
+          },
+          "thresholds": {
+            "$ref": "#/components/schemas/RiskThresholds"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RegionRiskSummary"
+            }
           }
         }
       }
