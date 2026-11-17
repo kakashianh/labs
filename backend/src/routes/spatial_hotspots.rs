@@ -542,10 +542,26 @@ mod tests {
             HotspotQuery { time_step: None, ..Default::default() },
             HotspotQuery { time_step: Some("-1".into()), ..Default::default() },
             HotspotQuery { time_step: Some("x".into()), ..Default::default() },
-            HotspotQuery { time_step: Some("1".into()), minimum_risk_level: Some("low".into()), ..Default::default() },
-            HotspotQuery { time_step: Some("1".into()), radius_m: Some("NaN".into()), ..Default::default() },
-            HotspotQuery { time_step: Some("1".into()), radius_m: Some("5001".into()), ..Default::default() },
-            HotspotQuery { time_step: Some("1".into()), include_singletons: Some("yes".into()), ..Default::default() },
+            HotspotQuery {
+                time_step: Some("1".into()),
+                minimum_risk_level: Some("low".into()),
+                ..Default::default()
+            },
+            HotspotQuery {
+                time_step: Some("1".into()),
+                radius_m: Some("NaN".into()),
+                ..Default::default()
+            },
+            HotspotQuery {
+                time_step: Some("1".into()),
+                radius_m: Some("5001".into()),
+                ..Default::default()
+            },
+            HotspotQuery {
+                time_step: Some("1".into()),
+                include_singletons: Some("yes".into()),
+                ..Default::default()
+            },
         ] {
             assert!(query.validate().is_err());
         }
@@ -558,7 +574,12 @@ mod tests {
         let b = Uuid::from_u128(2);
         let c = Uuid::from_u128(3);
         let d = Uuid::from_u128(4);
-        let candidates = vec![candidate(a, region), candidate(b, region), candidate(c, region), candidate(d, region)];
+        let candidates = vec![
+            candidate(a, region),
+            candidate(b, region),
+            candidate(c, region),
+            candidate(d, region),
+        ];
         let components = connected_components(&candidates, &[(a, b), (b, c)], true);
         assert_eq!(components, vec![(a, vec![a, b, c]), (d, vec![d])]);
     }
