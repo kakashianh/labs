@@ -16,7 +16,8 @@ pub fn router(state: AppState) -> Router {
         routes::spatial_simulation_init::router().with_state(state.clone());
     let spatial_simulation_results_routes =
         routes::spatial_simulation_results::router().with_state(state.clone());
-    let spatial_risk_routes = routes::spatial_risk::router().with_state(state.clone());
+    let spatial_risk_routes =
+        routes::spatial_risk::router().with_state(state.clone());
     let spatial_simulation_run_routes =
         routes::spatial_simulation_run::router().with_state(state.clone());
     Router::new()
