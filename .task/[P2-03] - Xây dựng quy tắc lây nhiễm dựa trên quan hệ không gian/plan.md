@@ -65,7 +65,7 @@ Input validation:
 - infected I phải finite, >= 0 và <= N.
 - distance_m phải finite và >= 0.
 - radius_m phải finite và > 0.
-- beta và alpha phải finite và >= 0.
+- beta và alpha phải finite và >= 0. Gamma và dt không thuộc input KAN-23; KAN-24 chịu trách nhiệm validate gamma/dt.
 - Building bị loại khỏi tập eligible theo policy KAN-22 không được tham gia tính local prevalence hoặc neighbor contribution.
 - Input thiếu/không hợp lệ phải được xử lý rõ ràng theo contract; không tự thay bằng 0 để tiếp tục tính pressure.
 
@@ -97,8 +97,8 @@ pub struct InfectionPressure {
 ### Step 1 – Review Spatial and SIR Contracts
 - [ ] Kiểm tra KAN-21 distance output và radius semantics.
 - [ ] Kiểm tra KAN-22 population/state representation và eligible building set.
-- [ ] Xác nhận KAN-22 code/data contract đã được tích hợp vào base branch hoặc thống nhất interface tương thích.
-- [ ] Đối chiếu beta, gamma, dt units với KAN-18.
+- [x] Xác nhận KAN-22 code/data contract hiện diện trên base branch.
+- [x] Đối chiếu beta units với KAN-18; gamma và dt validation thuộc KAN-24.
 - [ ] Xác định adjacency representation.
 - [ ] Ghi rõ model assumptions và limitations.
 
@@ -112,32 +112,32 @@ pub struct InfectionPressure {
 - [ ] Ghi công thức vào backend/docs trước implementation.
 
 ### Step 3 – Implement Neighbor Pressure
-- [ ] Build deterministic adjacency list.
-- [ ] Validate population, infected state, distance, radius, beta và alpha theo Data Contract.
-- [ ] Tính distance weight theo công thức đã duyệt.
-- [ ] Tính local prevalence và weighted neighbor prevalence.
-- [ ] Tính lambda_i = beta * (p_local_i + alpha * p_neighbor_i).
-- [ ] Bỏ qua building không thuộc eligible set theo policy KAN-22.
-- [ ] Xử lý không có neighbor/weight sum bằng 0.
-- [ ] Tránh double-count và self-edge.
+- [x] Build deterministic adjacency list.
+- [x] Validate population, infected state, distance, radius, beta và alpha theo Data Contract.
+- [x] Tính distance weight theo công thức đã duyệt.
+- [x] Tính local prevalence và weighted neighbor prevalence.
+- [x] Tính lambda_i = beta * (p_local_i + alpha * p_neighbor_i).
+- [x] Chỉ nhận eligible building states từ caller; building excluded không thể tham gia adjacency/input set.
+- [x] Xử lý không có neighbor/weight sum bằng 0.
+- [x] Reject duplicate undirected edge và self-edge.
 - [ ] Không triển khai time loop hoặc state transition thuộc KAN-24.
 
 ### Step 4 – Tests
-- [ ] Local-only: không có neighbors thì p_neighbor = 0 nhưng local prevalence vẫn được tính.
-- [ ] Có cả local prevalence và infected neighbor thì pressure phản ánh cả hai thành phần.
-- [ ] Neighbor có I_j = 0 không đóng góp neighbor prevalence.
-- [ ] Neighbor gần hơn có weight lớn hơn neighbor xa hơn (với cùng radius và các điều kiện khác).
-- [ ] Neighbor tại đúng radius có weight = 0.
-- [ ] Neighbor ngoài radius không được đưa vào adjacency/không đóng góp.
-- [ ] Zero total weight và empty neighbors không phát sinh NaN/divide-by-zero.
-- [ ] Weighted neighbor prevalence nằm trong [0,1] khi mọi input state hợp lệ.
-- [ ] Thay đổi thứ tự adjacency input không làm thay đổi kết quả ngoài sai số floating-point cho phép.
-- [ ] Duplicate edge và self-edge được loại bỏ hoặc từ chối theo contract.
-- [ ] Reject population <= 0, non-finite population, infected < 0 hoặc infected > population.
-- [ ] Reject distance âm/không finite, radius <= 0/không finite, beta/alpha âm hoặc không finite.
-- [ ] Building bị exclude theo KAN-22 không tham gia tính toán.
-- [ ] Beta = 0 cho infection pressure = 0.
-- [ ] Đối chiếu kết quả với tính toán độc lập bằng fixture nhỏ.
+- [x] Local-only: không có neighbors thì p_neighbor = 0 nhưng local prevalence vẫn được tính.
+- [x] Có cả local prevalence và infected neighbor thì pressure phản ánh cả hai thành phần.
+- [x] Neighbor có I_j = 0 không đóng góp neighbor prevalence.
+- [x] Neighbor gần hơn có weight lớn hơn neighbor xa hơn (với cùng radius và các điều kiện khác).
+- [x] Neighbor tại đúng radius có weight = 0.
+- [x] Neighbor ngoài radius không được đưa vào adjacency/không đóng góp.
+- [x] Zero total weight và empty neighbors không phát sinh NaN/divide-by-zero.
+- [x] Weighted neighbor prevalence nằm trong [0,1] khi mọi input state hợp lệ.
+- [x] Thay đổi thứ tự adjacency input không làm thay đổi kết quả ngoài sai số floating-point cho phép.
+- [x] Duplicate edge và self-edge được từ chối theo contract.
+- [x] Reject population <= 0, non-finite population, infected < 0 hoặc infected > population.
+- [x] Reject distance âm/không finite, radius <= 0/không finite, beta/alpha âm hoặc không finite.
+- [x] Building bị exclude theo KAN-22 không tham gia tính toán (caller chỉ truyền eligible states).
+- [x] Beta = 0 cho infection pressure = 0.
+- [x] Đối chiếu kết quả với tính toán độc lập bằng fixture nhỏ.
 
 ### Step 5 – Documentation and Integration Readiness
 - [ ] Tài liệu hóa công thức, units, input validation và assumptions.
@@ -193,7 +193,7 @@ New infection flow cho mỗi bước được KAN-24 tính theo min(S_i, lambda_
 - [ ] Kiểm tra các validation rules trong Data Contract đã được implement và có tests.
 - [ ] Test local-only, infected/uninfected neighbor, distance tăng, distance = radius và ngoài radius.
 - [ ] Test weighted prevalence trong [0,1] với input hợp lệ.
-- [ ] Test alpha=1.0 được cấu hình tập trung, không hard-code rải rác.
+- [x] Test alpha=1.0 được cấu hình tập trung, không hard-code rải rác.
 - [ ] Test zero total weight và empty neighbors không phát sinh NaN.
 - [ ] Test thứ tự adjacency input không ảnh hưởng kết quả ngoài sai số floating-point cho phép.
 - [ ] Đối chiếu kết quả với tính toán độc lập bằng fixture nhỏ.
