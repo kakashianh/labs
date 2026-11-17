@@ -3,8 +3,8 @@ use crate::{
     db::building_neighbors::{self, BuildingAdjacencyError},
     error::{AppError, Result},
     simulation::spatial_sir::{
-        simulate_spatial_sir, BuildingSirState, SpatialSirConfig, SpatialSirError,
-        SpatialSirPoint, MAX_BUILDINGS,
+        simulate_spatial_sir, BuildingSirState, SpatialSirConfig, SpatialSirError, SpatialSirPoint,
+        MAX_BUILDINGS,
     },
     state::AppState,
 };
@@ -15,7 +15,7 @@ use axum::{
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
-use sqlx::{QueryBuilder, Row, Postgres};
+use sqlx::{Postgres, QueryBuilder, Row};
 use uuid::Uuid;
 
 const INSERT_BATCH_SIZE: usize = 500;
@@ -130,12 +130,11 @@ pub async fn run_spatial_sir(
     .fetch_all(&state.db)
     .await?;
     if rows.is_empty() {
-        let exists: bool = sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM public.simulation_runs WHERE id = $1)",
-        )
-        .bind(simulation_id)
-        .fetch_one(&state.db)
-        .await?;
+        let exists: bool =
+            sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM public.simulation_runs WHERE id = $1)")
+                .bind(simulation_id)
+                .fetch_one(&state.db)
+                .await?;
         return if exists {
             Err(AppError::BadRequest("simulation has no eligible building states".into()))
         } else {
@@ -156,7 +155,10 @@ pub async fn run_spatial_sir(
         })
         .collect::<std::result::Result<Vec<_>, sqlx::Error>>()?;
 
-    let building_ids: Vec<_> = buildings.iter().map(|building| building.building_id).collect();
+    let building_ids: Vec<_> = buildings
+        .iter()
+        .map(|building| building.building_id)
+        .collect();
     let adjacency = building_neighbors::build_building_adjacency(
         &state.db,
         &building_ids,
@@ -221,7 +223,9 @@ pub async fn run_spatial_sir(
         return Ok((StatusCode::OK, Json(response)));
     }
     if status != "initialized" {
-        return Err(AppError::Conflict("simulation is not in an executable state".into()));
+        return Err(AppError::Conflict(
+            "simulation is not in an executable state".into(),
+        ));
     }
 
     for chunk in result.points.chunks(INSERT_BATCH_SIZE) {
@@ -266,9 +270,9 @@ pub async fn run_spatial_sir(
 
 fn map_adjacency_error(error: BuildingAdjacencyError) -> AppError {
     match error {
-        BuildingAdjacencyError::InvalidRadius => {
-            AppError::BadRequest("radius_m must be finite, greater than zero, and no greater than 5000".into())
-        }
+        BuildingAdjacencyError::InvalidRadius => AppError::BadRequest(
+            "radius_m must be finite, greater than zero, and no greater than 5000".into(),
+        ),
         BuildingAdjacencyError::Database(error) => AppError::Database(error),
     }
 }
