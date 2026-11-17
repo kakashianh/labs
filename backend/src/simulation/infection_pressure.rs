@@ -105,8 +105,7 @@ pub fn calculate_infection_pressures(
         }
     }
 
-    let mut adjacency: HashMap<Uuid, Vec<(Uuid, f64)>> =
-        HashMap::with_capacity(buildings.len());
+    let mut adjacency: HashMap<Uuid, Vec<(Uuid, f64)>> = HashMap::with_capacity(buildings.len());
     let mut seen_edges = HashSet::with_capacity(edges.len());
 
     for edge in edges {
@@ -248,12 +247,9 @@ mod tests {
 
     #[test]
     fn computes_local_only_pressure_without_neighbors() {
-        let result = calculate_infection_pressures(
-            &[building(id(1), 100.0, 20.0)],
-            &[],
-            config(100.0, 0.4),
-        )
-        .unwrap();
+        let result =
+            calculate_infection_pressures(&[building(id(1), 100.0, 20.0)], &[], config(100.0, 0.4))
+                .unwrap();
 
         let value = pressure(&result, id(1));
         assert_eq!(value.local_prevalence, 0.2);
@@ -264,10 +260,7 @@ mod tests {
     #[test]
     fn combines_local_and_neighbor_prevalence_with_alpha_one() {
         let result = calculate_infection_pressures(
-            &[
-                building(id(1), 100.0, 20.0),
-                building(id(2), 100.0, 50.0),
-            ],
+            &[building(id(1), 100.0, 20.0), building(id(2), 100.0, 50.0)],
             &[edge(id(1), id(2), 50.0)],
             config(100.0, 0.2),
         )
@@ -282,10 +275,7 @@ mod tests {
     #[test]
     fn uninfected_neighbor_contributes_zero_prevalence() {
         let result = calculate_infection_pressures(
-            &[
-                building(id(1), 100.0, 10.0),
-                building(id(2), 100.0, 0.0),
-            ],
+            &[building(id(1), 100.0, 10.0), building(id(2), 100.0, 0.0)],
             &[edge(id(1), id(2), 10.0)],
             config(100.0, 0.5),
         )
@@ -331,26 +321,22 @@ mod tests {
     #[test]
     fn zero_total_weight_never_divides_by_zero() {
         let result = calculate_infection_pressures(
-            &[
-                building(id(1), 100.0, 0.0),
-                building(id(2), 100.0, 100.0),
-            ],
+            &[building(id(1), 100.0, 0.0), building(id(2), 100.0, 100.0)],
             &[edge(id(1), id(2), 100.0)],
             config(100.0, 1.0),
         )
         .unwrap();
 
         assert_eq!(pressure(&result, id(1)).neighbor_prevalence, 0.0);
-        assert!(result.iter().all(|value| value.infection_pressure.is_finite()));
+        assert!(result
+            .iter()
+            .all(|value| value.infection_pressure.is_finite()));
     }
 
     #[test]
     fn beta_zero_disables_pressure() {
         let result = calculate_infection_pressures(
-            &[
-                building(id(1), 100.0, 10.0),
-                building(id(2), 100.0, 20.0),
-            ],
+            &[building(id(1), 100.0, 10.0), building(id(2), 100.0, 20.0)],
             &[edge(id(1), id(2), 1.0)],
             config(100.0, 0.0),
         )
@@ -366,10 +352,7 @@ mod tests {
         settings.alpha = 2.0;
 
         let result = calculate_infection_pressures(
-            &[
-                building(id(1), 100.0, 10.0),
-                building(id(2), 100.0, 50.0),
-            ],
+            &[building(id(1), 100.0, 10.0), building(id(2), 100.0, 50.0)],
             &[edge(id(1), id(2), 0.0)],
             settings,
         )
@@ -386,8 +369,8 @@ mod tests {
             building(id(3), 50.0, 5.0),
         ];
         let edges = [edge(id(1), id(2), 10.0), edge(id(1), id(3), 20.0)];
-        let forward = calculate_infection_pressures(&buildings, &edges, config(100.0, 0.3))
-            .unwrap();
+        let forward =
+            calculate_infection_pressures(&buildings, &edges, config(100.0, 0.3)).unwrap();
         let reverse = calculate_infection_pressures(
             &[buildings[2], buildings[1], buildings[0]],
             &[edges[1], edges[0]],
@@ -401,11 +384,7 @@ mod tests {
     #[test]
     fn rejects_invalid_population_and_infected_state() {
         assert_eq!(
-            calculate_infection_pressures(
-                &[building(id(1), 0.0, 0.0)],
-                &[],
-                config(100.0, 0.2)
-            ),
+            calculate_infection_pressures(&[building(id(1), 0.0, 0.0)], &[], config(100.0, 0.2)), 
             Err(InfectionPressureError::InvalidPopulation)
         );
         assert_eq!(
@@ -463,10 +442,7 @@ mod tests {
 
     #[test]
     fn rejects_duplicate_buildings_self_edges_unknown_and_duplicate_edges() {
-        let duplicate = [
-            building(id(1), 100.0, 0.0),
-            building(id(1), 100.0, 0.0),
-        ];
+        let duplicate = [building(id(1), 100.0, 0.0), building(id(1), 100.0, 0.0)];
         assert_eq!(
             calculate_infection_pressures(&duplicate, &[], config(100.0, 0.2)),
             Err(InfectionPressureError::DuplicateBuilding)
@@ -521,12 +497,9 @@ mod tests {
     fn eligible_input_excludes_buildings_without_manual_population() {
         // The caller passes only KAN-22 eligible states. An excluded building
         // must not be present in the state map or in the adjacency edge set.
-        let result = calculate_infection_pressures(
-            &[building(id(1), 100.0, 10.0)],
-            &[],
-            config(100.0, 0.3),
-        )
-        .unwrap();
+        let result =
+            calculate_infection_pressures(&[building(id(1), 100.0, 10.0)], &[], config(100.0, 0.3))
+                .unwrap();
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].building_id, id(1));
@@ -538,10 +511,7 @@ mod tests {
         settings.alpha = f64::MAX;
         assert_eq!(
             calculate_infection_pressures(
-                &[
-                    building(id(1), 100.0, 100.0),
-                    building(id(2), 100.0, 100.0),
-                ],
+                &[building(id(1), 100.0, 100.0), building(id(2), 100.0, 100.0),],
                 &[edge(id(1), id(2), 0.0)],
                 settings
             ),
