@@ -119,6 +119,52 @@ async fn spatial_sir_initialization_persists_states_exclusions_and_idempotency()
     assert_eq!(states, 1);
     assert_eq!(exclusions, 1);
 
+    sqlx::query(
+        "CREATE FUNCTION public.reject_spatial_sir_result() RETURNS trigger LANGUAGE plpgsql AS $ BEGIN RAISE EXCEPTION 'injected persistence failure'; END; $",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "CREATE TRIGGER reject_spatial_sir_result BEFORE INSERT ON public.simulation_building_results FOR EACH ROW EXECUTE FUNCTION public.reject_spatial_sir_result()",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let failed_run = app
+        .clone()
+        .oneshot(post_run_request(
+            simulation_uuid,
+            json!({"radius_m": 100.0, "beta": 0.3, "gamma": 0.1, "dt": 0.1, "steps": 2}),
+        ))
+        .await
+        .expect("failed persistence request");
+    assert_eq!(failed_run.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    let failed_status: String =
+        sqlx::query_scalar("SELECT status FROM public.simulation_runs WHERE id = $1")
+            .bind(simulation_uuid)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    let failed_rows: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM public.simulation_building_results WHERE simulation_id = $1",
+    )
+    .bind(simulation_uuid)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(failed_status, "initialized");
+    assert_eq!(failed_rows, 0);
+    sqlx::query("DROP TRIGGER reject_spatial_sir_result ON public.simulation_building_results")
+        .execute(&pool)
+        .await
+        .unwrap();
+    sqlx::query("DROP FUNCTION public.reject_spatial_sir_result()")
+        .execute(&pool)
+        .await
+        .unwrap();
+
     let run_payload = json!({
         "radius_m": 100.0,
         "beta": 0.3,
