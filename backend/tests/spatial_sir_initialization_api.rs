@@ -126,13 +126,10 @@ async fn spatial_sir_initialization_persists_states_exclusions_and_idempotency()
 
     // The adjacency graph must contain only eligible simulation buildings;
     // building_b is spatially overlapping but excluded due to missing population.
-    let eligible_only_adjacency = db::building_neighbors::build_building_adjacency(
-        &pool,
-        &[building_a],
-        100.0,
-    )
-    .await
-    .expect("build eligible-only adjacency");
+    let eligible_only_adjacency =
+        db::building_neighbors::build_building_adjacency(&pool, &[building_a], 100.0)
+            .await
+            .expect("build eligible-only adjacency");
     assert!(eligible_only_adjacency.edges.is_empty());
 
     sqlx::query(
