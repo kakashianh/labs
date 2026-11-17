@@ -11,7 +11,7 @@ use crate::{
 use axum::{
     extract::{rejection::JsonRejection, Path, State},
     http::StatusCode,
-    routing::post,
+    routing::{get, post},
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
@@ -41,10 +41,60 @@ pub struct RunSpatialSirResponse {
 }
 
 pub fn router() -> Router<AppState> {
-    Router::new().route(
-        "/api/v1/simulations/:simulation_id/run",
-        post(run_spatial_sir),
+    Router::new()
+        .route(
+            "/api/v1/simulations/:simulation_id/run",
+            post(run_spatial_sir),
+        )
+        .route(
+            "/api/v1/simulations/:simulation_id",
+            get(get_spatial_sir_run),
+        )
+}
+
+#[derive(Debug, Serialize)]
+pub struct SpatialSirRunSummaryResponse {
+    pub simulation_id: Uuid,
+    pub status: String,
+    pub population_source: String,
+    pub eligible_building_count: i64,
+    pub excluded_building_count: i64,
+    pub result_point_count: i64,
+    pub time_step_count: i64,
+    pub completed_at: Option<String>,
+}
+
+pub async fn get_spatial_sir_run(
+    State(state): State<AppState>,
+    Path(simulation_id): Path<Uuid>,
+) -> Result<Json<SpatialSirRunSummaryResponse>> {
+    let row = sqlx::query(
+        r#"SELECT r.id, r.status, r.population_source, r.completed_at::TEXT AS completed_at,
+                  (SELECT COUNT(*) FROM public.simulation_building_states s
+                   WHERE s.simulation_id = r.id) AS eligible_building_count,
+                  (SELECT COUNT(*) FROM public.simulation_building_exclusions e
+                   WHERE e.simulation_id = r.id) AS excluded_building_count,
+                  (SELECT COUNT(*) FROM public.simulation_building_results p
+                   WHERE p.simulation_id = r.id) AS result_point_count,
+                  (SELECT COUNT(DISTINCT time_step) FROM public.simulation_building_results p
+                   WHERE p.simulation_id = r.id) AS time_step_count
+           FROM public.simulation_runs r WHERE r.id = $1"#,
     )
+    .bind(simulation_id)
+    .fetch_optional(&state.db)
+    .await?
+    .ok_or(AppError::NotFound)?;
+
+    Ok(Json(SpatialSirRunSummaryResponse {
+        simulation_id: row.try_get("id")?,
+        status: row.try_get("status")?,
+        population_source: row.try_get("population_source")?,
+        eligible_building_count: row.try_get("eligible_building_count")?,
+        excluded_building_count: row.try_get("excluded_building_count")?,
+        result_point_count: row.try_get("result_point_count")?,
+        time_step_count: row.try_get("time_step_count")?,
+        completed_at: row.try_get("completed_at")?,
+    }))
 }
 
 pub async fn run_spatial_sir(
