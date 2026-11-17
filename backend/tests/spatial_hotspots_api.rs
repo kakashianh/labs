@@ -68,6 +68,32 @@ async fn hotspot_api_builds_transitive_components_and_returns_union_geometry() {
         .unwrap();
     }
 
+    let low_region_id = insert_region(&pool, "hotspot-low-region").await;
+    let low_building = insert_building(
+        &pool,
+        low_region_id,
+        "way/93005",
+        93005,
+        106.20000,
+    )
+    .await;
+    sqlx::query(
+        "INSERT INTO public.simulation_building_states (simulation_id,building_id,population,initial_s,initial_i,initial_r) VALUES ($1,$2,100,99,1,0)",
+    )
+    .bind(simulation_id)
+    .bind(low_building)
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO public.simulation_building_results (simulation_id,building_id,time_step,time,susceptible,infected,recovered) VALUES ($1,$2,0,0,99,1,0)",
+    )
+    .bind(simulation_id)
+    .bind(low_building)
+    .execute(&pool)
+    .await
+    .unwrap();
+
     let distance_ab: f64 = sqlx::query_scalar(
         "SELECT ST_Distance(a.footprint::geography,b.footprint::geography) FROM public.buildings a CROSS JOIN public.buildings b WHERE a.id=$1 AND b.id=$2",
     )
@@ -133,6 +159,18 @@ async fn hotspot_api_builds_transitive_components_and_returns_union_geometry() {
     let without_singletons = read_json(without_singletons).await;
     assert_eq!(without_singletons["hotspot_count"], 1);
     assert_eq!(without_singletons["hotspots"][0]["member_count"], 3);
+
+    let no_hotspots = app
+        .clone()
+        .oneshot(get_request(format!(
+            "/api/v1/simulations/{simulation_id}/hotspots?time_step=0&region_id={low_region_id}"
+        )))
+        .await
+        .unwrap();
+    assert_eq!(no_hotspots.status(), StatusCode::OK);
+    let no_hotspots = read_json(no_hotspots).await;
+    assert_eq!(no_hotspots["hotspot_count"], 0);
+    assert_eq!(no_hotspots["hotspots"], serde_json::json!([]));
 
     let invalid_radius = app
         .clone()
