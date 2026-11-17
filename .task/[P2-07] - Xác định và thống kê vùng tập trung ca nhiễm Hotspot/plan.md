@@ -127,7 +127,7 @@ GET /api/v1/simulations/{simulation_id}/hotspots
 - `simulation_id` và `time_step` bắt buộc.
 - `region_id` optional; nếu truyền phải validate tồn tại và filter qua buildings.region_id.
 - `minimum_risk_level` optional, default `high`; chỉ chấp nhận `medium|high`.
-- `radius_m` optional nhưng có default được định nghĩa trong API/config; phải ghi rõ default trong OpenAPI và không vượt 5,000 m.
+- `radius_m` optional, default `100 m`; phải ghi rõ default trong OpenAPI và không vượt 5,000 m.
 - `include_singletons` optional, default `true`.
 - Chỉ cho phép đọc run `completed`; reuse lifecycle/error semantics từ KAN-25.
 - Unknown run/time_step/region và invalid query trả error theo AppError convention.
@@ -143,7 +143,7 @@ GET /api/v1/simulations/{simulation_id}/hotspots
 - [ ] Kiểm tra S/I/R, population và completed-run/time_step contract KAN-24/KAN-25.
 - [ ] Chốt candidate: risk level >= configurable minimum (default High) và infected > 0.
 - [ ] Chốt singleton default true, có thể override.
-- [ ] Chốt radius_m default, validation và maximum 5,000 m.
+- [ ] Chốt radius_m default `100 m`, validation và maximum 5,000 m.
 - [ ] Chốt geometry MultiPolygon GeoJSON SRID 4326.
 - [ ] Chốt không persist hotspot result ở scope này; trả effective config snapshot.
 
@@ -219,3 +219,12 @@ GET /api/v1/simulations/{simulation_id}/hotspots
 ## 10. Definition of Done
 
 KAN-27 hoàn thành khi hệ thống xác định được connected spatial hotspots từ các building đạt candidate condition, thống kê chính xác theo simulation/time_step/region, tạo geometry MultiPolygon SRID 4326 hợp lệ và cung cấp API/configuration snapshot được kiểm thử để frontend CesiumJS sử dụng.
+
+## 11. Implementation Progress
+
+- Đã tạo API `GET /api/v1/simulations/{simulation_id}/hotspots` trên nhánh `feat/p2-07-hotspot-detection`.
+- Đã triển khai candidate filtering theo KAN-26 snapshot, Connected Components, singleton policy, deterministic `cluster_id`, aggregate statistics và PostGIS GeoJSON `MultiPolygon`.
+- Effective configuration được trả trong response; default `radius_m = 100 m`, maximum `5,000 m`.
+- Đã bổ sung OpenAPI và Testcontainers integration test cho transitive component, radius boundary (inclusive), singleton filtering, aggregate statistics và geometry.
+- Đã thêm integration test vào CI workflow.
+- Các TODO phía trên chưa được tick cho đến khi CI và kiểm thử thực tế xác nhận thành công.
