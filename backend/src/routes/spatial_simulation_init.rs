@@ -237,14 +237,13 @@ fn validate_request(request: &InitializeSpatialSirRequest) -> Result<()> {
                 }
             }
         }
-        if item.population.is_some() {
+        if let Some(population) = item.population {
             let infected = item.initial_infected.ok_or_else(|| {
                 AppError::BadRequest(
                     "initial_infected is required when population is provided".into(),
                 )
             })?;
             let recovered = item.initial_recovered.unwrap_or(0.0);
-            let population = item.population.expect("checked above");
             if infected + recovered > population || !(infected + recovered).is_finite() {
                 return Err(AppError::BadRequest(
                     "initial_infected + initial_recovered must not exceed population".into(),
