@@ -658,6 +658,189 @@
           }
         }
       }
+    },
+    "/api/v1/simulations/{simulation_id}/results": {
+      "get": {
+        "operationId": "listSpatialSimulationResults",
+        "summary": "List building SIR results at a simulation time step",
+        "description": "Returns a stable page of building-level results. Population is read from the same simulation's initialized building state. Only completed runs are readable. Aggregate totals are exposed by the separate aggregate endpoint and are independent of pagination.",
+        "parameters": [
+          {
+            "name": "simulation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "time_step",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "region_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Building results for the selected snapshot.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpatialResultsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid time_step, region_id or pagination.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Simulation or requested time_step/region does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Simulation has not completed; error is simulation_not_completed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "simulation_not_completed"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/simulations/{simulation_id}/aggregate": {
+      "get": {
+        "operationId": "getSpatialSimulationAggregate",
+        "summary": "Get aggregate SIR for a simulation snapshot",
+        "description": "Returns totals over all matching buildings, optionally filtered by region. This calculation is never limited by the building-results pagination endpoint.",
+        "parameters": [
+          {
+            "name": "simulation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "time_step",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "region_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Aggregate SIR totals for the requested snapshot.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpatialSirAggregate"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid time_step or region_id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Simulation or requested time_step/region does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Simulation has not completed; error is simulation_not_completed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "simulation_not_completed"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1379,6 +1562,145 @@
             "type": "string",
             "format": "date-time",
             "nullable": true
+          }
+        }
+      },
+      "SpatialBuildingResult": {
+        "type": "object",
+        "required": [
+          "building_id",
+          "region_id",
+          "population",
+          "susceptible",
+          "infected",
+          "recovered"
+        ],
+        "properties": {
+          "building_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "region_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "population": {
+            "type": "number",
+            "format": "double"
+          },
+          "susceptible": {
+            "type": "number",
+            "format": "double"
+          },
+          "infected": {
+            "type": "number",
+            "format": "double"
+          },
+          "recovered": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "ResultsPagination": {
+        "type": "object",
+        "required": [
+          "page",
+          "page_size",
+          "total",
+          "total_pages"
+        ],
+        "properties": {
+          "page": {
+            "type": "integer"
+          },
+          "page_size": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total_pages": {
+            "type": "integer"
+          }
+        }
+      },
+      "SpatialResultsResponse": {
+        "type": "object",
+        "required": [
+          "simulation_id",
+          "time_step",
+          "time",
+          "data",
+          "pagination"
+        ],
+        "properties": {
+          "simulation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "time_step": {
+            "type": "integer"
+          },
+          "time": {
+            "type": "number",
+            "format": "double"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpatialBuildingResult"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/ResultsPagination"
+          }
+        }
+      },
+      "SpatialSirAggregate": {
+        "type": "object",
+        "required": [
+          "simulation_id",
+          "time_step",
+          "time",
+          "building_count",
+          "population",
+          "susceptible",
+          "infected",
+          "recovered"
+        ],
+        "properties": {
+          "simulation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "time_step": {
+            "type": "integer"
+          },
+          "time": {
+            "type": "number",
+            "format": "double"
+          },
+          "building_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "population": {
+            "type": "number",
+            "format": "double"
+          },
+          "susceptible": {
+            "type": "number",
+            "format": "double"
+          },
+          "infected": {
+            "type": "number",
+            "format": "double"
+          },
+          "recovered": {
+            "type": "number",
+            "format": "double"
           }
         }
       }
