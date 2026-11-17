@@ -54,6 +54,19 @@ mod tests {
         assert!(spec["paths"]["/api/v1/simulations/{simulation_id}/aggregate"]["get"].is_object());
         assert!(spec["components"]["schemas"]["SpatialResultsResponse"].is_object());
         assert!(spec["components"]["schemas"]["SpatialSirAggregate"].is_object());
+        assert!(
+            spec["paths"]["/api/v1/simulations/{simulation_id}/risk-classification"]["post"]
+                .is_object()
+        );
+        assert!(
+            spec["paths"]["/api/v1/simulations/{simulation_id}/risk-results"]["get"].is_object()
+        );
+        assert!(
+            spec["paths"]["/api/v1/simulations/{simulation_id}/risk-aggregate"]["get"].is_object()
+        );
+        assert!(spec["components"]["schemas"]["RiskThresholds"].is_object());
+        assert!(spec["components"]["schemas"]["BuildingRisk"].is_object());
+        assert!(spec["components"]["schemas"]["RegionRiskSummary"].is_object());
         assert!(spec["components"]["schemas"]["InitializeSpatialSirRequest"].is_object());
         assert!(spec["components"]["schemas"]["SirSimulationRequest"].is_object());
         assert!(spec["components"]["schemas"]["SirSimulationResponse"].is_object());
