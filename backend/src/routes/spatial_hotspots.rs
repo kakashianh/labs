@@ -596,6 +596,17 @@ mod tests {
     }
 
     #[test]
+    fn non_candidate_vertices_cannot_bridge_components() {
+        let region = Uuid::new_v4();
+        let a = Uuid::from_u128(1);
+        let excluded = Uuid::from_u128(2);
+        let c = Uuid::from_u128(3);
+        let candidates = vec![candidate(a, region), candidate(c, region)];
+        let components = connected_components(&candidates, &[(a, excluded), (excluded, c)], true);
+        assert_eq!(components, vec![(a, vec![a]), (c, vec![c])]);
+    }
+
+    #[test]
     fn cluster_id_is_smallest_member_uuid() {
         let region = Uuid::new_v4();
         let a = Uuid::from_u128(30);
