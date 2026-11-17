@@ -108,6 +108,60 @@ async fn spatial_sir_initialization_persists_states_exclusions_and_idempotency()
     assert_eq!(states, 1);
     assert_eq!(exclusions, 1);
 
+    let run_payload = json!({
+        "radius_m": 100.0,
+        "beta": 0.3,
+        "gamma": 0.1,
+        "dt": 0.1,
+        "steps": 2
+    });
+    let run_response = app
+        .clone()
+        .oneshot(post_run_request(simulation_uuid, run_payload.clone()))
+        .await
+        .expect("run simulation");
+    assert_eq!(run_response.status(), StatusCode::CREATED);
+    let run_body = read_json(run_response).await;
+    assert_eq!(run_body["status"], "completed");
+    assert_eq!(run_body["building_count"], 1);
+    assert_eq!(run_body["point_count"], 3);
+    assert_eq!(run_body["time_step_count"], 3);
+    assert_eq!(run_body["idempotent_replay"], false);
+
+    let persisted: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM public.simulation_building_results WHERE simulation_id = $1",
+    )
+    .bind(simulation_uuid)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(persisted, 3);
+    let bad_states: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM public.simulation_building_results WHERE simulation_id = $1 AND abs((susceptible + infected + recovered) - 100.0) > 1e-6",
+    )
+    .bind(simulation_uuid)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(bad_states, 0);
+
+    let run_replay = app
+        .clone()
+        .oneshot(post_run_request(simulation_uuid, run_payload.clone()))
+        .await
+        .expect("replay simulation");
+    assert_eq!(run_replay.status(), StatusCode::OK);
+    assert_eq!(read_json(run_replay).await["idempotent_replay"], true);
+
+    let mut different_config = run_payload;
+    different_config["beta"] = json!(0.4);
+    let run_conflict = app
+        .clone()
+        .oneshot(post_run_request(simulation_uuid, different_config))
+        .await
+        .expect("conflicting simulation replay");
+    assert_eq!(run_conflict.status(), StatusCode::CONFLICT);
+
     let all_excluded_payload = json!({
         "request_id": Uuid::new_v4(),
         "buildings": [{"building_id": building_a}, {"building_id": building_b}]
@@ -175,4 +229,13 @@ async fn read_json(response: axum::response::Response) -> Value {
         .await
         .expect("body");
     serde_json::from_slice(&bytes).expect("JSON")
+}
+
+fn post_run_request(simulation_id: Uuid, payload: Value) -> Request<Body> {
+    Request::builder()
+        .method("POST")
+        .uri(format!("/api/v1/simulations/{simulation_id}/run"))
+        .header("content-type", "application/json")
+        .body(Body::from(payload.to_string()))
+        .expect("build run request")
 }
