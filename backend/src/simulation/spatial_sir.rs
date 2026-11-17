@@ -12,8 +12,7 @@ use super::infection_pressure::{
     InfectionPressureError, NeighborEdge,
 };
 use super::sir::{
-    MAX_SIMULATION_DURATION, MAX_STEPS, POPULATION_ABS_TOLERANCE,
-    POPULATION_REL_TOLERANCE,
+    MAX_SIMULATION_DURATION, MAX_STEPS, POPULATION_ABS_TOLERANCE, POPULATION_REL_TOLERANCE,
 };
 
 pub const MAX_BUILDINGS: usize = 500;
@@ -123,7 +122,13 @@ pub fn simulate_spatial_sir(
             let susceptible = clamp_roundoff(state.susceptible - infection, tolerance)?;
             let infected = clamp_roundoff(state.infected + infection - recovery, tolerance)?;
             let recovered = clamp_roundoff(state.recovered + recovery, tolerance)?;
-            validate_next_state(state.population, susceptible, infected, recovered, tolerance)?;
+            validate_next_state(
+                state.population,
+                susceptible,
+                infected,
+                recovered,
+                tolerance,
+            )?;
             next.push(BuildingSirState {
                 building_id: state.building_id,
                 population: state.population,
@@ -254,9 +259,24 @@ fn append_snapshot(
 mod tests {
     use super::*;
 
-    fn id(value: u128) -> Uuid { Uuid::from_u128(value) }
-    fn state(building_id: Uuid, population: f64, susceptible: f64, infected: f64, recovered: f64) -> BuildingSirState {
-        BuildingSirState { building_id, population, susceptible, infected, recovered }
+    fn id(value: u128) -> Uuid {
+        Uuid::from_u128(value)
+    }
+
+    fn state(
+        building_id: Uuid,
+        population: f64,
+        susceptible: f64,
+        infected: f64,
+        recovered: f64,
+    ) -> BuildingSirState {
+        BuildingSirState {
+            building_id,
+            population,
+            susceptible,
+            infected,
+            recovered,
+        }
     }
     fn edge(a: Uuid, b: Uuid, distance_m: f64) -> NeighborEdge {
         NeighborEdge { source_building_id: a, target_building_id: b, distance_m }
@@ -265,18 +285,27 @@ mod tests {
         SpatialSirConfig { radius_m: 100.0, beta: 0.4, gamma: 0.1, dt: 0.1, steps }
     }
     fn point(result: &SpatialSirResult, building_id: Uuid, time_step: usize) -> &SpatialSirPoint {
-        result.points.iter().find(|p| p.building_id == building_id && p.time_step == time_step).unwrap()
+        result
+            .points
+            .iter()
+            .find(|p| p.building_id == building_id && p.time_step == time_step)
+            .unwrap()
     }
 
     #[test]
     fn no_seed_never_generates_infection() {
-        let result = simulate_spatial_sir(&[state(id(1), 100.0, 100.0, 0.0, 0.0)], &[], config(3)).unwrap();
-        assert!(result.points.iter().all(|p| p.infected == 0.0 && p.recovered == 0.0));
+        let result =
+            simulate_spatial_sir(&[state(id(1), 100.0, 100.0, 0.0, 0.0)], &[], config(3)).unwrap();
+        assert!(result
+            .points
+            .iter()
+            .all(|p| p.infected == 0.0 && p.recovered == 0.0));
     }
 
     #[test]
     fn local_only_matches_single_building_sir_equation() {
-        let result = simulate_spatial_sir(&[state(id(1), 100.0, 90.0, 10.0, 0.0)], &[], config(1)).unwrap();
+        let result =
+            simulate_spatial_sir(&[state(id(1), 100.0, 90.0, 10.0, 0.0)], &[], config(1)).unwrap();
         let p = point(&result, id(1), 1);
         let infection = 0.4 * (10.0 / 100.0) * 90.0 * 0.1;
         let recovery = 0.1 * 10.0 * 0.1;
@@ -287,8 +316,12 @@ mod tests {
 
     #[test]
     fn infected_neighbor_spreads_using_kan23_pressure() {
-        let buildings = [state(id(1), 100.0, 100.0, 0.0, 0.0), state(id(2), 100.0, 90.0, 10.0, 0.0)];
-        let result = simulate_spatial_sir(&buildings, &[edge(id(1), id(2), 50.0)], config(1)).unwrap();
+        let buildings = [
+            state(id(1), 100.0, 100.0, 0.0, 0.0),
+            state(id(2), 100.0, 90.0, 10.0, 0.0),
+        ];
+        let result =
+            simulate_spatial_sir(&buildings, &[edge(id(1), id(2), 50.0)], config(1)).unwrap();
         assert!(point(&result, id(1), 1).infected > 0.0);
     }
 
@@ -309,15 +342,23 @@ mod tests {
 
     #[test]
     fn edge_outside_radius_does_not_spread_infection() {
-        let buildings = [state(id(1), 100.0, 100.0, 0.0, 0.0), state(id(2), 100.0, 90.0, 10.0, 0.0)];
-        let result = simulate_spatial_sir(&buildings, &[edge(id(1), id(2), 101.0)], config(1)).unwrap();
+        let buildings = [
+            state(id(1), 100.0, 100.0, 0.0, 0.0),
+            state(id(2), 100.0, 90.0, 10.0, 0.0),
+        ];
+        let result =
+            simulate_spatial_sir(&buildings, &[edge(id(1), id(2), 101.0)], config(1)).unwrap();
         assert_eq!(point(&result, id(1), 1).infected, 0.0);
     }
 
     #[test]
     fn every_building_conserves_population_at_every_step() {
-        let buildings = [state(id(1), 100.0, 90.0, 10.0, 0.0), state(id(2), 250.0, 245.0, 5.0, 0.0)];
-        let result = simulate_spatial_sir(&buildings, &[edge(id(1), id(2), 10.0)], config(10)).unwrap();
+        let buildings = [
+            state(id(1), 100.0, 90.0, 10.0, 0.0),
+            state(id(2), 250.0, 245.0, 5.0, 0.0),
+        ];
+        let result =
+            simulate_spatial_sir(&buildings, &[edge(id(1), id(2), 10.0)], config(10)).unwrap();
         for p in &result.points {
             let population = if p.building_id == id(1) { 100.0 } else { 250.0 };
             assert!((p.susceptible + p.infected + p.recovered - population).abs() < 1e-6);
@@ -338,11 +379,20 @@ mod tests {
 
     #[test]
     fn rejects_invalid_state_and_resource_limits() {
-        assert_eq!(simulate_spatial_sir(&[], &[], config(1)), Err(SpatialSirError::InvalidBuildingCount));
-        assert_eq!(simulate_spatial_sir(&[state(id(1), 10.0, 9.0, 2.0, 0.0)], &[], config(1)), Err(SpatialSirError::PopulationMismatch));
+        assert_eq!(
+            simulate_spatial_sir(&[], &[], config(1)),
+            Err(SpatialSirError::InvalidBuildingCount)
+        );
+        assert_eq!(
+            simulate_spatial_sir(&[state(id(1), 10.0, 9.0, 2.0, 0.0)], &[], config(1)),
+            Err(SpatialSirError::PopulationMismatch)
+        );
         let mut huge = config(1000);
         huge.steps = 1000;
-        assert_eq!(simulate_spatial_sir(&[state(id(1), 10.0, 10.0, 0.0, 0.0); 251], &[], huge), Err(SpatialSirError::ResultLimitExceeded));
+        assert_eq!(
+            simulate_spatial_sir(&[state(id(1), 10.0, 10.0, 0.0, 0.0); 251], &[], huge),
+            Err(SpatialSirError::ResultLimitExceeded)
+        );
     }
 
     #[test]
@@ -350,9 +400,15 @@ mod tests {
         let building = [state(id(1), 10.0, 10.0, 0.0, 0.0)];
         let mut value = config(1);
         value.gamma = f64::NAN;
-        assert_eq!(simulate_spatial_sir(&building, &[], value), Err(SpatialSirError::InvalidGamma));
+        assert_eq!(
+            simulate_spatial_sir(&building, &[], value),
+            Err(SpatialSirError::InvalidGamma)
+        );
         value = config(1);
         value.dt = 0.0;
-        assert_eq!(simulate_spatial_sir(&building, &[], value), Err(SpatialSirError::InvalidTimeStep));
+        assert_eq!(
+            simulate_spatial_sir(&building, &[], value),
+            Err(SpatialSirError::InvalidTimeStep)
+        );
     }
 }
