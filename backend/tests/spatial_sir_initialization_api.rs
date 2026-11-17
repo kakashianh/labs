@@ -120,7 +120,7 @@ async fn spatial_sir_initialization_persists_states_exclusions_and_idempotency()
     assert_eq!(exclusions, 1);
 
     sqlx::query(
-        "CREATE FUNCTION public.reject_spatial_sir_result() RETURNS trigger LANGUAGE plpgsql AS $ BEGIN RAISE EXCEPTION 'injected persistence failure'; END; $",
+        "CREATE FUNCTION public.reject_spatial_sir_result() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'injected persistence failure'; END; $$",
     )
     .execute(&pool)
     .await
