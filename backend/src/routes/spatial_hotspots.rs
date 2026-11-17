@@ -505,7 +505,7 @@ async fn list_hotspots(
             algorithm_version: ALGORITHM_VERSION,
             minimum_risk_level: query.minimum_risk_level,
             risk_thresholds: thresholds,
-            radius_m: query.radius_m(),
+            radius_m: query.radius_m,
             include_singletons: query.include_singletons,
         },
         hotspot_count,
