@@ -384,7 +384,7 @@ mod tests {
     #[test]
     fn rejects_invalid_population_and_infected_state() {
         assert_eq!(
-            calculate_infection_pressures(&[building(id(1), 0.0, 0.0)], &[], config(100.0, 0.2)), 
+            calculate_infection_pressures(&[building(id(1), 0.0, 0.0)], &[], config(100.0, 0.2)),
             Err(InfectionPressureError::InvalidPopulation)
         );
         assert_eq!(
