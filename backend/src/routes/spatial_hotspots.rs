@@ -28,19 +28,13 @@ pub struct HotspotQuery {
     include_singletons: Option<String>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 struct ValidatedHotspotQuery {
     time_step: i32,
     region_id: Option<Uuid>,
     minimum_risk_level: RiskLevel,
-    radius_m_bits: u64,
+    radius_m: f64,
     include_singletons: bool,
-}
-
-impl ValidatedHotspotQuery {
-    fn radius_m(self) -> f64 {
-        f64::from_bits(self.radius_m_bits)
-    }
 }
 
 #[derive(Debug, Serialize)]
@@ -126,12 +120,12 @@ impl HotspotQuery {
             }
         };
 
-        let radius_m = self
-            .radius_m
-            .as_deref()
-            .unwrap_or("100")
-            .parse::<f64>()
-            .map_err(|_| AppError::BadRequest("radius_m must be a finite number".into()))?;
+        let radius_m = match self.radius_m.as_deref() {
+            Some(value) => value
+                .parse::<f64>()
+                .map_err(|_| AppError::BadRequest("radius_m must be a finite number".into()))?,
+            None => DEFAULT_RADIUS_M,
+        };
         if !radius_m.is_finite() || radius_m <= 0.0 || radius_m > MAX_RADIUS_M {
             return Err(AppError::BadRequest(format!(
                 "radius_m must be greater than 0 and no greater than {MAX_RADIUS_M}"
@@ -152,7 +146,7 @@ impl HotspotQuery {
             time_step,
             region_id,
             minimum_risk_level,
-            radius_m_bits: radius_m.to_bits(),
+            radius_m,
             include_singletons,
         })
     }
@@ -451,7 +445,7 @@ async fn list_hotspots(
     validate_region(&state.db, query.region_id).await?;
 
     let candidates = load_candidates(&state.db, simulation_id, query, &thresholds).await?;
-    let edges = load_edges(&state.db, &candidates, query.radius_m()).await?;
+    let edges = load_edges(&state.db, &candidates, query.radius_m).await?;
     let components = connected_components(&candidates, &edges, query.include_singletons);
     let geometries = load_cluster_geometries(&state.db, &components).await?;
 
@@ -541,7 +535,7 @@ mod tests {
         .validate()
         .unwrap();
         assert_eq!(valid.minimum_risk_level, RiskLevel::High);
-        assert_eq!(valid.radius_m(), DEFAULT_RADIUS_M);
+        assert_eq!(valid.radius_m, DEFAULT_RADIUS_M);
         assert!(valid.include_singletons);
 
         for query in [
