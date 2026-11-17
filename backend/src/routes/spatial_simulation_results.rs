@@ -132,14 +132,14 @@ async fn ensure_completed_run(db: &sqlx::PgPool, simulation_id: Uuid) -> Result<
 }
 
 async fn validate_time_step(db: &sqlx::PgPool, simulation_id: Uuid, time_step: i32) -> Result<f64> {
-    sqlx::query_scalar(
+    sqlx::query_scalar::<_, Option<f64>>(
         "SELECT MIN(time) FROM public.simulation_building_results WHERE simulation_id = $1 AND time_step = $2"
     )
     .bind(simulation_id)
     .bind(time_step)
     .fetch_one(db)
     .await?
-    .ok_or_else(|| AppError::NotFound)
+    .ok_or(AppError::NotFound)
 }
 
 async fn validate_region(db: &sqlx::PgPool, region_id: Option<Uuid>) -> Result<()> {
