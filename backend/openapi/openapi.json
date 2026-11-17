@@ -622,6 +622,42 @@
           }
         }
       }
+    },
+    "/api/v1/simulations/{simulation_id}": {
+      "get": {
+        "operationId": "getSpatialSirSimulationRun",
+        "summary": "Get spatial SIR simulation run status",
+        "description": "Returns lifecycle status and persisted result counts. Detailed time-series retrieval is provided by the spatial simulation results API.",
+        "parameters": [
+          {
+            "name": "simulation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Simulation run summary.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpatialSirRunSummaryResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Simulation run not found."
+          },
+          "500": {
+            "description": "Unexpected database error."
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1290,6 +1326,59 @@
           },
           "idempotent_replay": {
             "type": "boolean"
+          }
+        }
+      },
+      "SpatialSirRunSummaryResponse": {
+        "type": "object",
+        "required": [
+          "simulation_id",
+          "status",
+          "population_source",
+          "eligible_building_count",
+          "excluded_building_count",
+          "result_point_count",
+          "time_step_count",
+          "completed_at"
+        ],
+        "properties": {
+          "simulation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "initialized",
+              "completed"
+            ]
+          },
+          "population_source": {
+            "type": "string",
+            "enum": [
+              "manual"
+            ]
+          },
+          "eligible_building_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "excluded_building_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "result_point_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "time_step_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
           }
         }
       }
