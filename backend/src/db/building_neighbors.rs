@@ -89,21 +89,30 @@ pub async fn find_building_neighbors(
 
     let rows = sqlx::query(
         r#"
+        WITH center AS MATERIALIZED (
+            SELECT id, footprint, footprint::geography AS geog
+            FROM public.buildings
+            WHERE id = $1
+              AND ST_SRID(footprint) = 4326
+              AND NOT ST_IsEmpty(footprint)
+              AND ST_IsValid(footprint)
+        )
         SELECT neighbor.id AS building_id,
-               ST_Distance(center.footprint::geography,
-                           neighbor.footprint::geography) AS distance_m
-        FROM public.buildings AS center
-        JOIN LATERAL (
+               ST_Distance(center.geog, neighbor.footprint::geography) AS distance_m
+        FROM center
+        CROSS JOIN LATERAL (
             SELECT candidate.id, candidate.footprint
             FROM public.buildings AS candidate
             WHERE candidate.id <> center.id
               AND ST_SRID(candidate.footprint) = 4326
               AND NOT ST_IsEmpty(candidate.footprint)
               AND ST_IsValid(candidate.footprint)
-              AND ST_DWithin(center.footprint::geography,
+              AND candidate.footprint::geography
+                  && extensions._ST_Expand(center.geog, $2)
+              AND ST_DWithin(center.geog,
                              candidate.footprint::geography, $2)
-        ) AS neighbor ON TRUE
-        WHERE center.id = $1
+            OFFSET 0
+        ) AS neighbor
         ORDER BY distance_m ASC, neighbor.id ASC
         LIMIT $3
         "#,
@@ -176,7 +185,7 @@ pub async fn build_building_adjacency(
     let rows = sqlx::query(
         r#"
         WITH selected_buildings AS MATERIALIZED (
-            SELECT id, footprint
+            SELECT id, footprint, footprint::geography AS geog
             FROM public.buildings
             WHERE id = ANY($1::uuid[])
               AND ST_SRID(footprint) = 4326
@@ -185,19 +194,21 @@ pub async fn build_building_adjacency(
         )
         SELECT a.id AS building_a_id,
                b.id AS building_b_id,
-               ST_Distance(a.footprint::geography,
-                           b.footprint::geography) AS distance_m
+               ST_Distance(a.geog, b.footprint::geography) AS distance_m
         FROM selected_buildings AS a
-        JOIN LATERAL (
+        CROSS JOIN LATERAL (
             SELECT candidate.id, candidate.footprint
             FROM public.buildings AS candidate
             WHERE candidate.id > a.id
               AND ST_SRID(candidate.footprint) = 4326
               AND NOT ST_IsEmpty(candidate.footprint)
               AND ST_IsValid(candidate.footprint)
-              AND ST_DWithin(a.footprint::geography,
+              AND candidate.footprint::geography
+                  && extensions._ST_Expand(a.geog, $2)
+              AND ST_DWithin(a.geog,
                              candidate.footprint::geography, $2)
-        ) AS b ON TRUE
+            OFFSET 0
+        ) AS b
         ORDER BY a.id ASC, b.id ASC
         "#,
     )
