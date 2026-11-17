@@ -145,13 +145,24 @@ async fn load_building_risks(
     let time = sqlx::query_scalar::<_, Option<f64>>(
         "SELECT MIN(time) FROM public.simulation_building_results WHERE simulation_id=$1 AND time_step=$2"
     ).bind(simulation_id).bind(query.time_step).fetch_one(db).await?.ok_or(AppError::NotFound)?;
+    if let Some(region_id) = query.region_id {
+        let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM public.regions WHERE id=$1)")
+            .bind(region_id).fetch_one(db).await?;
+        if !exists { return Err(AppError::NotFound); }
+    }
     let rows = sqlx::query(
         r#"SELECT r.building_id, b.region_id, s.population, r.infected
            FROM public.simulation_building_results r
            JOIN public.simulation_building_states s ON s.simulation_id=r.simulation_id AND s.building_id=r.building_id
            JOIN public.buildings b ON b.id=r.building_id
            WHERE r.simulation_id=$1 AND r.time_step=$2 AND ($3::uuid IS NULL OR b.region_id=$3)
-           ORDER BY b.region_id, r.building_id"#
+           UNION ALL
+           SELECT e.building_id, b.region_id, NULL::DOUBLE PRECISION AS population, 0::DOUBLE PRECISION AS infected
+           FROM public.simulation_building_exclusions e
+           JOIN public.buildings b ON b.id=e.building_id
+           WHERE e.simulation_id=$1 AND e.reason_code='missing_population'
+             AND ($3::uuid IS NULL OR b.region_id=$3)
+           ORDER BY region_id, building_id"#
     ).bind(simulation_id).bind(query.time_step).bind(query.region_id).fetch_all(db).await?;
     let data = rows.into_iter().map(|row| {
         let input = BuildingRiskInput {
