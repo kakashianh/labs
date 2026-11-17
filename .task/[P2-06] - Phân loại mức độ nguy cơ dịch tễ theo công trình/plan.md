@@ -87,6 +87,11 @@ Mỗi item cần có tối thiểu:
 
 ### 5.3 API shape
 
+Implemented routes:
+- `POST /api/v1/simulations/{simulation_id}/risk-classification`: lưu snapshot thresholds vào `simulation_config.risk_classification`; body cho phép override từng ngưỡng, bỏ trống dùng giá trị hiện tại/default.
+- `GET /api/v1/simulations/{simulation_id}/risk-results?time_step=...&region_id=...&page=...&page_size=...`: danh sách risk theo building, gồm cả building bị loại do missing population.
+- `GET /api/v1/simulations/{simulation_id}/risk-aggregate?time_step=...&region_id=...`: tổng hợp theo region, không phân trang.
+
 - Endpoint danh sách per-building risk: filter theo `simulation_id`, `time_step`, `region_id`; hỗ trợ pagination và stable ordering theo `building_id`.
 - Endpoint regional risk summary: filter theo `simulation_id`, `time_step`, `region_id`; không áp dụng pagination.
 - Reuse validation, completed-run checks và repository/query logic từ KAN-25 khi phù hợp; tránh sao chép JOIN/filter logic.
@@ -99,7 +104,7 @@ Mỗi item cần có tối thiểu:
 - [x] Đối chiếu KAN-24 result precision và S/I/R invariants.
 - [x] Đối chiếu KAN-25 filters, completed-run validation và aggregation.
 - [x] Xác định cách đọc/lưu `risk_classification` snapshot trong `simulation_runs.simulation_config`.
-- [ ] Xác nhận migration có cần thiết không; ưu tiên tận dụng JSON config hiện có nếu đáp ứng được.
+- [x] Xác nhận không cần migration mới; tận dụng `simulation_runs.simulation_config` JSONB hiện có.
 
 ### Step 2 – Implement Risk Classification Domain
 - [x] Tạo typed risk level enum: Low, Medium, High, Unclassified.
