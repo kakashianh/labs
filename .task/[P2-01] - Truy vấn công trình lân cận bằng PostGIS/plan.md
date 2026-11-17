@@ -162,7 +162,7 @@ Các quyết định đã được người dùng duyệt và là contract bắt
 - Center missing -> 404; invalid/empty/non-4326 center -> 400; no neighbors -> 200 with data: [].
 - Response exposes the total invalid/empty/non-4326 footprint count in public.buildings. Batch adjacency returns unique undirected edges plus excluded_invalid_geometry_count and missing_building_count.
 - Added SQLx migration 20261116000000_add_building_footprint_geography_gist_index.sql: partial GiST expression index on (footprint::geography) for valid, non-empty EPSG:4326 footprints.
-- Both single-neighbor and batch adjacency use LATERAL candidate scans so the planner can use the geography expression index.
+- Both single-neighbor and batch adjacency currently use LATERAL candidate scans. Production EXPLAIN after migration shows this query shape does not yet produce a parameterized GiST Index Cond; see the 2026-11-17 production verification below. Do not treat the LATERAL shape alone as proof of effective index filtering.
 
 ### Live dataset query-plan review
 
@@ -170,10 +170,56 @@ Read-only inspection of the linked Supabase database on 2026-11-16:
 - 431 buildings; all 431 have SRID 4326; invalid_or_empty_buildings = 0.
 - Existing buildings_footprint_gist_idx is GiST(footprint) on geometry and is not used by geography-cast ST_DWithin.
 - Before the new expression index, the materialized batch self-join at radius 250 m used sequential scans, evaluated 431 × 431 candidate pairs, and took about 5.44 seconds to return 21,387 edges. This is the evidence for adding the geography expression index.
-- The new migration is committed only in this feature branch. It has NOT been applied to the live Supabase database.
-- Testcontainers integration tests run EXPLAIN ANALYZE for both query shapes and assert that the expression index is usable with enable_seqscan=off. This verifies index compatibility, not that the planner should choose it for every small-table workload.
+- The migration was subsequently applied to live Supabase on 2026-11-17 (migration history version `20261117005723`).
+- Testcontainers integration tests run EXPLAIN ANALYZE for both query shapes and assert that the expression index is usable with `enable_seqscan=off`. This verifies index compatibility, not that the production query shape gets a selective index condition.
 
 ### Remaining deployment verification
 
 - [x] After the feature branch is merged/deployed and the migration is applied, rerun EXPLAIN (ANALYZE, BUFFERS) on the live 431-building dataset and compare actual execution time/index choice.
 - [x] Run the complete CI workflow successfully on the final branch head.
+
+
+## 12. Supabase Production Migration and EXPLAIN Verification (2026-11-17)
+
+Target project: `gis-3d` (`ubltoieatdwdyzowpaig`), PostgreSQL 17.11.
+
+### Migration result
+
+- [x] Applied migration `add_building_footprint_geography_gist_index` successfully using Supabase migration workflow.
+- [x] Confirmed migration history version: `20261117005723`.
+- [x] Confirmed index exists: `buildings_footprint_geography_gist_idx`.
+- Index definition: partial GiST on `(footprint::geography)`, restricted to valid, non-empty EPSG:4326 footprints.
+- Index size after creation: 32 kB.
+- Production data at verification: 431 buildings; 0 invalid/empty/wrong-SRID footprints.
+
+### Production EXPLAIN (ANALYZE, BUFFERS)
+
+Radius used: 250 m. Tests executed read-only against the live production dataset.
+
+1. **Current single-neighbor LATERAL query shape**
+   - Planner selected an Index Scan node on `buildings_footprint_geography_gist_idx`, but there was no `Index Cond`; all 431 candidate rows were scanned and then filtered by `ST_DWithin`.
+   - Actual execution time: approximately 121.756 ms.
+   - Therefore this is not yet selective GiST index usage.
+
+2. **Current batch adjacency LATERAL query shape**
+   - Planner selected an Index Scan node on the geography index, but again without an `Index Cond`.
+   - The candidate scan ran 431 times, scanning 431 rows per outer building.
+   - Returned 21,387 undirected edges.
+   - Actual execution time: approximately 5,334.995 ms.
+   - The index node label alone must not be interpreted as successful spatial index filtering.
+
+3. **Index-capability diagnostic using a scalar InitPlan center geometry**
+   - The same geography expression index produced an explicit Index Cond:
+     `(footprint::geography) && _st_expand(center_geography, 250)`.
+   - Exact `ST_DWithin` remained as a filter.
+   - Returned 29 neighbors for the sampled center; actual execution time approximately 14.699 ms.
+   - This proves the production index is valid and can be used selectively when the center geography is available as an InitPlan constant. It does not prove that the current correlated LATERAL application queries use it effectively.
+
+### Follow-up required before claiming spatial-index optimization complete
+
+- [ ] Rewrite single and batch SQL so the geography GiST index receives a selective parameterized `Index Cond` for the actual correlated query shape.
+- [ ] Add/adjust integration EXPLAIN tests to assert an actual spatial `Index Cond`, not merely the presence of an Index Scan node.
+- [ ] Rerun production EXPLAIN after the query rewrite and compare results and execution time against the baseline above.
+- [x] Record production migration and query-plan evidence in this plan.
+
+**Status:** production migration is complete; production query-plan verification is complete and has identified a query-shape optimization gap. Do not mark P2-01 fully done until the follow-up query and tests above are complete.
