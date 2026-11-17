@@ -195,15 +195,20 @@ async fn hotspot_api_builds_transitive_components_and_returns_union_geometry() {
     assert_eq!(medium_candidates.status(), StatusCode::OK);
     let medium_candidates = read_json(medium_candidates).await;
     assert_eq!(medium_candidates["hotspot_count"], 3);
-    assert!(medium_candidates["hotspots"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .any(|hotspot| hotspot["building_ids"]
+    let medium_building_id = medium_building.to_string();
+    assert!(
+        medium_candidates["hotspots"]
             .as_array()
             .unwrap()
             .iter()
-            .any(|id| id == &medium_building.to_string())));
+            .any(|hotspot| {
+                hotspot["building_ids"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|id| id == &medium_building_id)
+            })
+    );
 
     let no_hotspots = app
         .clone()
