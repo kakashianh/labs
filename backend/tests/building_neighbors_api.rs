@@ -1,0 +1,390 @@
+use axum::{
+    body::Body,
+    http::{Request, StatusCode},
+};
+use backend::{db, router::router, state::AppState};
+use serde_json::Value;
+use sqlx::postgres::PgPoolOptions;
+use testcontainers::{
+    core::{IntoContainerPort, WaitFor},
+    runners::AsyncRunner,
+    GenericImage, ImageExt,
+};
+use tower::ServiceExt;
+use uuid::Uuid;
+
+#[tokio::test]
+async fn building_neighbor_api_uses_metric_footprint_distance_and_batch_adjacency() {
+    let container = GenericImage::new("postgis/postgis", "17-3.5")
+        .with_wait_for(WaitFor::message_on_stderr(
+            "database system is ready to accept connections",
+        ))
+        .with_exposed_port(5432.tcp())
+        .with_env_var("POSTGRES_USER", "gis_test")
+        .with_env_var("POSTGRES_PASSWORD", "gis_test")
+        .with_env_var("POSTGRES_DB", "gis_test")
+        .start()
+        .await
+        .expect("start PostGIS container");
+    let port = container
+        .get_host_port_ipv4(5432)
+        .await
+        .expect("mapped port");
+    let url = format!("postgres://gis_test:gis_test@127.0.0.1:{port}/gis_test");
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&url)
+        .await
+        .expect("connect DB");
+    db::run_migrations(&pool).await.expect("run migrations");
+
+    let region_id: Uuid = sqlx::query_scalar(
+        r#"INSERT INTO public.regions
+           (code,name,boundary_method,boundary)
+           VALUES ('NEIGHBOR-REGION','Neighbor Region','fixture',
+           ST_GeomFromText('MULTIPOLYGON(((106 10,107 10,107 11,106 11,106 10)))',4326))
+           RETURNING id"#,
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("insert region");
+
+    async fn insert_building(
+        pool: &sqlx::PgPool,
+        region_id: Uuid,
+        external_id: &str,
+        wkt: &str,
+    ) -> Uuid {
+        sqlx::query_scalar(
+            r#"INSERT INTO public.buildings
+               (external_id,osm_type,osm_way_id,region_id,footprint)
+               VALUES ($1,'way',abs(hashtext($1))::bigint,$2,ST_GeomFromText($3,4326))
+               RETURNING id"#,
+        )
+        .bind(external_id)
+        .bind(region_id)
+        .bind(wkt)
+        .fetch_one(pool)
+        .await
+        .expect("insert building fixture")
+    }
+
+    let center = insert_building(
+        &pool,
+        region_id,
+        "way/neighbor-center",
+        "MULTIPOLYGON(((106 10,106.001 10,106.001 10.001,106 10.001,106 10)))",
+    )
+    .await;
+    let touching = insert_building(
+        &pool,
+        region_id,
+        "way/neighbor-touching",
+        "MULTIPOLYGON(((106.001 10,106.002 10,106.002 10.001,106.001 10.001,106.001 10)))",
+    )
+    .await;
+    let near = insert_building(
+        &pool,
+        region_id,
+        "way/neighbor-near",
+        "MULTIPOLYGON(((106.0011 10,106.0021 10,106.0021 10.001,106.0011 10.001,106.0011 10)))",
+    )
+    .await;
+    let far = insert_building(
+        &pool,
+        region_id,
+        "way/neighbor-far",
+        "MULTIPOLYGON(((106.02 10,106.021 10,106.021 10.001,106.02 10.001,106.02 10)))",
+    )
+    .await;
+    let invalid = insert_building(
+        &pool,
+        region_id,
+        "way/neighbor-invalid",
+        "MULTIPOLYGON(((106.01 10.01,106.012 10.012,106.01 10.012,106.012 10.01,106.01 10.01)))",
+    )
+    .await;
+
+    let missing_id = Uuid::new_v4();
+    let app = router(AppState::new(pool.clone()));
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri(format!(
+                    "/api/v1/buildings/{center}/neighbors?radius_m=20&limit=10"
+                ))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = axum::body::to_bytes(response.into_body(), 1024 * 1024)
+        .await
+        .unwrap();
+    let json: Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(json["center_building_id"], center.to_string());
+    assert_eq!(json["distance_semantics"], "footprint_to_footprint");
+    assert_eq!(json["excluded_invalid_geometry_count"], 1);
+    let neighbors = json["data"].as_array().unwrap();
+    assert_eq!(neighbors.len(), 2);
+    assert_eq!(neighbors[0]["building_id"], touching.to_string());
+    assert_eq!(neighbors[0]["distance_m"], 0.0);
+    assert_eq!(neighbors[1]["building_id"], near.to_string());
+    let near_distance = neighbors[1]["distance_m"].as_f64().unwrap();
+    assert!(near_distance > 10.0 && near_distance < 12.0);
+    assert!(!neighbors
+        .iter()
+        .any(|item| item["building_id"] == far.to_string()));
+    assert!(!neighbors
+        .iter()
+        .any(|item| item["building_id"] == invalid.to_string()));
+
+    // Exercise the radius boundary with a one-micrometer tolerance for floating-point stability.
+    let exact_radius_m: f64 = sqlx::query_scalar(
+        r#"SELECT ST_Distance(center.footprint::geography, neighbor.footprint::geography)
+           FROM public.buildings center
+           JOIN public.buildings neighbor ON neighbor.id = $2
+           WHERE center.id = $1"#,
+    )
+    .bind(center)
+    .bind(near)
+    .fetch_one(&pool)
+    .await
+    .expect("calculate exact footprint distance");
+    let included_at_boundary_tolerance: bool = sqlx::query_scalar(
+        r#"SELECT ST_DWithin(center.footprint::geography, neighbor.footprint::geography,
+                            ST_Distance(center.footprint::geography, neighbor.footprint::geography) + 0.000001)
+           FROM public.buildings center
+           JOIN public.buildings neighbor ON neighbor.id = $2
+           WHERE center.id = $1"#,
+    )
+    .bind(center)
+    .bind(near)
+    .fetch_one(&pool)
+    .await
+    .expect("check inclusive PostGIS radius boundary");
+    assert!(included_at_boundary_tolerance);
+
+    let boundary_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri(format!(
+                    "/api/v1/buildings/{center}/neighbors?radius_m={}",
+                    exact_radius_m + 0.000001
+                ))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(boundary_response.status(), StatusCode::OK);
+    let boundary_body = axum::body::to_bytes(boundary_response.into_body(), 1024 * 1024)
+        .await
+        .unwrap();
+    let boundary_json: Value = serde_json::from_slice(&boundary_body).unwrap();
+    assert!(boundary_json["data"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|item| item["building_id"] == near.to_string()));
+
+    let mut plan_tx = pool.begin().await.expect("begin query-plan transaction");
+    sqlx::query("SET LOCAL enable_seqscan = OFF")
+        .execute(&mut *plan_tx)
+        .await
+        .expect("prefer index scans for index-availability assertion");
+    let query_plan: Value = sqlx::query_scalar(
+        r#"
+        EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
+        WITH center AS MATERIALIZED (
+            SELECT id, footprint, footprint::geography AS geog
+            FROM public.buildings
+            WHERE id = $1
+              AND ST_SRID(footprint) = 4326
+              AND NOT ST_IsEmpty(footprint)
+              AND ST_IsValid(footprint)
+        )
+        SELECT neighbor.id AS building_id,
+               ST_Distance(center.geog, neighbor.footprint::geography) AS distance_m
+        FROM center
+        CROSS JOIN LATERAL (
+            SELECT candidate.id, candidate.footprint
+            FROM public.buildings AS candidate
+            WHERE candidate.id <> center.id
+              AND ST_SRID(candidate.footprint) = 4326
+              AND NOT ST_IsEmpty(candidate.footprint)
+              AND ST_IsValid(candidate.footprint)
+              AND candidate.footprint::geography
+                  && _ST_Expand(center.geog, $2)
+              AND ST_DWithin(center.geog,
+                             candidate.footprint::geography, $2)
+            OFFSET 0
+        ) AS neighbor
+        ORDER BY distance_m ASC, neighbor.id ASC
+        LIMIT $3
+        "#,
+    )
+    .bind(center)
+    .bind(20.0_f64)
+    .bind(10_i64)
+    .fetch_one(&mut *plan_tx)
+    .await
+    .expect("EXPLAIN ANALYZE neighbor query");
+    plan_tx
+        .commit()
+        .await
+        .expect("commit query-plan transaction");
+    assert!(query_plan[0]["Plan"].is_object());
+    let single_plan_text = query_plan.to_string();
+    assert!(single_plan_text.contains("buildings_footprint_geography_gist_idx"));
+    assert!(single_plan_text.contains("Index Cond"));
+    assert!(single_plan_text.contains("_st_expand"));
+    println!("PostGIS neighbor EXPLAIN ANALYZE: {query_plan}");
+
+    let mut batch_plan_tx = pool
+        .begin()
+        .await
+        .expect("begin batch query-plan transaction");
+    sqlx::query("SET LOCAL enable_seqscan = OFF")
+        .execute(&mut *batch_plan_tx)
+        .await
+        .expect("prefer index scans for batch index-availability assertion");
+    let batch_query_plan: Value = sqlx::query_scalar(
+        r#"
+        EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
+        WITH selected_buildings AS MATERIALIZED (
+            SELECT id, footprint, footprint::geography AS geog
+            FROM public.buildings
+            WHERE id = ANY($1::uuid[])
+              AND ST_SRID(footprint) = 4326
+              AND NOT ST_IsEmpty(footprint)
+              AND ST_IsValid(footprint)
+        )
+        SELECT a.id AS building_a_id,
+               b.id AS building_b_id,
+               ST_Distance(a.geog, b.footprint::geography) AS distance_m
+        FROM selected_buildings AS a
+        CROSS JOIN LATERAL (
+            SELECT candidate.id, candidate.footprint
+            FROM public.buildings AS candidate
+            WHERE candidate.id > a.id
+              AND ST_SRID(candidate.footprint) = 4326
+              AND NOT ST_IsEmpty(candidate.footprint)
+              AND ST_IsValid(candidate.footprint)
+              AND candidate.footprint::geography
+                  && _ST_Expand(a.geog, $2)
+              AND ST_DWithin(a.geog,
+                             candidate.footprint::geography, $2)
+            OFFSET 0
+        ) AS b
+        ORDER BY a.id ASC, b.id ASC
+        "#,
+    )
+    .bind(&[center, touching, near, far, invalid][..])
+    .bind(20.0_f64)
+    .fetch_one(&mut *batch_plan_tx)
+    .await
+    .expect("EXPLAIN ANALYZE batch adjacency query");
+    batch_plan_tx
+        .commit()
+        .await
+        .expect("commit batch query-plan transaction");
+    assert!(batch_query_plan[0]["Plan"].is_object());
+    let batch_plan_text = batch_query_plan.to_string();
+    assert!(batch_plan_text.contains("buildings_footprint_geography_gist_idx"));
+    assert!(batch_plan_text.contains("Index Cond"));
+    assert!(batch_plan_text.contains("_st_expand"));
+    println!("PostGIS batch adjacency EXPLAIN ANALYZE: {batch_query_plan}");
+
+    // The batch graph is undirected: each pair occurs once and invalid geometries
+    // never enter the graph.
+    let missing_building = Uuid::new_v4();
+    let adjacency = db::building_neighbors::build_building_adjacency(
+        &pool,
+        &[center, touching, near, far, invalid, missing_building],
+        20.0,
+    )
+    .await
+    .expect("build adjacency");
+    assert!(adjacency.edges.len() >= 2);
+    assert_eq!(adjacency.excluded_invalid_geometry_count, 1);
+    assert_eq!(adjacency.missing_building_count, 1);
+    assert!(adjacency
+        .edges
+        .iter()
+        .all(|edge| edge.building_a_id < edge.building_b_id));
+    assert!(adjacency
+        .edges
+        .iter()
+        .all(|edge| { edge.building_a_id != invalid && edge.building_b_id != invalid }));
+    assert!(adjacency.edges.iter().any(|edge| {
+        edge.building_a_id == center && edge.building_b_id == touching
+            || edge.building_a_id == touching && edge.building_b_id == center
+    }));
+    assert!(matches!(
+        db::building_neighbors::build_building_adjacency(&pool, &[center], 0.0).await,
+        Err(db::building_neighbors::BuildingAdjacencyError::InvalidRadius)
+    ));
+
+    for (uri, expected) in [
+        (
+            format!("/api/v1/buildings/{center}/neighbors?limit=10"),
+            StatusCode::BAD_REQUEST,
+        ),
+        (
+            format!("/api/v1/buildings/{center}/neighbors?radius_m=0"),
+            StatusCode::BAD_REQUEST,
+        ),
+        (
+            format!("/api/v1/buildings/{center}/neighbors?radius_m=5001"),
+            StatusCode::BAD_REQUEST,
+        ),
+        (
+            format!("/api/v1/buildings/{center}/neighbors?limit=501"),
+            StatusCode::BAD_REQUEST,
+        ),
+        (
+            "/api/v1/buildings/not-a-uuid/neighbors".to_string(),
+            StatusCode::BAD_REQUEST,
+        ),
+        (
+            format!("/api/v1/buildings/{invalid}/neighbors?radius_m=20"),
+            StatusCode::BAD_REQUEST,
+        ),
+        (
+            format!("/api/v1/buildings/{missing_id}/neighbors?radius_m=20"),
+            StatusCode::NOT_FOUND,
+        ),
+    ] {
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri(uri.clone())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), expected, "{uri}");
+    }
+
+    let empty = app
+        .oneshot(
+            Request::builder()
+                .uri(format!("/api/v1/buildings/{far}/neighbors?radius_m=1"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(empty.status(), StatusCode::OK);
+    let body = axum::body::to_bytes(empty.into_body(), 1024 * 1024)
+        .await
+        .unwrap();
+    let json: Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(json["data"].as_array().unwrap().len(), 0);
+}

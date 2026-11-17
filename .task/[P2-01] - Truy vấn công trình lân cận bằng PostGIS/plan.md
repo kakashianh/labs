@@ -71,42 +71,42 @@ Không hard-code endpoint path trước khi đối chiếu convention routes hi�
 ## 6. Implementation Plan
 
 ### Step 1 – Inspect Existing GIS Schema and Query Conventions
-- [ ] Đọc migration KAN-13 và DB README.
-- [ ] Xác nhận SRID/type thực tế của footprint.
-- [ ] Xác nhận GiST index hiện hữu và dữ liệu invalid/empty.
-- [ ] Kiểm tra query/repository conventions SQLx.
-- [ ] Chốt distance semantics và identifier contract.
+- [x] Đọc migration KAN-13 và DB README.
+- [x] Xác nhận SRID/type thực tế của footprint.
+- [x] Xác nhận GiST index hiện hữu và dữ liệu invalid/empty.
+- [x] Kiểm tra query/repository conventions SQLx.
+- [x] Chốt distance semantics và identifier contract.
 
 ### Step 2 – Design and Verify Spatial SQL
-- [ ] Viết truy vấn ST_DWithin theo đơn vị mét.
-- [ ] Tính distance_m nhất quán với predicate filter.
-- [ ] Loại center building khỏi danh sách neighbor.
-- [ ] Thêm deterministic ordering và result limit.
-- [ ] Chạy EXPLAIN/EXPLAIN ANALYZE với dữ liệu hiện có.
-- [ ] Chỉ thêm expression index/migration nếu có bằng chứng cần thiết.
+- [x] Viết truy vấn ST_DWithin theo đơn vị mét.
+- [x] Tính distance_m nhất quán với predicate filter.
+- [x] Loại center building khỏi danh sách neighbor.
+- [x] Thêm deterministic ordering và result limit.
+- [x] Chạy EXPLAIN/EXPLAIN ANALYZE với dữ liệu hiện có.
+- [x] Chỉ thêm expression index/migration nếu có bằng chứng cần thiết.
 
 ### Step 3 – Implement Repository and Service
-- [ ] Tạo query/repository function có bind parameters.
-- [ ] Xử lý center building không tồn tại.
-- [ ] Xử lý radius/limit ngoài miền cho phép.
-- [ ] Trả empty list khi không có neighbor.
-- [ ] Không nối chuỗi SQL từ user input.
+- [x] Tạo query/repository function có bind parameters.
+- [x] Xử lý center building không tồn tại.
+- [x] Xử lý radius/limit ngoài miền cho phép.
+- [x] Trả empty list khi không có neighbor.
+- [x] Không nối chuỗi SQL từ user input.
 
 ### Step 4 – Expose API
-- [ ] Tạo request/response DTO theo API convention.
-- [ ] Đăng ký route trong router.
-- [ ] Map lỗi sang AppError/error envelope hiện tại.
-- [ ] Cập nhật OpenAPI contract.
-- [ ] Viết tài liệu request/response.
+- [x] Tạo request/response DTO theo API convention.
+- [x] Đăng ký route trong router.
+- [x] Map lỗi sang AppError/error envelope hiện tại.
+- [x] Cập nhật OpenAPI contract.
+- [x] Viết tài liệu request/response.
 
 ### Step 5 – Tests and Verification
-- [ ] Unit test validation radius và limit.
-- [ ] Integration test building gần/trong/ngoài bán kính.
-- [ ] Test khoảng cách đúng đơn vị mét.
-- [ ] Test center không xuất hiện trong neighbors.
-- [ ] Test building không tồn tại và danh sách rỗng.
-- [ ] Test geometry boundary và kết quả ổn định.
-- [ ] Kiểm tra query plan/index usage khi phù hợp.
+- [x] Unit test validation radius và limit.
+- [x] Integration test building gần/trong/ngoài bán kính.
+- [x] Test khoảng cách đúng đơn vị mét.
+- [x] Test center không xuất hiện trong neighbors.
+- [x] Test building không tồn tại và danh sách rỗng.
+- [x] Test geometry boundary và kết quả ổn định.
+- [x] Kiểm tra query plan/index usage khi phù hợp.
 - [ ] Chạy backend fmt, Clippy, tests và CI.
 
 ## 7. Acceptance Criteria
@@ -144,9 +144,112 @@ Các quyết định đã được người dùng duyệt và là contract bắt
 - **Boundary:** ST_DWithin dùng inclusive boundary (distance <= radius). Weight tại đúng radius có thể bằng 0 theo KAN-23, vì vậy building ở biên được trả trong kết quả spatial query nhưng không tạo neighbor pressure theo linear kernel.
 
 ### Additional review checklist
-- [ ] Xác nhận footprint MultiPolygon 4326 và kiểm tra invalid/empty records.
-- [ ] Implement footprint-to-footprint distance bằng cùng biểu thức metric cho filter và output.
-- [ ] Có query/batch contract để dựng adjacency cho toàn bộ simulation building set.
-- [ ] Test polygon giao nhau/chạm nhau (distance 0), sát biên, đúng biên và ngoài biên.
-- [ ] Chạy EXPLAIN ANALYZE; ghi nhận index được dùng hay sequential scan hợp lý trên dataset nhỏ.
-- [ ] Không thêm index migration nếu chưa có evidence về query plan/workload.
+- [x] Xác nhận footprint MultiPolygon 4326 và kiểm tra invalid/empty records.
+- [x] Implement footprint-to-footprint distance bằng cùng biểu thức metric cho filter và output.
+- [x] Có query/batch contract để dựng adjacency cho toàn bộ simulation building set.
+- [x] Test polygon giao nhau/chạm nhau (distance 0), sát biên, đúng biên và ngoài biên.
+- [x] Chạy EXPLAIN ANALYZE; ghi nhận index được dùng hay sequential scan hợp lý trên dataset nhỏ.
+- [x] Không thêm index migration nếu chưa có evidence về query plan/workload.
+
+
+## 11. Implementation and Verification Evidence (2026-11-16)
+
+### Implemented on feat/p2-01-postgis-building-adjacency
+
+- API: GET /api/v1/buildings/{building_id}/neighbors?radius_m=...&limit=...
+- radius_m is required (no hidden epidemiological default), finite, greater than 0, and at most 5,000 m. limit defaults to 100 and is capped at 500.
+- Filter and output both use geography casts: ST_DWithin and ST_Distance. The center is excluded; results are ordered by distance_m then building UUID.
+- Center missing -> 404; invalid/empty/non-4326 center -> 400; no neighbors -> 200 with data: [].
+- Response exposes the total invalid/empty/non-4326 footprint count in public.buildings. Batch adjacency returns unique undirected edges plus excluded_invalid_geometry_count and missing_building_count.
+- Added SQLx migration 20261116000000_add_building_footprint_geography_gist_index.sql: partial GiST expression index on (footprint::geography) for valid, non-empty EPSG:4326 footprints.
+- Both single-neighbor and batch adjacency use materialized outer CTEs, an explicit geography bounding-box predicate (`&& extensions._ST_Expand(...)`), and a LATERAL candidate subquery with `OFFSET 0` to preserve a parameterized GiST index scan. Production EXPLAIN evidence is recorded below.
+
+### Live dataset query-plan review
+
+Read-only inspection of the linked Supabase database on 2026-11-16:
+- 431 buildings; all 431 have SRID 4326; invalid_or_empty_buildings = 0.
+- Existing buildings_footprint_gist_idx is GiST(footprint) on geometry and is not used by geography-cast ST_DWithin.
+- Before the new expression index, the materialized batch self-join at radius 250 m used sequential scans, evaluated 431 × 431 candidate pairs, and took about 5.44 seconds to return 21,387 edges. This is the evidence for adding the geography expression index.
+- The migration was subsequently applied to live Supabase on 2026-11-17 (migration history version `20261117005723`).
+- Testcontainers integration tests run EXPLAIN ANALYZE for both query shapes and assert that the expression index is usable with `enable_seqscan=off`. This verifies index compatibility, not that the production query shape gets a selective index condition.
+
+### Remaining deployment verification
+
+- [x] After the feature branch is merged/deployed and the migration is applied, rerun EXPLAIN (ANALYZE, BUFFERS) on the live 431-building dataset and compare actual execution time/index choice.
+- [x] Run the complete CI workflow successfully on the final branch head.
+
+
+## 12. Supabase Production Migration and EXPLAIN Verification (2026-11-17)
+
+Target project: `gis-3d` (`ubltoieatdwdyzowpaig`), PostgreSQL 17.11.
+
+### Migration result
+
+- [x] Applied migration `add_building_footprint_geography_gist_index` successfully using Supabase migration workflow.
+- [x] Confirmed migration history version: `20261117005723`.
+- [x] Confirmed index exists: `buildings_footprint_geography_gist_idx`.
+- Index definition: partial GiST on `(footprint::geography)`, restricted to valid, non-empty EPSG:4326 footprints.
+- Index size after creation: 32 kB.
+- Production data at verification: 431 buildings; 0 invalid/empty/wrong-SRID footprints.
+
+### Production EXPLAIN (ANALYZE, BUFFERS)
+
+Radius used: 250 m. Tests executed read-only against the live production dataset.
+
+1. **Current single-neighbor LATERAL query shape**
+   - Planner selected an Index Scan node on `buildings_footprint_geography_gist_idx`, but there was no `Index Cond`; all 431 candidate rows were scanned and then filtered by `ST_DWithin`.
+   - Actual execution time: approximately 121.756 ms.
+   - Therefore this is not yet selective GiST index usage.
+
+2. **Current batch adjacency LATERAL query shape**
+   - Planner selected an Index Scan node on the geography index, but again without an `Index Cond`.
+   - The candidate scan ran 431 times, scanning 431 rows per outer building.
+   - Returned 21,387 undirected edges.
+   - Actual execution time: approximately 5,334.995 ms.
+   - The index node label alone must not be interpreted as successful spatial index filtering.
+
+3. **Index-capability diagnostic using a scalar InitPlan center geometry**
+   - The same geography expression index produced an explicit Index Cond:
+     `(footprint::geography) && _st_expand(center_geography, 250)`.
+   - Exact `ST_DWithin` remained as a filter.
+   - Returned 29 neighbors for the sampled center; actual execution time approximately 14.699 ms.
+   - This proves the production index is valid and can be used selectively when the center geography is available as an InitPlan constant. It does not prove that the current correlated LATERAL application queries use it effectively.
+
+### Follow-up required before claiming spatial-index optimization complete
+
+- [ ] Rewrite single and batch SQL so the geography GiST index receives a selective parameterized `Index Cond` for the actual correlated query shape.
+- [ ] Add/adjust integration EXPLAIN tests to assert an actual spatial `Index Cond`, not merely the presence of an Index Scan node.
+- [ ] Rerun production EXPLAIN after the query rewrite and compare results and execution time against the baseline above.
+- [x] Record production migration and query-plan evidence in this plan.
+
+**Status:** production migration is complete; production query-plan verification is complete and has identified a query-shape optimization gap. Do not mark P2-01 fully done until the follow-up query and tests above are complete.
+
+
+## 13. Selective Geography GiST Query Rewrite (2026-11-17)
+
+### Implementation
+
+- [x] Single-neighbor query now materializes the validated center row and its geography value.
+- [x] Batch query materializes the selected building set and geography values.
+- [x] Both candidate subqueries apply an explicit geography bounding-box predicate:
+  `candidate.footprint::geography && extensions._ST_Expand(center_geog, radius_m)`.
+- [x] Both retain exact `ST_DWithin` as the final distance predicate and `ST_Distance` for returned distances.
+- [x] Added `OFFSET 0` inside each LATERAL candidate subquery to prevent pull-up that previously left the spatial predicate as a join filter rather than a parameterized index condition.
+- [x] Integration EXPLAIN tests now assert both the geography index name and the presence of `Index Cond` / `_st_expand`, rather than checking only for an Index Scan node.
+
+### Live production EXPLAIN comparison
+
+Target: Supabase project `ubltoieatdwdyzowpaig`, 431 valid EPSG:4326 buildings, radius 250 m.
+
+| Query | Previous production shape | Rewritten shape |
+|---|---:|---:|
+| Single-neighbor | ~121.756 ms; no selective Index Cond | ~14.993 ms; parameterized geography GiST Index Cond |
+| Batch adjacency | ~5,334.995 ms; candidate scan 431 rows × 431 loops | ~1,727.256 ms; parameterized geography GiST Index Cond |
+
+Batch output remained 21,387 undirected edges in both shapes. The rewritten batch plan used the geography GiST index to reduce candidate rows before exact `ST_DWithin` filtering. These timings are single EXPLAIN ANALYZE observations on the live dataset, not a controlled benchmark guarantee.
+
+### CI
+
+- [ ] Final CI for the rewritten implementation. Commit `fa44fa36ca273028c2561ce2d686ca8c0b33c75a` triggered Rust CI run `43992722375` and PostGIS import workflow `43992722244`; both were in progress at plan update time.
+
+**Current status:** Production migration and selective query-plan verification are complete. Implementation and stronger EXPLAIN assertions are committed on `feat/p2-01-postgis-building-adjacency`. Keep final CI and final branch verification unchecked until the workflow runs complete successfully.

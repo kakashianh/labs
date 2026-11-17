@@ -1,5 +1,6 @@
 //! API routes.
 pub mod building_detail;
+pub mod building_neighbors;
 pub mod buildings;
 pub mod health;
 pub mod openapi;

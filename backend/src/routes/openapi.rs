@@ -36,6 +36,18 @@ mod tests {
         assert!(spec["paths"]["/api/v1/regions"]["get"].is_object());
         assert!(spec["paths"]["/api/v1/regions/{region_id}"]["get"].is_object());
         assert!(spec["paths"]["/api/v1/buildings/{building_id}"]["get"].is_object());
+        assert!(spec["paths"]["/api/v1/buildings/{building_id}/neighbors"]["get"].is_object());
+        assert!(spec["components"]["schemas"]["BuildingNeighborsResponse"].is_object());
+        let neighbor_parameters = spec["paths"]["/api/v1/buildings/{building_id}/neighbors"]["get"]
+            ["parameters"]
+            .as_array()
+            .expect("neighbor query parameters");
+        assert!(neighbor_parameters.iter().any(|parameter| {
+            parameter["name"] == "radius_m" && parameter["required"].as_bool() == Some(true)
+        }));
+        assert!(neighbor_parameters.iter().any(|parameter| {
+            parameter["name"] == "limit" && parameter["required"].as_bool() == Some(false)
+        }));
         assert!(spec["paths"]["/api/v1/simulations/sir"]["post"].is_object());
         assert!(spec["components"]["schemas"]["SirSimulationRequest"].is_object());
         assert!(spec["components"]["schemas"]["SirSimulationResponse"].is_object());

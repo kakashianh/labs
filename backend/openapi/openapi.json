@@ -406,6 +406,125 @@
           }
         }
       }
+    },
+    "/api/v1/buildings/{building_id}/neighbors": {
+      "get": {
+        "operationId": "getBuildingNeighbors",
+        "summary": "Find nearby buildings",
+        "description": "Returns nearby buildings using minimum footprint-to-footprint distance. Source footprints are EPSG:4326 and are cast to geography for meter-based filtering and distance output. Invalid/empty/non-4326 neighbor geometries are excluded and counted. The center building must have a valid, non-empty EPSG:4326 footprint.",
+        "parameters": [
+          {
+            "name": "building_id",
+            "in": "path",
+            "required": true,
+            "description": "Internal building UUID.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "radius_m",
+            "in": "query",
+            "required": true,
+            "description": "Search radius in meters.",
+            "schema": {
+              "type": "number",
+              "format": "double",
+              "exclusiveMinimum": 0,
+              "maximum": 5000
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of neighbors.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Neighbor list; an empty data array is a valid result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildingNeighborsResponse"
+                },
+                "examples": {
+                  "withNeighbors": {
+                    "value": {
+                      "center_building_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                      "radius_m": 100,
+                      "distance_semantics": "footprint_to_footprint",
+                      "excluded_invalid_geometry_count": 0,
+                      "data": [
+                        {
+                          "building_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+                          "distance_m": 12.4
+                        }
+                      ]
+                    }
+                  },
+                  "empty": {
+                    "value": {
+                      "center_building_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                      "radius_m": 100,
+                      "distance_semantics": "footprint_to_footprint",
+                      "excluded_invalid_geometry_count": 0,
+                      "data": []
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid UUID, radius, limit, or invalid center footprint.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "radius_m must be greater than 0 and no greater than 5000"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Center building not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected database or server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Internal server error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -781,6 +900,62 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/SirSimulationPoint"
+            }
+          }
+        }
+      },
+      "BuildingNeighbor": {
+        "type": "object",
+        "required": [
+          "building_id",
+          "distance_m"
+        ],
+        "properties": {
+          "building_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "distance_m": {
+            "type": "number",
+            "format": "double",
+            "minimum": 0,
+            "description": "Minimum distance between the two footprints, in meters."
+          }
+        }
+      },
+      "BuildingNeighborsResponse": {
+        "type": "object",
+        "required": [
+          "center_building_id",
+          "radius_m",
+          "distance_semantics",
+          "excluded_invalid_geometry_count",
+          "data"
+        ],
+        "properties": {
+          "center_building_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "radius_m": {
+            "type": "number",
+            "format": "double"
+          },
+          "distance_semantics": {
+            "type": "string",
+            "enum": [
+              "footprint_to_footprint"
+            ]
+          },
+          "excluded_invalid_geometry_count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Total count of invalid, empty, or non-EPSG:4326 building footprints in public.buildings; these records are excluded from neighbor candidates."
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BuildingNeighbor"
             }
           }
         }

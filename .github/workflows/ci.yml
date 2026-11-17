@@ -80,7 +80,7 @@ jobs:
 
       - name: Run API integration tests (Testcontainers)
         working-directory: backend
-        run: cargo test --test buildings_api --test region_building_details_api -- --nocapture
+        run: cargo test --test buildings_api --test region_building_details_api --test building_neighbors_api -- --nocapture
 
   postgis-integration:
     name: Docker Compose + PostGIS migration verification
@@ -163,6 +163,10 @@ jobs:
 
             IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='buildings_footprint_gist_idx') THEN
               RAISE EXCEPTION 'buildings GiST index is missing';
+            END IF;
+
+            IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='buildings_footprint_geography_gist_idx') THEN
+              RAISE EXCEPTION 'buildings geography GiST index is missing';
             END IF;
 
             IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='buildings_region_id_idx') THEN
