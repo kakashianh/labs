@@ -88,11 +88,22 @@ async fn risk_classification_persists_thresholds_and_aggregates_all_buildings() 
         .clone()
         .oneshot(post_json(
             format!("/api/v1/simulations/{simulation_id}/risk-classification"),
-            json!({"risk_low_max": 0.05, "risk_medium_max": 0.15}),
+            json!({"risk_low_max": 0.04, "risk_medium_max": 0.10}),
         ))
         .await
         .unwrap();
     assert_eq!(configured.status(), StatusCode::OK);
+    let configured_body = read_json(configured).await;
+    assert_eq!(configured_body["thresholds"]["source"], "request_override");
+    assert_eq!(configured_body["thresholds"]["risk_low_max"], 0.04);
+    let saved_config: Value = sqlx::query_scalar(
+        "SELECT simulation_config FROM public.simulation_runs WHERE id = $1",
+    )
+    .bind(simulation_id)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(saved_config["risk_classification"]["risk_medium_max"], 0.10);
 
     let listed = app
         .clone()
@@ -119,8 +130,8 @@ async fn risk_classification_persists_thresholds_and_aggregates_all_buildings() 
     assert_eq!(summary["total_building_count"], 3);
     assert_eq!(summary["unclassified_building_count"], 1);
     assert!((summary["infection_ratio"].as_f64().unwrap() - 0.14).abs() < 1e-12);
-    assert_eq!(summary["buckets"][0]["risk_level"], "low");
-    assert_eq!(summary["buckets"][0]["building_count"], 1);
+    assert_eq!(summary["buckets"][1]["risk_level"], "medium");
+    assert_eq!(summary["buckets"][1]["building_count"], 1);
     assert_eq!(summary["buckets"][2]["risk_level"], "high");
     assert_eq!(summary["buckets"][2]["building_count"], 1);
     assert_eq!(summary["buckets"][3]["risk_level"], "unclassified");
