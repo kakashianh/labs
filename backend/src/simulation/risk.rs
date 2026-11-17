@@ -273,6 +273,14 @@ mod tests {
             RiskThresholds::default().classify(input(Some(10.0), 11.0)),
             Err(RiskError::InvalidBuildingValues)
         );
+        assert_eq!(
+            RiskThresholds::default().classify(input(Some(-1.0), 0.0)),
+            Err(RiskError::InvalidBuildingValues)
+        );
+        assert_eq!(
+            RiskThresholds::default().classify(input(Some(10.0), f64::INFINITY)),
+            Err(RiskError::InvalidBuildingValues)
+        );
     }
 
     #[test]
