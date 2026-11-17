@@ -4,7 +4,7 @@ use crate::{
     error::{AppError, Result},
     simulation::spatial_sir::{
         simulate_spatial_sir, BuildingSirState, SpatialSirConfig, SpatialSirError,
-        SpatialSirPoint, MAX_RESULT_ROWS,
+        SpatialSirPoint, MAX_BUILDINGS, MAX_RESULT_ROWS,
     },
     state::AppState,
 };
@@ -95,6 +95,11 @@ pub async fn run_spatial_sir(
         })
         .collect::<std::result::Result<Vec<_>, sqlx::Error>>()?;
 
+    if buildings.len() > MAX_BUILDINGS {
+        return Err(AppError::BadRequest(format!(
+            "simulation supports at most {MAX_BUILDINGS} eligible buildings"
+        )));
+    }
     let building_ids: Vec<_> = buildings.iter().map(|building| building.building_id).collect();
     let adjacency = building_neighbors::build_building_adjacency(
         &state.db,
