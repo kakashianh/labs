@@ -3,12 +3,7 @@ use crate::{
     error::{AppError, Result},
     state::AppState,
 };
-use axum::{
-    extract::rejection::JsonRejection,
-    http::StatusCode,
-    routing::post,
-    Json, Router,
-};
+use axum::{extract::rejection::JsonRejection, http::StatusCode, routing::post, Json, Router};
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use std::collections::HashSet;
@@ -302,14 +297,12 @@ mod tests {
     #[test]
     fn rejects_invalid_population_and_over_population() {
         assert!(validate_request(&request(vec![building(Some(0.0), Some(0.0), None)])).is_err());
-        assert!(
-            validate_request(&request(vec![building(
-                Some(100.0),
-                Some(80.0),
-                Some(21.0)
-            )]))
-            .is_err()
-        );
+        assert!(validate_request(&request(vec![building(
+            Some(100.0),
+            Some(80.0),
+            Some(21.0)
+        )]))
+        .is_err());
         assert!(validate_request(&request(vec![building(
             Some(f64::INFINITY),
             Some(0.0),
