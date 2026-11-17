@@ -279,10 +279,20 @@ mod tests {
         }
     }
     fn edge(a: Uuid, b: Uuid, distance_m: f64) -> NeighborEdge {
-        NeighborEdge { source_building_id: a, target_building_id: b, distance_m }
+        NeighborEdge {
+            source_building_id: a,
+            target_building_id: b,
+            distance_m,
+        }
     }
     fn config(steps: usize) -> SpatialSirConfig {
-        SpatialSirConfig { radius_m: 100.0, beta: 0.4, gamma: 0.1, dt: 0.1, steps }
+        SpatialSirConfig {
+            radius_m: 100.0,
+            beta: 0.4,
+            gamma: 0.1,
+            dt: 0.1,
+            steps,
+        }
     }
     fn point(result: &SpatialSirResult, building_id: Uuid, time_step: usize) -> &SpatialSirPoint {
         result
