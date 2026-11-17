@@ -1084,7 +1084,8 @@
             "description": "Maximum footprint-to-footprint distance in meters. Defaults to 100.",
             "schema": {
               "type": "number",
-              "exclusiveMinimum": 0,
+              "minimum": 0,
+              "exclusiveMinimum": true,
               "maximum": 5000,
               "default": 100
             }
