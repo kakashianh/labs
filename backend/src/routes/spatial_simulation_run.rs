@@ -163,8 +163,8 @@ pub async fn run_spatial_sir(
         .collect();
     let adjacency =
         building_neighbors::build_building_adjacency(&state.db, &building_ids, request.radius_m)
-    .await
-    .map_err(map_adjacency_error)?;
+            .await
+            .map_err(map_adjacency_error)?;
     if adjacency.missing_building_count != 0 {
         return Err(AppError::Conflict(
             "simulation references buildings that no longer exist".into(),
