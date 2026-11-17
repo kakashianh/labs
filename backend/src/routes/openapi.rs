@@ -50,6 +50,10 @@ mod tests {
         }));
         assert!(spec["paths"]["/api/v1/simulations/sir"]["post"].is_object());
         assert!(spec["paths"]["/api/v1/simulations/initialize"]["post"].is_object());
+        assert!(spec["paths"]["/api/v1/simulations/{simulation_id}/results"]["get"].is_object());
+        assert!(spec["paths"]["/api/v1/simulations/{simulation_id}/aggregate"]["get"].is_object());
+        assert!(spec["components"]["schemas"]["SpatialResultsResponse"].is_object());
+        assert!(spec["components"]["schemas"]["SpatialSirAggregate"].is_object());
         assert!(spec["components"]["schemas"]["InitializeSpatialSirRequest"].is_object());
         assert!(spec["components"]["schemas"]["SirSimulationRequest"].is_object());
         assert!(spec["components"]["schemas"]["SirSimulationResponse"].is_object());
