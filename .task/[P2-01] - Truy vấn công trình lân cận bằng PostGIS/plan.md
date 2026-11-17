@@ -162,7 +162,7 @@ Các quyết định đã được người dùng duyệt và là contract bắt
 - Center missing -> 404; invalid/empty/non-4326 center -> 400; no neighbors -> 200 with data: [].
 - Response exposes the total invalid/empty/non-4326 footprint count in public.buildings. Batch adjacency returns unique undirected edges plus excluded_invalid_geometry_count and missing_building_count.
 - Added SQLx migration 20261116000000_add_building_footprint_geography_gist_index.sql: partial GiST expression index on (footprint::geography) for valid, non-empty EPSG:4326 footprints.
-- Both single-neighbor and batch adjacency currently use LATERAL candidate scans. Production EXPLAIN after migration shows this query shape does not yet produce a parameterized GiST Index Cond; see the 2026-11-17 production verification below. Do not treat the LATERAL shape alone as proof of effective index filtering.
+- Both single-neighbor and batch adjacency use materialized outer CTEs, an explicit geography bounding-box predicate (`&& extensions._ST_Expand(...)`), and a LATERAL candidate subquery with `OFFSET 0` to preserve a parameterized GiST index scan. Production EXPLAIN evidence is recorded below.
 
 ### Live dataset query-plan review
 
@@ -223,3 +223,33 @@ Radius used: 250 m. Tests executed read-only against the live production dataset
 - [x] Record production migration and query-plan evidence in this plan.
 
 **Status:** production migration is complete; production query-plan verification is complete and has identified a query-shape optimization gap. Do not mark P2-01 fully done until the follow-up query and tests above are complete.
+
+
+## 13. Selective Geography GiST Query Rewrite (2026-11-17)
+
+### Implementation
+
+- [x] Single-neighbor query now materializes the validated center row and its geography value.
+- [x] Batch query materializes the selected building set and geography values.
+- [x] Both candidate subqueries apply an explicit geography bounding-box predicate:
+  `candidate.footprint::geography && extensions._ST_Expand(center_geog, radius_m)`.
+- [x] Both retain exact `ST_DWithin` as the final distance predicate and `ST_Distance` for returned distances.
+- [x] Added `OFFSET 0` inside each LATERAL candidate subquery to prevent pull-up that previously left the spatial predicate as a join filter rather than a parameterized index condition.
+- [x] Integration EXPLAIN tests now assert both the geography index name and the presence of `Index Cond` / `_st_expand`, rather than checking only for an Index Scan node.
+
+### Live production EXPLAIN comparison
+
+Target: Supabase project `ubltoieatdwdyzowpaig`, 431 valid EPSG:4326 buildings, radius 250 m.
+
+| Query | Previous production shape | Rewritten shape |
+|---|---:|---:|
+| Single-neighbor | ~121.756 ms; no selective Index Cond | ~14.993 ms; parameterized geography GiST Index Cond |
+| Batch adjacency | ~5,334.995 ms; candidate scan 431 rows × 431 loops | ~1,727.256 ms; parameterized geography GiST Index Cond |
+
+Batch output remained 21,387 undirected edges in both shapes. The rewritten batch plan used the geography GiST index to reduce candidate rows before exact `ST_DWithin` filtering. These timings are single EXPLAIN ANALYZE observations on the live dataset, not a controlled benchmark guarantee.
+
+### CI
+
+- [ ] Final CI for the rewritten implementation. Commit `fa44fa36ca273028c2561ce2d686ca8c0b33c75a` triggered Rust CI run `43992722375` and PostGIS import workflow `43992722244`; both were in progress at plan update time.
+
+**Current status:** Production migration and selective query-plan verification are complete. Implementation and stronger EXPLAIN assertions are committed on `feat/p2-01-postgis-building-adjacency`. Keep final CI and final branch verification unchecked until the workflow runs complete successfully.
