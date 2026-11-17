@@ -4,7 +4,7 @@ use crate::{
     error::{AppError, Result},
     simulation::spatial_sir::{
         simulate_spatial_sir, BuildingSirState, SpatialSirConfig, SpatialSirError,
-        SpatialSirPoint, MAX_BUILDINGS, MAX_RESULT_ROWS,
+        SpatialSirPoint, MAX_BUILDINGS,
     },
     state::AppState,
 };
@@ -69,7 +69,7 @@ pub async fn get_spatial_sir_run(
     Path(simulation_id): Path<Uuid>,
 ) -> Result<Json<SpatialSirRunSummaryResponse>> {
     let row = sqlx::query(
-        r#"SELECT r.id, r.status, r.population_source, r.completed_at::TEXT AS completed_at,
+        r#"SELECT r.id, r.status, r.population_source, TO_CHAR(r.completed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') AS completed_at,
                   (SELECT COUNT(*) FROM public.simulation_building_states s
                    WHERE s.simulation_id = r.id) AS eligible_building_count,
                   (SELECT COUNT(*) FROM public.simulation_building_exclusions e
@@ -112,6 +112,17 @@ pub async fn run_spatial_sir(
         steps: request.steps,
     };
 
+    let selected_count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM public.simulation_building_states WHERE simulation_id = $1",
+    )
+    .bind(simulation_id)
+    .fetch_one(&state.db)
+    .await?;
+    if selected_count > MAX_BUILDINGS as i64 {
+        return Err(AppError::BadRequest(format!(
+            "simulation supports at most {MAX_BUILDINGS} eligible buildings"
+        )));
+    }
     let rows = sqlx::query(
         "SELECT building_id, population, initial_s, initial_i, initial_r FROM public.simulation_building_states WHERE simulation_id = $1 ORDER BY building_id",
     )
@@ -145,11 +156,6 @@ pub async fn run_spatial_sir(
         })
         .collect::<std::result::Result<Vec<_>, sqlx::Error>>()?;
 
-    if buildings.len() > MAX_BUILDINGS {
-        return Err(AppError::BadRequest(format!(
-            "simulation supports at most {MAX_BUILDINGS} eligible buildings"
-        )));
-    }
     let building_ids: Vec<_> = buildings.iter().map(|building| building.building_id).collect();
     let adjacency = building_neighbors::build_building_adjacency(
         &state.db,
@@ -174,7 +180,6 @@ pub async fn run_spatial_sir(
         .collect::<Vec<_>>();
 
     let result = simulate_spatial_sir(&buildings, &edges, config).map_err(map_engine_error)?;
-    debug_assert!(result.point_count <= MAX_RESULT_ROWS);
     let config_json =
         serde_json::to_value(&request).map_err(|error| AppError::Internal(error.into()))?;
 
