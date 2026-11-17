@@ -68,6 +68,31 @@ async fn hotspot_api_builds_transitive_components_and_returns_union_geometry() {
         .unwrap();
     }
 
+    let medium_building = insert_building(
+        &pool,
+        region_id,
+        "way/93006",
+        93006,
+        106.15000,
+    )
+    .await;
+    sqlx::query(
+        "INSERT INTO public.simulation_building_states (simulation_id,building_id,population,initial_s,initial_i,initial_r) VALUES ($1,$2,100,90,10,0)",
+    )
+    .bind(simulation_id)
+    .bind(medium_building)
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO public.simulation_building_results (simulation_id,building_id,time_step,time,susceptible,infected,recovered) VALUES ($1,$2,0,0,90,10,0)",
+    )
+    .bind(simulation_id)
+    .bind(medium_building)
+    .execute(&pool)
+    .await
+    .unwrap();
+
     let low_region_id = insert_region(&pool, "hotspot-low-region").await;
     let low_building = insert_building(
         &pool,
@@ -159,6 +184,26 @@ async fn hotspot_api_builds_transitive_components_and_returns_union_geometry() {
     let without_singletons = read_json(without_singletons).await;
     assert_eq!(without_singletons["hotspot_count"], 1);
     assert_eq!(without_singletons["hotspots"][0]["member_count"], 3);
+
+    let medium_candidates = app
+        .clone()
+        .oneshot(get_request(format!(
+            "/api/v1/simulations/{simulation_id}/hotspots?time_step=0&minimum_risk_level=medium&radius_m={distance_ab}"
+        )))
+        .await
+        .unwrap();
+    assert_eq!(medium_candidates.status(), StatusCode::OK);
+    let medium_candidates = read_json(medium_candidates).await;
+    assert_eq!(medium_candidates["hotspot_count"], 3);
+    assert!(medium_candidates["hotspots"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|hotspot| hotspot["building_ids"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|id| id == &medium_building.to_string())));
 
     let no_hotspots = app
         .clone()
