@@ -293,6 +293,21 @@ mod tests {
     }
 
     #[test]
+    fn infection_does_not_cascade_within_the_same_timestep() {
+        let buildings = [
+            state(id(1), 100.0, 90.0, 10.0, 0.0),
+            state(id(2), 100.0, 100.0, 0.0, 0.0),
+            state(id(3), 100.0, 100.0, 0.0, 0.0),
+        ];
+        let edges = [edge(id(1), id(2), 10.0), edge(id(2), id(3), 10.0)];
+        let result = simulate_spatial_sir(&buildings, &edges, config(2)).unwrap();
+
+        assert!(point(&result, id(2), 1).infected > 0.0);
+        assert_eq!(point(&result, id(3), 1).infected, 0.0);
+        assert!(point(&result, id(3), 2).infected > 0.0);
+    }
+
+    #[test]
     fn edge_outside_radius_does_not_spread_infection() {
         let buildings = [state(id(1), 100.0, 100.0, 0.0, 0.0), state(id(2), 100.0, 90.0, 10.0, 0.0)];
         let result = simulate_spatial_sir(&buildings, &[edge(id(1), id(2), 101.0)], config(1)).unwrap();
