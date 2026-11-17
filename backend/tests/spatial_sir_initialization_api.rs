@@ -44,8 +44,13 @@ async fn spatial_sir_initialization_persists_states_exclusions_and_idempotency()
     .fetch_one(&pool)
     .await
     .expect("insert region");
-    let building_a = insert_building(&pool, region_id, "way/81001", 81001).await;
-    let building_b = insert_building(&pool, region_id, "way/81002", 81002).await;
+    let mut building_a = insert_building(&pool, region_id, "way/81001", 81001).await;
+    let mut building_b = insert_building(&pool, region_id, "way/81002", 81002).await;
+    // Keep the eligible building's UUID smaller so the excluded building would
+    // have appeared as a candidate in the old unfiltered lateral scan.
+    if building_a > building_b {
+        std::mem::swap(&mut building_a, &mut building_b);
+    }
 
     let app = router(AppState::new(pool.clone()));
     let request_id = Uuid::new_v4();
@@ -118,6 +123,17 @@ async fn spatial_sir_initialization_persists_states_exclusions_and_idempotency()
     .unwrap();
     assert_eq!(states, 1);
     assert_eq!(exclusions, 1);
+
+    // The adjacency graph must contain only eligible simulation buildings;
+    // building_b is spatially overlapping but excluded due to missing population.
+    let eligible_only_adjacency = db::building_neighbors::build_building_adjacency(
+        &pool,
+        &[building_a],
+        100.0,
+    )
+    .await
+    .expect("build eligible-only adjacency");
+    assert!(eligible_only_adjacency.edges.is_empty());
 
     sqlx::query(
         "CREATE FUNCTION public.reject_spatial_sir_result() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'injected persistence failure'; END; $$",
