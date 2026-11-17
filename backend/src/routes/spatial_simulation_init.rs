@@ -182,3 +182,66 @@ fn validate_request(request: &InitializeSpatialSirRequest) -> Result<()> {
     }
     Ok(())
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn request(items: Vec<BuildingInitialInput>) -> InitializeSpatialSirRequest {
+        InitializeSpatialSirRequest {
+            request_id: Uuid::nil(),
+            buildings: items,
+        }
+    }
+
+    fn building(population: Option<f64>, infected: Option<f64>, recovered: Option<f64>) -> BuildingInitialInput {
+        BuildingInitialInput {
+            building_id: Uuid::new_v4(),
+            population,
+            initial_infected: infected,
+            initial_recovered: recovered,
+        }
+    }
+
+    #[test]
+    fn accepts_manual_population_and_explicit_zero_infected() {
+        assert!(validate_request(&request(vec![building(Some(100.0), Some(0.0), None)])).is_ok());
+    }
+
+    #[test]
+    fn missing_population_is_eligible_for_exclusion_without_infected_seed() {
+        assert!(validate_request(&request(vec![building(None, None, None)])).is_ok());
+    }
+
+    #[test]
+    fn requires_initial_infected_when_population_is_present() {
+        assert!(validate_request(&request(vec![building(Some(100.0), None, None)])).is_err());
+    }
+
+    #[test]
+    fn rejects_invalid_population_and_over_population() {
+        assert!(validate_request(&request(vec![building(Some(0.0), Some(0.0), None)])).is_err());
+        assert!(validate_request(&request(vec![building(Some(100.0), Some(80.0), Some(21.0))])).is_err());
+        assert!(validate_request(&request(vec![building(Some(f64::INFINITY), Some(0.0), None)])).is_err());
+    }
+
+    #[test]
+    fn rejects_duplicate_building_ids() {
+        let first = building(Some(100.0), Some(1.0), None);
+        let mut second = building(Some(200.0), Some(0.0), None);
+        second.building_id = first.building_id;
+        assert!(validate_request(&request(vec![first, second])).is_err());
+    }
+
+    #[test]
+    fn rejects_negative_seed_values() {
+        assert!(validate_request(&request(vec![building(Some(100.0), Some(-1.0), None)])).is_err());
+        assert!(validate_request(&request(vec![building(Some(100.0), Some(1.0), Some(-1.0))])).is_err());
+    }
+
+    #[test]
+    fn rejects_empty_building_selection() {
+        assert!(validate_request(&request(vec![])).is_err());
+    }
+}
