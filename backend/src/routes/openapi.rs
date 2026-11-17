@@ -64,6 +64,11 @@ mod tests {
         assert!(
             spec["paths"]["/api/v1/simulations/{simulation_id}/risk-aggregate"]["get"].is_object()
         );
+        assert!(
+            spec["paths"]["/api/v1/simulations/{simulation_id}/hotspots"]["get"].is_object()
+        );
+        assert!(spec["components"]["schemas"]["HotspotsResponse"].is_object());
+        assert!(spec["components"]["schemas"]["Hotspot"].is_object());
         assert!(spec["components"]["schemas"]["RiskThresholds"].is_object());
         assert!(spec["components"]["schemas"]["BuildingRisk"].is_object());
         assert!(spec["components"]["schemas"]["RegionRiskSummary"].is_object());
