@@ -539,9 +539,18 @@ mod tests {
         assert!(valid.include_singletons);
 
         for query in [
-            HotspotQuery { time_step: None, ..Default::default() },
-            HotspotQuery { time_step: Some("-1".into()), ..Default::default() },
-            HotspotQuery { time_step: Some("x".into()), ..Default::default() },
+            HotspotQuery {
+                time_step: None,
+                ..Default::default()
+            },
+            HotspotQuery {
+                time_step: Some("-1".into()),
+                ..Default::default()
+            },
+            HotspotQuery {
+                time_step: Some("x".into()),
+                ..Default::default()
+            },
             HotspotQuery {
                 time_step: Some("1".into()),
                 minimum_risk_level: Some("low".into()),
@@ -590,7 +599,11 @@ mod tests {
         let a = Uuid::from_u128(1);
         let b = Uuid::from_u128(2);
         let c = Uuid::from_u128(3);
-        let candidates = vec![candidate(a, region), candidate(b, region), candidate(c, region)];
+        let candidates = vec![
+            candidate(a, region),
+            candidate(b, region),
+            candidate(c, region),
+        ];
         let components = connected_components(&candidates, &[(a, b)], false);
         assert_eq!(components, vec![(a, vec![a, b])]);
     }
