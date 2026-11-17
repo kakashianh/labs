@@ -146,3 +146,83 @@ Các quyết định đã được người dùng duyệt:
 - [ ] Persist initial values bằng kiểu dữ liệu tương thích f64 của Phase 1.
 - [ ] Test rollback toàn transaction nếu contract yêu cầu atomic initialization và có một building input invalid.
 - [ ] Không tạo population mặc định hoặc seed infection ngầm.
+
+
+## 11. Approved Initialization Contract (2026-11-17)
+
+Người dùng đã duyệt các quy tắc bổ sung sau để làm rõ request, validation, tính tái lập và tính nguyên tử của quá trình khởi tạo.
+
+### 11.1 Request contract
+
+Request nhận danh sách building tường minh, mỗi phần tử gắn với UUID:
+
+```json
+{
+  "buildings": [
+    {
+      "building_id": "uuid-1",
+      "population": 100.0,
+      "initial_infected": 5.0,
+      "initial_recovered": 0.0
+    },
+    {
+      "building_id": "uuid-2",
+      "population": 250.0,
+      "initial_infected": 0.0,
+      "initial_recovered": 0.0
+    }
+  ]
+}
+```
+
+Quy tắc field:
+- `building_id`: bắt buộc, UUID của building đã tồn tại.
+- `population`: population manual; nếu không được cung cấp thì building được phân loại excluded với reason `missing_population`.
+- `initial_infected`: bắt buộc đối với building có population; giá trị 0 phải được gửi tường minh để tránh seed infection ngầm.
+- `initial_recovered`: optional, mặc định 0 nếu không gửi.
+- `initial_susceptible`: backend tự tính bằng `population - initial_infected - initial_recovered`, không nhận từ client.
+
+Việc chọn building ở ticket này dùng explicit UUID list. Không phụ thuộc KAN-21 neighbor API hoặc tự mở rộng tập building bằng spatial query; quan hệ lân cận được sử dụng ở các ticket mô phỏng tiếp theo.
+
+### 11.2 Exclusion versus invalid request
+
+Phân biệt rõ hai trường hợp:
+- **Excluded building:** thiếu field population. Không tham gia run; trả về và lưu reason `missing_population`.
+- **Invalid request:** population được cung cấp nhưng không hợp lệ (không finite hoặc <= 0), initial infected/recovered âm hoặc không finite, tổng I0 + R0 lớn hơn N, UUID sai định dạng, UUID trùng hoặc UUID không tồn tại. Reject toàn bộ request; không âm thầm bỏ qua input sai.
+
+Nếu sau khi phân loại không còn eligible building nào, reject request và không tạo simulation run rỗng.
+
+### 11.3 Persist exclusions and reproducibility
+
+Bên cạnh initial state của eligible buildings, cần lưu exclusion để giải thích chính xác phạm vi run. Thiết kế bảng `simulation_building_exclusions` hoặc cấu trúc tương đương, tối thiểu gồm:
+- `simulation_id`
+- `building_id`
+- `reason_code` (ở scope hiện tại gồm `missing_population`)
+- `created_at`
+
+Ràng buộc uniqueness phù hợp để một building không có nhiều exclusion record trùng trong cùng run. Nếu schema hiện tại có cấu trúc tương đương thì reuse, không tạo bảng trùng. Response khởi tạo phải phân biệt eligible và excluded, kèm reason code.
+
+### 11.4 Atomicity and idempotency
+
+- Validate cấu trúc request và các giá trị số trước khi ghi dữ liệu.
+- Trong transaction: xác minh building UUID tồn tại, phân loại eligible/excluded, tạo simulation run, ghi initial states và exclusion records; commit tất cả cùng nhau.
+- Bất kỳ lỗi persistence hoặc vi phạm contract nào trong quá trình ghi phải rollback toàn bộ run và dữ liệu liên quan.
+- Bổ sung request ID/idempotency key do client cung cấp (hoặc cơ chế tương đương có uniqueness theo phạm vi phù hợp) để retry cùng một yêu cầu không tạo simulation run trùng. Cùng key nhưng payload khác phải trả lỗi conflict, không ghi đè run cũ.
+- Không dựa riêng vào unique key `(simulation_id, building_id)` để giải quyết retry, vì mỗi lần retry có thể đã tạo một simulation_id mới.
+
+### 11.5 Additional tests
+
+- Missing population tạo exclusion record và reason code chính xác.
+- Missing `initial_infected` ở building có population bị reject; explicit zero được chấp nhận.
+- Missing `initial_recovered` được chuẩn hóa thành 0.
+- Duplicate UUID, malformed UUID và unknown UUID reject toàn request.
+- Invalid provided population / I0 / R0 và over-population reject toàn request.
+- Tất cả buildings bị excluded thì không tạo run.
+- Response và persistence khớp nhau giữa eligible states và exclusions.
+- Lỗi khi ghi bất kỳ state/exclusion nào rollback run và toàn bộ records liên quan.
+- Retry cùng idempotency key và cùng payload trả lại kết quả run đã tạo; cùng key nhưng payload khác trả conflict.
+- Hai request đồng thời dùng cùng idempotency key không tạo hai run.
+
+### 11.6 Implementation boundary
+
+Các mục trong section này là contract đã duyệt cho KAN-22. Chưa có code, migration hoặc API nào được triển khai chỉ bởi việc cập nhật plan. Khi implement phải rà soát schema/migrations hiện tại trước, reuse cấu trúc tương đương và giữ tương thích SQLx embedded migrations cùng f64/Phase 1.
