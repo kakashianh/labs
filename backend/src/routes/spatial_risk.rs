@@ -145,7 +145,6 @@ async fn load_building_risks(
     let time = sqlx::query_scalar::<_, Option<f64>>(
         "SELECT MIN(time) FROM public.simulation_building_results WHERE simulation_id=$1 AND time_step=$2"
     ).bind(simulation_id).bind(query.time_step).fetch_one(db).await?.ok_or(AppError::NotFound)?;
-    let Some(time) = time else { return Err(AppError::NotFound); };
     let rows = sqlx::query(
         r#"SELECT r.building_id, b.region_id, s.population, r.infected
            FROM public.simulation_building_results r
