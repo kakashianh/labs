@@ -74,8 +74,8 @@ async fn spatial_results_and_aggregate_are_consistent_and_pagination_independent
     let aggregate = read_json(aggregate).await;
     assert_eq!(aggregate["building_count"], 2);
     assert_eq!(aggregate["population"], 300.0);
-    assert_eq!(aggregate["susceptible"], 278.0);
-    assert_eq!(aggregate["infected"], 31.0);
+    assert_eq!(aggregate["susceptible"], 266.0);
+    assert_eq!(aggregate["infected"], 32.0);
     assert_eq!(aggregate["recovered"], 2.0);
 
     let scoped_empty = app.clone().oneshot(get_request(format!(
