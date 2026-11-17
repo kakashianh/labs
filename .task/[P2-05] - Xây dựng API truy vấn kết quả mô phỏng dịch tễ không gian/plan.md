@@ -70,42 +70,44 @@ Query contract:
 
 ## 5. Implementation Plan
 
+> Implementation is pushed to `feat/p2-05-spatial-simulation-results-api`. Unit/integration tests and CI remain pending; do not mark verification/acceptance criteria complete until the workflow passes.
+
 ### Step 1 – Inspect Stored Result Schema and API Conventions
 
-- [ ] Review KAN-24 migrations/repositories và xác nhận transaction/status update.
-- [ ] Inspect existing building/region response DTOs và error mapping.
-- [ ] Chốt endpoint names, pagination convention và OpenAPI examples.
-- [ ] Chốt aggregate numeric semantics: giữ f64, không round ở API; test với tolerance.
-- [ ] Xác nhận query lấy population từ initial state thuộc đúng simulation run.
+- [x] Review KAN-24 migrations/repositories và xác nhận transaction/status update.
+- [x] Inspect existing building/region response DTOs và error mapping.
+- [x] Chốt endpoint names, pagination convention và OpenAPI examples.
+- [x] Chốt aggregate numeric semantics: giữ f64, không round ở API; test với tolerance.
+- [x] Xác nhận query lấy population từ initial state thuộc đúng simulation run.
 
 ### Step 2 – Design Query Strategy
 
-- [ ] Query run metadata/status trước khi đọc result.
-- [ ] Query building states theo `simulation_id + time_step`.
-- [ ] Join `simulation_building_states` theo cả `simulation_id` và `building_id` để lấy population.
-- [ ] Join `buildings` để lấy `region_id`; không giả định region mapping ngoài schema.
-- [ ] Query aggregate riêng trên toàn bộ tập đã filter, không bị ảnh hưởng bởi limit/offset.
-- [ ] Dùng cùng predicate/filter cho detail và aggregate.
-- [ ] Add pagination/limit và stable ordering theo `building_id`.
+- [x] Query run metadata/status trước khi đọc result.
+- [x] Query building states theo `simulation_id + time_step`.
+- [x] Join `simulation_building_states` theo cả `simulation_id` và `building_id` để lấy population.
+- [x] Join `buildings` để lấy `region_id`; không giả định region mapping ngoài schema.
+- [x] Query aggregate riêng trên toàn bộ tập đã filter, không bị ảnh hưởng bởi limit/offset.
+- [x] Dùng cùng predicate/filter cho detail và aggregate.
+- [x] Add pagination/limit và stable ordering theo `building_id`.
 - [ ] Check indexes với EXPLAIN; tận dụng PK/index `(simulation_id, time_step, building_id)` hiện có và bổ sung index chỉ khi query plan chứng minh cần thiết.
 
 ### Step 3 – Implement Repository and Service
 
-- [ ] Add parameterized SQLx queries.
-- [ ] Validate UUID, `time_step >= 0`, `region_id` và pagination bounds.
-- [ ] Prevent cross-run/time mixing bằng composite join/filter đầy đủ.
-- [ ] Return explicit not-found/status errors.
-- [ ] Return `simulation_not_completed` cho run `initialized`.
-- [ ] Ensure aggregate and detail queries share identical filters.
-- [ ] Ensure aggregate is independent from pagination.
+- [x] Add parameterized SQLx queries.
+- [x] Validate UUID, `time_step >= 0`, `region_id` và pagination bounds.
+- [x] Prevent cross-run/time mixing bằng composite join/filter đầy đủ.
+- [x] Return explicit not-found/status errors.
+- [x] Return `simulation_not_completed` cho run `initialized`.
+- [x] Ensure aggregate and detail queries share identical filters.
+- [x] Ensure aggregate is independent from pagination.
 
 ### Step 4 – Implement Axum Routes and DTOs
 
-- [ ] Add routes under existing API version.
-- [ ] Define typed query/response DTOs.
-- [ ] Register routes in router.
-- [ ] Update OpenAPI schema/contract tests.
-- [ ] Document pagination, region filter, lifecycle errors and numeric semantics.
+- [x] Add routes under existing API version.
+- [x] Define typed query/response DTOs.
+- [x] Register routes in router.
+- [x] Update OpenAPI schema/contract tests.
+- [x] Document pagination, region filter, lifecycle errors and numeric semantics.
 
 ### Step 5 – Tests and Verification
 
