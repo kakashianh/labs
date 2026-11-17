@@ -1027,6 +1027,100 @@
           }
         }
       }
+    },
+    "/api/v1/simulations/{simulation_id}/hotspots": {
+      "get": {
+        "tags": [
+          "Spatial Simulation"
+        ],
+        "summary": "List spatial infection hotspots",
+        "description": "Finds connected components among candidate buildings. A candidate has infected > 0 and risk level at least minimum_risk_level. Edges use footprint-to-footprint geography distance <= radius_m; components are transitive. Geometry is the union of member footprints as GeoJSON MultiPolygon in EPSG:4326.",
+        "parameters": [
+          {
+            "name": "simulation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "time_step",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "region_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "minimum_risk_level",
+            "in": "query",
+            "required": false,
+            "description": "Minimum candidate risk level. Defaults to high.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "medium",
+                "high"
+              ],
+              "default": "high"
+            }
+          },
+          {
+            "name": "radius_m",
+            "in": "query",
+            "required": false,
+            "description": "Maximum footprint-to-footprint distance in meters. Defaults to 100.",
+            "schema": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 5000,
+              "default": 100
+            }
+          },
+          {
+            "name": "include_singletons",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Hotspot clusters and effective detection configuration.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HotspotsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query or candidate geometry."
+          },
+          "404": {
+            "description": "Simulation, time step, or region not found."
+          },
+          "409": {
+            "description": "Simulation has not completed."
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2170,6 +2264,159 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/RegionRiskSummary"
+            }
+          }
+        }
+      },
+      "HotspotConfiguration": {
+        "type": "object",
+        "required": [
+          "algorithm",
+          "algorithm_version",
+          "minimum_risk_level",
+          "risk_thresholds",
+          "radius_m",
+          "include_singletons"
+        ],
+        "properties": {
+          "algorithm": {
+            "type": "string",
+            "enum": [
+              "connected_components"
+            ]
+          },
+          "algorithm_version": {
+            "type": "string",
+            "example": "hotspot-v1"
+          },
+          "minimum_risk_level": {
+            "type": "string",
+            "enum": [
+              "medium",
+              "high"
+            ]
+          },
+          "risk_thresholds": {
+            "$ref": "#/components/schemas/RiskThresholds"
+          },
+          "radius_m": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 5000
+          },
+          "include_singletons": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Hotspot": {
+        "type": "object",
+        "required": [
+          "cluster_id",
+          "simulation_id",
+          "time_step",
+          "region_id",
+          "member_count",
+          "population_total",
+          "infected_total",
+          "infection_ratio",
+          "risk_level",
+          "building_ids",
+          "geometry"
+        ],
+        "properties": {
+          "cluster_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Smallest UUID among member building IDs."
+          },
+          "simulation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "time_step": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "region_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "member_count": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "population_total": {
+            "type": "number",
+            "minimum": 0
+          },
+          "infected_total": {
+            "type": "number",
+            "minimum": 0
+          },
+          "infection_ratio": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Weighted ratio: SUM(infected) / SUM(population)."
+          },
+          "risk_level": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "unclassified"
+            ],
+            "description": "Aggregate risk level classified using the KAN-26 threshold snapshot."
+          },
+          "building_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "geometry": {
+            "$ref": "#/components/schemas/MultiPolygon"
+          }
+        }
+      },
+      "HotspotsResponse": {
+        "type": "object",
+        "required": [
+          "simulation_id",
+          "time_step",
+          "region_id",
+          "configuration",
+          "hotspot_count",
+          "hotspots"
+        ],
+        "properties": {
+          "simulation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "time_step": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "region_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "configuration": {
+            "$ref": "#/components/schemas/HotspotConfiguration"
+          },
+          "hotspot_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "hotspots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Hotspot"
             }
           }
         }
