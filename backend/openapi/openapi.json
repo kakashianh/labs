@@ -525,6 +525,40 @@
           }
         }
       }
+    },
+    "/api/v1/simulations/initialize": {
+      "post": {
+        "operationId": "initializeSpatialSirSimulation",
+        "summary": "Initialize SIR state for selected buildings",
+        "description": "Creates a persisted spatial simulation run from an explicit list of building UUIDs. Population is manual; buildings without population are excluded with a persisted reason. Retries with the same request_id and payload return the existing run.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitializeSpatialSirRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Idempotent replay of an existing run."
+          },
+          "201": {
+            "description": "Simulation run initialized."
+          },
+          "400": {
+            "description": "Invalid request, unknown building, or no eligible buildings."
+          },
+          "409": {
+            "description": "request_id was previously used with a different payload."
+          },
+          "500": {
+            "description": "Unexpected persistence error."
+          }
+        }
+      }
     }
   },
   "components": {
@@ -957,6 +991,155 @@
             "items": {
               "$ref": "#/components/schemas/BuildingNeighbor"
             }
+          }
+        }
+      },
+      "InitializeSpatialSirRequest": {
+        "type": "object",
+        "required": [
+          "request_id",
+          "buildings"
+        ],
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Client-generated idempotency key."
+          },
+          "buildings": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/BuildingInitialInput"
+            }
+          }
+        }
+      },
+      "BuildingInitialInput": {
+        "type": "object",
+        "required": [
+          "building_id"
+        ],
+        "properties": {
+          "building_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "population": {
+            "type": "number",
+            "format": "double",
+            "exclusiveMinimum": 0,
+            "nullable": true,
+            "description": "Manual population. Omit to exclude this building."
+          },
+          "initial_infected": {
+            "type": "number",
+            "format": "double",
+            "minimum": 0,
+            "nullable": true,
+            "description": "Required when population is provided; explicit zero is valid."
+          },
+          "initial_recovered": {
+            "type": "number",
+            "format": "double",
+            "minimum": 0,
+            "default": 0,
+            "nullable": true
+          }
+        }
+      },
+      "InitializeSpatialSirResponse": {
+        "type": "object",
+        "required": [
+          "simulation_id",
+          "status",
+          "population_source",
+          "idempotent_replay",
+          "eligible",
+          "excluded"
+        ],
+        "properties": {
+          "simulation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "initialized"
+            ]
+          },
+          "population_source": {
+            "type": "string",
+            "enum": [
+              "manual"
+            ]
+          },
+          "idempotent_replay": {
+            "type": "boolean"
+          },
+          "eligible": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InitializedBuilding"
+            }
+          },
+          "excluded": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExcludedBuilding"
+            }
+          }
+        }
+      },
+      "InitializedBuilding": {
+        "type": "object",
+        "required": [
+          "building_id",
+          "population",
+          "initial_s",
+          "initial_i",
+          "initial_r"
+        ],
+        "properties": {
+          "building_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "population": {
+            "type": "number",
+            "format": "double"
+          },
+          "initial_s": {
+            "type": "number",
+            "format": "double"
+          },
+          "initial_i": {
+            "type": "number",
+            "format": "double"
+          },
+          "initial_r": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "ExcludedBuilding": {
+        "type": "object",
+        "required": [
+          "building_id",
+          "reason_code"
+        ],
+        "properties": {
+          "building_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason_code": {
+            "type": "string",
+            "enum": [
+              "missing_population"
+            ]
           }
         }
       }
