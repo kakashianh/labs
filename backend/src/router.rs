@@ -16,6 +16,8 @@ pub fn router(state: AppState) -> Router {
         routes::spatial_simulation_init::router().with_state(state.clone());
     let spatial_simulation_results_routes =
         routes::spatial_simulation_results::router().with_state(state.clone());
+    let spatial_hotspot_routes =
+        routes::spatial_hotspots::router().with_state(state.clone());
     let spatial_risk_routes =
         routes::spatial_risk::router().with_state(state.clone());
     let spatial_simulation_run_routes =
@@ -31,6 +33,7 @@ pub fn router(state: AppState) -> Router {
         .merge(spatial_simulation_init_routes)
         .merge(spatial_simulation_results_routes)
         .merge(spatial_risk_routes)
+        .merge(spatial_hotspot_routes)
         .merge(spatial_simulation_run_routes)
         .with_state(state)
         .layer(tower_http::cors::CorsLayer::permissive())
