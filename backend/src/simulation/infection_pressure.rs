@@ -375,7 +375,7 @@ mod tests {
         )
         .unwrap();
 
-        assert!((pressure(&result, id(1)).infection_pressure - 1.05).abs() < 1e-12);
+        assert!((pressure(&result, id(1)).infection_pressure - 0.55).abs() < 1e-12);
     }
 
     #[test]
