@@ -95,45 +95,45 @@ Mỗi item cần có tối thiểu:
 ## 6. Implementation Plan
 
 ### Step 1 – Inspect Result and Population Contracts
-- [ ] Đối chiếu KAN-22 population representation.
-- [ ] Đối chiếu KAN-24 result precision và S/I/R invariants.
-- [ ] Đối chiếu KAN-25 filters, completed-run validation và aggregation.
-- [ ] Xác định cách đọc/lưu `risk_classification` snapshot trong `simulation_runs.simulation_config`.
+- [x] Đối chiếu KAN-22 population representation.
+- [x] Đối chiếu KAN-24 result precision và S/I/R invariants.
+- [x] Đối chiếu KAN-25 filters, completed-run validation và aggregation.
+- [x] Xác định cách đọc/lưu `risk_classification` snapshot trong `simulation_runs.simulation_config`.
 - [ ] Xác nhận migration có cần thiết không; ưu tiên tận dụng JSON config hiện có nếu đáp ứng được.
 
 ### Step 2 – Implement Risk Classification Domain
-- [ ] Tạo typed risk level enum: Low, Medium, High, Unclassified.
-- [ ] Tạo config tập trung với default Low <= 0.05, Medium <= 0.15, High > 0.15.
-- [ ] Validate thresholds: finite, nằm trong [0,1], và low < medium.
-- [ ] Tính I/N từ raw values, không dùng giá trị đã format.
-- [ ] Áp dụng boundary rules chính xác như mục 4.1.
-- [ ] Population missing/null/N<=0 trả Unclassified + reason, ratio null.
-- [ ] Giữ deterministic result và lưu snapshot config đã sử dụng.
+- [x] Tạo typed risk level enum: Low, Medium, High, Unclassified.
+- [x] Tạo config tập trung với default Low <= 0.05, Medium <= 0.15, High > 0.15.
+- [x] Validate thresholds: finite, nằm trong [0,1], và low < medium.
+- [x] Tính I/N từ raw values, không dùng giá trị đã format.
+- [x] Áp dụng boundary rules chính xác như mục 4.1.
+- [x] Population missing/null/N<=0 trả Unclassified + reason, ratio null.
+- [x] Domain deterministic; API POST lưu snapshot config đã sử dụng.
 
 ### Step 3 – Implement Regional Aggregation
-- [ ] Group building by region and risk level.
-- [ ] Aggregate building count, population và infected count cho từng bucket.
-- [ ] Tính regional infection ratio theo tổng infected / tổng population hợp lệ.
-- [ ] Theo dõi unclassified building count riêng.
-- [ ] Xử lý region không có building eligible.
-- [ ] Đảm bảo aggregation không phụ thuộc page/page_size.
+- [x] Group building by region and risk level.
+- [x] Aggregate building count, population và infected count cho từng bucket.
+- [x] Tính regional infection ratio theo tổng infected / tổng population hợp lệ.
+- [x] Theo dõi unclassified building count riêng.
+- [x] Xử lý region không có building eligible khi truyền region_id cụ thể.
+- [x] Đảm bảo aggregation không phụ thuộc page/page_size.
 
 ### Step 4 – Expose Result to API
-- [ ] Thêm API/service theo convention hiện có.
-- [ ] Filter simulation_id, time_step và region_id.
-- [ ] Trả per-building risk fields và regional summary theo contract mục 5.
-- [ ] Reuse KAN-25 repository/query logic khi có thể.
-- [ ] Cập nhật OpenAPI/docs và error contract.
+- [x] Thêm API/service theo convention hiện có.
+- [x] Filter simulation_id, time_step và region_id.
+- [x] Trả per-building risk fields và regional summary theo contract mục 5.
+- [ ] Reuse KAN-25 validation/repository pattern; query hiện tại dùng cùng JOIN và predicate đã kiểm tra ở KAN-25.
+- [x] Cập nhật OpenAPI/docs và error contract.
 
 ### Step 5 – Tests and Verification
-- [ ] Test Low, Medium, High và chính xác tại 5%/15%.
-- [ ] Test threshold invalid, non-finite và out-of-range.
-- [ ] Test population missing/null/N=0/N<0 và unclassified reason.
-- [ ] Test weighted regional ratio với các building có population khác nhau.
-- [ ] Test unclassified count và region empty.
-- [ ] Test consistency giữa per-building risk và regional counts.
-- [ ] Test aggregate không bị ảnh hưởng bởi pagination.
-- [ ] Test configuration snapshot/reproducibility.
+- [x] Viết unit tests cho Low, Medium, High và chính xác tại 5%/15% (chờ CI xác nhận).
+- [x] Viết unit tests cho threshold invalid, non-finite và out-of-range (chờ CI xác nhận).
+- [x] Viết unit tests cho population missing/null và N=0; N<0 bị reject (chờ CI xác nhận).
+- [x] Viết unit tests cho weighted regional ratio với population khác nhau (chờ CI xác nhận).
+- [x] Viết unit tests cho unclassified count và region empty (chờ CI xác nhận).
+- [x] Thêm PostGIS integration test kiểm tra risk buckets và regional counts (chờ CI xác nhận).
+- [x] API aggregate không nhận pagination; integration test kiểm tra aggregate toàn bộ dữ liệu (chờ CI xác nhận).
+- [x] Thêm integration test cho persist threshold snapshot (chờ CI xác nhận).
 - [ ] Chạy backend tests, fmt, Clippy và CI.
 
 ## 7. Acceptance Criteria
