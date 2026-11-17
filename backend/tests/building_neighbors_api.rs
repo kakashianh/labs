@@ -199,21 +199,30 @@ async fn building_neighbor_api_uses_metric_footprint_distance_and_batch_adjacenc
     let query_plan: Value = sqlx::query_scalar(
         r#"
         EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
+        WITH center AS MATERIALIZED (
+            SELECT id, footprint, footprint::geography AS geog
+            FROM public.buildings
+            WHERE id = $1
+              AND ST_SRID(footprint) = 4326
+              AND NOT ST_IsEmpty(footprint)
+              AND ST_IsValid(footprint)
+        )
         SELECT neighbor.id AS building_id,
-               ST_Distance(center.footprint::geography,
-                           neighbor.footprint::geography) AS distance_m
-        FROM public.buildings AS center
-        JOIN LATERAL (
+               ST_Distance(center.geog, neighbor.footprint::geography) AS distance_m
+        FROM center
+        CROSS JOIN LATERAL (
             SELECT candidate.id, candidate.footprint
             FROM public.buildings AS candidate
             WHERE candidate.id <> center.id
               AND ST_SRID(candidate.footprint) = 4326
               AND NOT ST_IsEmpty(candidate.footprint)
               AND ST_IsValid(candidate.footprint)
-              AND ST_DWithin(center.footprint::geography,
+              AND candidate.footprint::geography
+                  && extensions._ST_Expand(center.geog, $2)
+              AND ST_DWithin(center.geog,
                              candidate.footprint::geography, $2)
-        ) AS neighbor ON TRUE
-        WHERE center.id = $1
+            OFFSET 0
+        ) AS neighbor
         ORDER BY distance_m ASC, neighbor.id ASC
         LIMIT $3
         "#,
@@ -229,9 +238,10 @@ async fn building_neighbor_api_uses_metric_footprint_distance_and_batch_adjacenc
         .await
         .expect("commit query-plan transaction");
     assert!(query_plan[0]["Plan"].is_object());
-    assert!(query_plan
-        .to_string()
-        .contains("buildings_footprint_geography_gist_idx"));
+    let single_plan_text = query_plan.to_string();
+    assert!(single_plan_text.contains("buildings_footprint_geography_gist_idx"));
+    assert!(single_plan_text.contains("Index Cond"));
+    assert!(single_plan_text.contains("_st_expand"));
     println!("PostGIS neighbor EXPLAIN ANALYZE: {query_plan}");
 
     let mut batch_plan_tx = pool
@@ -246,7 +256,7 @@ async fn building_neighbor_api_uses_metric_footprint_distance_and_batch_adjacenc
         r#"
         EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
         WITH selected_buildings AS MATERIALIZED (
-            SELECT id, footprint
+            SELECT id, footprint, footprint::geography AS geog
             FROM public.buildings
             WHERE id = ANY($1::uuid[])
               AND ST_SRID(footprint) = 4326
@@ -255,19 +265,21 @@ async fn building_neighbor_api_uses_metric_footprint_distance_and_batch_adjacenc
         )
         SELECT a.id AS building_a_id,
                b.id AS building_b_id,
-               ST_Distance(a.footprint::geography,
-                           b.footprint::geography) AS distance_m
+               ST_Distance(a.geog, b.footprint::geography) AS distance_m
         FROM selected_buildings AS a
-        JOIN LATERAL (
+        CROSS JOIN LATERAL (
             SELECT candidate.id, candidate.footprint
             FROM public.buildings AS candidate
             WHERE candidate.id > a.id
               AND ST_SRID(candidate.footprint) = 4326
               AND NOT ST_IsEmpty(candidate.footprint)
               AND ST_IsValid(candidate.footprint)
-              AND ST_DWithin(a.footprint::geography,
+              AND candidate.footprint::geography
+                  && extensions._ST_Expand(a.geog, $2)
+              AND ST_DWithin(a.geog,
                              candidate.footprint::geography, $2)
-        ) AS b ON TRUE
+            OFFSET 0
+        ) AS b
         ORDER BY a.id ASC, b.id ASC
         "#,
     )
@@ -281,9 +293,10 @@ async fn building_neighbor_api_uses_metric_footprint_distance_and_batch_adjacenc
         .await
         .expect("commit batch query-plan transaction");
     assert!(batch_query_plan[0]["Plan"].is_object());
-    assert!(batch_query_plan
-        .to_string()
-        .contains("buildings_footprint_geography_gist_idx"));
+    let batch_plan_text = batch_query_plan.to_string();
+    assert!(batch_plan_text.contains("buildings_footprint_geography_gist_idx"));
+    assert!(batch_plan_text.contains("Index Cond"));
+    assert!(batch_plan_text.contains("_st_expand"));
     println!("PostGIS batch adjacency EXPLAIN ANALYZE: {batch_query_plan}");
 
     // The batch graph is undirected: each pair occurs once and invalid geometries
