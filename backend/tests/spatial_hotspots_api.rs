@@ -91,7 +91,7 @@ async fn hotspot_api_builds_transitive_components_and_returns_union_geometry() {
     let response = app
         .clone()
         .oneshot(get_request(format!(
-            "/api/v1/simulations/{simulation_id}/hotspots?time_step=0&radius_m=15"
+            "/api/v1/simulations/{simulation_id}/hotspots?time_step=0&radius_m={distance_ab}"
         )))
         .await
         .unwrap();
@@ -102,7 +102,7 @@ async fn hotspot_api_builds_transitive_components_and_returns_union_geometry() {
     assert_eq!(body["configuration"]["algorithm_version"], "hotspot-v1");
     assert_eq!(body["configuration"]["minimum_risk_level"], "high");
     assert_eq!(body["configuration"]["include_singletons"], true);
-    assert_eq!(body["configuration"]["radius_m"], 15.0);
+    assert_eq!(body["configuration"]["radius_m"], distance_ab);
 
     let cluster = body["hotspots"]
         .as_array()
@@ -125,7 +125,7 @@ async fn hotspot_api_builds_transitive_components_and_returns_union_geometry() {
     let without_singletons = app
         .clone()
         .oneshot(get_request(format!(
-            "/api/v1/simulations/{simulation_id}/hotspots?time_step=0&radius_m=15&include_singletons=false"
+            "/api/v1/simulations/{simulation_id}/hotspots?time_step=0&radius_m={distance_ab}&include_singletons=false"
         )))
         .await
         .unwrap();
