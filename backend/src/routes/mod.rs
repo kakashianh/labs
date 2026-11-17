@@ -7,4 +7,5 @@ pub mod openapi;
 pub mod regions;
 pub mod simulations;
 pub mod spatial_simulation_init;
+pub mod spatial_simulation_results;
 pub mod spatial_simulation_run;
