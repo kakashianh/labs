@@ -108,7 +108,7 @@ pub async fn find_building_neighbors(
               AND NOT ST_IsEmpty(candidate.footprint)
               AND ST_IsValid(candidate.footprint)
               AND candidate.footprint::geography
-                  && extensions._ST_Expand(center.geog, $2)
+                  && _ST_Expand(center.geog, $2)
               AND ST_DWithin(center.geog,
                              candidate.footprint::geography, $2)
             OFFSET 0
@@ -204,7 +204,7 @@ pub async fn build_building_adjacency(
               AND NOT ST_IsEmpty(candidate.footprint)
               AND ST_IsValid(candidate.footprint)
               AND candidate.footprint::geography
-                  && extensions._ST_Expand(a.geog, $2)
+                  && _ST_Expand(a.geog, $2)
               AND ST_DWithin(a.geog,
                              candidate.footprint::geography, $2)
             OFFSET 0
