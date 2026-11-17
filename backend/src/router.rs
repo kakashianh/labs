@@ -12,6 +12,8 @@ pub fn router(state: AppState) -> Router {
     let region_routes = routes::regions::router().with_state(state.clone());
     let openapi_routes = routes::openapi::router().with_state(state.clone());
     let simulation_routes = routes::simulations::router().with_state(state.clone());
+    let spatial_simulation_init_routes =
+        routes::spatial_simulation_init::router().with_state(state.clone());
     Router::new()
         .merge(health_routes)
         .merge(building_routes)
@@ -20,6 +22,7 @@ pub fn router(state: AppState) -> Router {
         .merge(region_routes)
         .merge(openapi_routes)
         .merge(simulation_routes)
+        .merge(spatial_simulation_init_routes)
         .with_state(state)
         .layer(tower_http::cors::CorsLayer::permissive())
         .layer(tracing_layer())

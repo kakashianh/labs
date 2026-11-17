@@ -49,6 +49,8 @@ mod tests {
             parameter["name"] == "limit" && parameter["required"].as_bool() == Some(false)
         }));
         assert!(spec["paths"]["/api/v1/simulations/sir"]["post"].is_object());
+        assert!(spec["paths"]["/api/v1/simulations/initialize"]["post"].is_object());
+        assert!(spec["components"]["schemas"]["InitializeSpatialSirRequest"].is_object());
         assert!(spec["components"]["schemas"]["SirSimulationRequest"].is_object());
         assert!(spec["components"]["schemas"]["SirSimulationResponse"].is_object());
         assert!(spec["components"]["schemas"]["SirSimulationPoint"].is_object());
