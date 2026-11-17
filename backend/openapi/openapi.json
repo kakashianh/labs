@@ -559,6 +559,105 @@
           }
         }
       }
+    },
+    "/api/v1/simulations/{simulation_id}/run": {
+      "post": {
+        "operationId": "runSpatialSirSimulation",
+        "summary": "Run and persist building-level SIR simulation",
+        "description": "Executes synchronous Euler updates for every eligible building using the KAN-23 local and distance-weighted neighbor infection pressure. Results are persisted atomically for time_step 0 through steps. Population is manually supplied during initialization. Same configuration retries are idempotent.",
+        "parameters": [
+          {
+            "name": "simulation_id",
+            "in": "path",
+            "required": true,
+            "description": "Initialized simulation run UUID.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunSpatialSirRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Idempotent replay of an already completed run."
+          },
+          "201": {
+            "description": "Simulation completed and all building/time-step results persisted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunSpatialSirResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid model parameters, initial states, or resource limits.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Simulation run not found."
+          },
+          "409": {
+            "description": "Run already completed with a different configuration or is not executable."
+          },
+          "500": {
+            "description": "Numerical or persistence failure; no partial result set is marked completed."
+          }
+        }
+      }
+    },
+    "/api/v1/simulations/{simulation_id}": {
+      "get": {
+        "operationId": "getSpatialSirSimulationRun",
+        "summary": "Get spatial SIR simulation run status",
+        "description": "Returns lifecycle status and persisted result counts. Detailed time-series retrieval is provided by the spatial simulation results API.",
+        "parameters": [
+          {
+            "name": "simulation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Simulation run summary.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpatialSirRunSummaryResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Simulation run not found."
+          },
+          "500": {
+            "description": "Unexpected database error."
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1140,6 +1239,146 @@
             "enum": [
               "missing_population"
             ]
+          }
+        }
+      },
+      "RunSpatialSirRequest": {
+        "type": "object",
+        "required": [
+          "radius_m",
+          "beta",
+          "gamma",
+          "dt",
+          "steps"
+        ],
+        "properties": {
+          "radius_m": {
+            "type": "number",
+            "format": "double",
+            "exclusiveMinimum": 0,
+            "maximum": 5000,
+            "description": "Footprint-to-footprint neighbor radius in meters."
+          },
+          "beta": {
+            "type": "number",
+            "format": "double",
+            "minimum": 0,
+            "description": "Transmission rate in inverse caller-defined time units."
+          },
+          "gamma": {
+            "type": "number",
+            "format": "double",
+            "minimum": 0,
+            "description": "Recovery rate in inverse caller-defined time units."
+          },
+          "dt": {
+            "type": "number",
+            "format": "double",
+            "exclusiveMinimum": 0,
+            "description": "Euler timestep in the same time unit as beta and gamma."
+          },
+          "steps": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000,
+            "description": "Number of Euler steps; effective result rows are limited to 250000 and buildings to 500."
+          }
+        }
+      },
+      "RunSpatialSirResponse": {
+        "type": "object",
+        "required": [
+          "simulation_id",
+          "status",
+          "building_count",
+          "point_count",
+          "time_step_count",
+          "excluded_invalid_geometry_count",
+          "idempotent_replay"
+        ],
+        "properties": {
+          "simulation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "completed"
+            ]
+          },
+          "building_count": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "point_count": {
+            "type": "integer",
+            "minimum": 2
+          },
+          "time_step_count": {
+            "type": "integer",
+            "minimum": 2,
+            "description": "steps + 1, including initial state."
+          },
+          "excluded_invalid_geometry_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "idempotent_replay": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SpatialSirRunSummaryResponse": {
+        "type": "object",
+        "required": [
+          "simulation_id",
+          "status",
+          "population_source",
+          "eligible_building_count",
+          "excluded_building_count",
+          "result_point_count",
+          "time_step_count",
+          "completed_at"
+        ],
+        "properties": {
+          "simulation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "initialized",
+              "completed"
+            ]
+          },
+          "population_source": {
+            "type": "string",
+            "enum": [
+              "manual"
+            ]
+          },
+          "eligible_building_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "excluded_building_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "result_point_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "time_step_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
           }
         }
       }

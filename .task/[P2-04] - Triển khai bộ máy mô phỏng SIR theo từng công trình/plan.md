@@ -63,36 +63,36 @@ Trước implementation:
 ## 6. Implementation Plan
 
 ### Step 1 – Review Dependencies and Freeze Engine Contract
-- [ ] Đối chiếu initial-state schema KAN-22.
-- [ ] Đối chiếu infection formula KAN-23 đã được duyệt.
-- [ ] Xác định input/output types và time-step semantics.
-- [ ] Xác định population/state precision.
-- [ ] Ước lượng row volume và resource limits.
+- [x] Đối chiếu initial-state schema KAN-22.
+- [x] Đối chiếu infection formula KAN-23 đã được duyệt.
+- [x] Xác định input/output types và time-step semantics.
+- [x] Xác định population/state precision.
+- [x] Ước lượng row volume và resource limits.
 
 ### Step 2 – Design Spatial SIR Domain
-- [ ] Thiết kế pure domain types cho building state và simulation config.
-- [ ] Tách domain computation khỏi database/HTTP.
-- [ ] Xác định deterministic ordering.
-- [ ] Xác định synchronous snapshot update.
-- [ ] Tái sử dụng validation/error conventions của KAN-18.
+- [x] Thiết kế pure domain types cho building state và simulation config.
+- [x] Tách domain computation khỏi database/HTTP.
+- [x] Xác định deterministic ordering.
+- [x] Xác định synchronous snapshot update.
+- [x] Tái sử dụng validation/error conventions của KAN-18.
 
 ### Step 3 – Implement Per-building Time-step Engine
-- [ ] Tính infection pressure qua KAN-23 interface.
-- [ ] Tính recovery theo gamma.
-- [ ] Cập nhật S/I/R cho từng building.
-- [ ] Validate finite/non-negative/conservation sau mỗi bước.
-- [ ] Dừng run khi numerical instability.
-- [ ] Xử lý zero infected seed và no-neighbor cases.
-- [ ] Đảm bảo cùng input cho cùng kết quả.
+- [x] Tính infection pressure qua KAN-23 interface.
+- [x] Tính recovery theo gamma.
+- [x] Cập nhật S/I/R cho từng building.
+- [x] Validate finite/non-negative/conservation sau mỗi bước.
+- [x] Dừng run khi numerical instability.
+- [x] Xử lý zero infected seed và no-neighbor cases.
+- [x] Đảm bảo cùng input cho cùng kết quả.
 
 ### Step 4 – Persist Simulation Results
-- [ ] Thiết kế result table/index nếu chưa có.
-- [ ] Lưu simulation_id, building_id, time_step, time, S, I, R.
-- [ ] Tạo unique key cho (simulation_id, building_id, time_step).
-- [ ] Persist theo batch có transaction boundary rõ ràng.
-- [ ] Không tạo duplicate khi retry.
-- [ ] Không đánh dấu completed khi thiếu kết quả.
-- [ ] Thêm indexes phục vụ truy vấn theo run/time/building.
+- [x] Thiết kế result table/index nếu chưa có.
+- [x] Lưu simulation_id, building_id, time_step, time, S, I, R.
+- [x] Tạo unique key cho (simulation_id, building_id, time_step).
+- [x] Persist theo batch có transaction boundary rõ ràng.
+- [x] Không tạo duplicate khi retry.
+- [x] Không đánh dấu completed khi thiếu kết quả.
+- [x] Thêm indexes phục vụ truy vấn theo run/time/building.
 
 ### Step 5 – Tests
 - [ ] No infected seed: không tự phát sinh infection.
@@ -111,10 +111,10 @@ Trước implementation:
 - [ ] Ghi thời gian compute và persist, memory/row count.
 - [ ] Kiểm tra query patterns và indexes.
 - [ ] Chỉ tối ưu sau khi có benchmark.
-- [ ] Cập nhật docs về công thức, limits, persistence và failure semantics.
+- [x] Cập nhật docs về công thức, limits, persistence và failure semantics.
 - [ ] Chạy backend tests, fmt, Clippy và CI.
 
-## 7. Acceptance Criteria
+## Implementation Status (2026-11-17)\n\nImplementation is present on `feat/p2-04-building-sir-simulation-engine`. Resource limits: maximum 500 eligible buildings and 250,000 result rows per run; persistence uses batches of 500 rows and one transaction for result rows plus the completed status. Added `POST /api/v1/simulations/{simulation_id}/run` and `GET /api/v1/simulations/{simulation_id}`. Detailed time-series retrieval remains KAN-25.\n\nUnit and Testcontainers test cases have been authored, but remain unchecked until CI verifies them. The 431-building benchmark and measured memory/time are also pending.\n\n## 7. Acceptance Criteria
 
 - [ ] Có S/I/R cho mỗi building và time_step.
 - [ ] Dùng neighbor infection rule đã duyệt.

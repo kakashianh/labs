@@ -2,3 +2,4 @@
 
 pub mod infection_pressure;
 pub mod sir;
+pub mod spatial_sir;

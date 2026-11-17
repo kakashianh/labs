@@ -44,8 +44,13 @@ async fn spatial_sir_initialization_persists_states_exclusions_and_idempotency()
     .fetch_one(&pool)
     .await
     .expect("insert region");
-    let building_a = insert_building(&pool, region_id, "way/81001", 81001).await;
-    let building_b = insert_building(&pool, region_id, "way/81002", 81002).await;
+    let mut building_a = insert_building(&pool, region_id, "way/81001", 81001).await;
+    let mut building_b = insert_building(&pool, region_id, "way/81002", 81002).await;
+    // Keep the eligible building's UUID smaller so the excluded building would
+    // have appeared as a candidate in the old unfiltered lateral scan.
+    if building_a > building_b {
+        std::mem::swap(&mut building_a, &mut building_b);
+    }
 
     let app = router(AppState::new(pool.clone()));
     let request_id = Uuid::new_v4();
@@ -91,6 +96,17 @@ async fn spatial_sir_initialization_persists_states_exclusions_and_idempotency()
     assert_eq!(conflict.status(), StatusCode::CONFLICT);
 
     let simulation_uuid = Uuid::parse_str(simulation_id).unwrap();
+    let initialized_summary = app
+        .clone()
+        .oneshot(get_run_request(simulation_uuid))
+        .await
+        .expect("get initialized run");
+    assert_eq!(initialized_summary.status(), StatusCode::OK);
+    let initialized_summary = read_json(initialized_summary).await;
+    assert_eq!(initialized_summary["status"], "initialized");
+    assert_eq!(initialized_summary["eligible_building_count"], 1);
+    assert_eq!(initialized_summary["excluded_building_count"], 1);
+
     let states: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM public.simulation_building_states WHERE simulation_id = $1",
     )
@@ -107,6 +123,131 @@ async fn spatial_sir_initialization_persists_states_exclusions_and_idempotency()
     .unwrap();
     assert_eq!(states, 1);
     assert_eq!(exclusions, 1);
+
+    // The adjacency graph must contain only eligible simulation buildings;
+    // building_b is spatially overlapping but excluded due to missing population.
+    let eligible_only_adjacency =
+        db::building_neighbors::build_building_adjacency(&pool, &[building_a], 100.0)
+            .await
+            .expect("build eligible-only adjacency");
+    assert!(eligible_only_adjacency.edges.is_empty());
+
+    sqlx::query(
+        "CREATE FUNCTION public.reject_spatial_sir_result() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'injected persistence failure'; END; $$",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "CREATE TRIGGER reject_spatial_sir_result BEFORE INSERT ON public.simulation_building_results FOR EACH ROW EXECUTE FUNCTION public.reject_spatial_sir_result()",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let failed_run = app
+        .clone()
+        .oneshot(post_run_request(
+            simulation_uuid,
+            json!({"radius_m": 100.0, "beta": 0.3, "gamma": 0.1, "dt": 0.1, "steps": 2}),
+        ))
+        .await
+        .expect("failed persistence request");
+    let failed_status = failed_run.status();
+    let failed_body = read_json(failed_run).await;
+    assert_eq!(
+        failed_status,
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "unexpected run error response: {failed_body}"
+    );
+    let failed_status: String =
+        sqlx::query_scalar("SELECT status FROM public.simulation_runs WHERE id = $1")
+            .bind(simulation_uuid)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    let failed_rows: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM public.simulation_building_results WHERE simulation_id = $1",
+    )
+    .bind(simulation_uuid)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(failed_status, "initialized");
+    assert_eq!(failed_rows, 0);
+    sqlx::query("DROP TRIGGER reject_spatial_sir_result ON public.simulation_building_results")
+        .execute(&pool)
+        .await
+        .unwrap();
+    sqlx::query("DROP FUNCTION public.reject_spatial_sir_result()")
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let run_payload = json!({
+        "radius_m": 100.0,
+        "beta": 0.3,
+        "gamma": 0.1,
+        "dt": 0.1,
+        "steps": 2
+    });
+    let run_response = app
+        .clone()
+        .oneshot(post_run_request(simulation_uuid, run_payload.clone()))
+        .await
+        .expect("run simulation");
+    assert_eq!(run_response.status(), StatusCode::CREATED);
+    let run_body = read_json(run_response).await;
+    assert_eq!(run_body["status"], "completed");
+    assert_eq!(run_body["building_count"], 1);
+    assert_eq!(run_body["point_count"], 3);
+    assert_eq!(run_body["time_step_count"], 3);
+    assert_eq!(run_body["idempotent_replay"], false);
+
+    let persisted: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM public.simulation_building_results WHERE simulation_id = $1",
+    )
+    .bind(simulation_uuid)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(persisted, 3);
+    let completed_summary = app
+        .clone()
+        .oneshot(get_run_request(simulation_uuid))
+        .await
+        .expect("get completed run");
+    let completed_summary = read_json(completed_summary).await;
+    assert_eq!(completed_summary["status"], "completed");
+    assert_eq!(completed_summary["result_point_count"], 3);
+    assert_eq!(completed_summary["time_step_count"], 3);
+    assert!(completed_summary["completed_at"].is_string());
+
+    let bad_states: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM public.simulation_building_results WHERE simulation_id = $1 AND abs((susceptible + infected + recovered) - 100.0) > 1e-6",
+    )
+    .bind(simulation_uuid)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(bad_states, 0);
+
+    let run_replay = app
+        .clone()
+        .oneshot(post_run_request(simulation_uuid, run_payload.clone()))
+        .await
+        .expect("replay simulation");
+    assert_eq!(run_replay.status(), StatusCode::OK);
+    assert_eq!(read_json(run_replay).await["idempotent_replay"], true);
+
+    let mut different_config = run_payload;
+    different_config["beta"] = json!(0.4);
+    let run_conflict = app
+        .clone()
+        .oneshot(post_run_request(simulation_uuid, different_config))
+        .await
+        .expect("conflicting simulation replay");
+    assert_eq!(run_conflict.status(), StatusCode::CONFLICT);
 
     let all_excluded_payload = json!({
         "request_id": Uuid::new_v4(),
@@ -175,4 +316,21 @@ async fn read_json(response: axum::response::Response) -> Value {
         .await
         .expect("body");
     serde_json::from_slice(&bytes).expect("JSON")
+}
+
+fn post_run_request(simulation_id: Uuid, payload: Value) -> Request<Body> {
+    Request::builder()
+        .method("POST")
+        .uri(format!("/api/v1/simulations/{simulation_id}/run"))
+        .header("content-type", "application/json")
+        .body(Body::from(payload.to_string()))
+        .expect("build run request")
+}
+
+fn get_run_request(simulation_id: Uuid) -> Request<Body> {
+    Request::builder()
+        .method("GET")
+        .uri(format!("/api/v1/simulations/{simulation_id}"))
+        .body(Body::empty())
+        .expect("build get run request")
 }
