@@ -200,6 +200,7 @@ pub async fn build_building_adjacency(
             SELECT candidate.id, candidate.footprint
             FROM public.buildings AS candidate
             WHERE candidate.id > a.id
+              AND candidate.id = ANY($1::uuid[])
               AND ST_SRID(candidate.footprint) = 4326
               AND NOT ST_IsEmpty(candidate.footprint)
               AND ST_IsValid(candidate.footprint)
