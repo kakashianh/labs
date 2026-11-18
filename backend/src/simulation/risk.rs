@@ -258,13 +258,19 @@ mod tests {
             risk_low_max: 0.2,
             ..RiskThresholds::default()
         };
-        assert_eq!(invalid_order.validate(), Err(RiskError::InvalidThresholdOrder));
+        assert_eq!(
+            invalid_order.validate(),
+            Err(RiskError::InvalidThresholdOrder)
+        );
 
         let invalid_range = RiskThresholds {
             risk_low_max: f64::NAN,
             ..RiskThresholds::default()
         };
-        assert_eq!(invalid_range.validate(), Err(RiskError::InvalidThresholdRange));
+        assert_eq!(
+            invalid_range.validate(),
+            Err(RiskError::InvalidThresholdRange)
+        );
         assert_eq!(
             RiskThresholds::default().classify(input(Some(10.0), 11.0)),
             Err(RiskError::InvalidBuildingValues)
