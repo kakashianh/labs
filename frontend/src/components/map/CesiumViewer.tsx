@@ -454,6 +454,11 @@ export default function CesiumViewer() {
     setSimulationSelectedBuildingIds([])
   }
 
+  const handleSelectionModeChange = (enabled: boolean) => {
+    if (enabled) clearSelectionRef.current?.()
+    setSimulationSelectionMode(enabled)
+  }
+
   const closeBuildingPanel = () => clearSelectionRef.current?.()
 
   return (
@@ -495,7 +500,7 @@ export default function CesiumViewer() {
       <SpatialSimulationControls
         selectedBuildingIds={simulationSelectedBuildingIds}
         selectionMode={simulationSelectionMode}
-        onSelectionModeChange={setSimulationSelectionMode}
+        onSelectionModeChange={handleSelectionModeChange}
         onClearSelection={clearSimulationSelection}
         onFrameChange={(frame) => { setSpatialFrame(frame); setSelectedHotspotId(null) }}
         onMetricChange={setSpatialMetric}
