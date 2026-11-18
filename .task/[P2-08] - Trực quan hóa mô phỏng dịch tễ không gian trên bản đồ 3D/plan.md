@@ -226,3 +226,18 @@ KAN-28 hoàn thành khi CesiumJS thể hiện được spatial SIR theo building
 - The map now loads completed spatial runs by `simulation_id`, supports time-step navigation, risk/ratio styling, S/I/R building details, aggregate summaries and a separate clickable hotspot layer.
 - Frontend unit tests, lint and production build have passed in GitHub Actions. Backend formatting, Clippy, Rust tests and Testcontainers/PostGIS integration tests have also passed in the current workflow; backend Docker image build is the remaining CI job at the time of this update.
 - Browser-based manual E2E and evidence capture are intentionally left unchecked until the feature is tested in Codespaces with a real completed spatial simulation.
+
+
+## 12. Cesium Basemap Rendering Fix (Browser Test Follow-up)
+
+Browser verification on 2026-11-18 found that the Cesium viewer and canvas were present, but the map surface rendered blank/black while the API status reported 431 buildings. The browser session did not expose enough console/network detail to prove the exact runtime cause.
+
+Source inspection found a configuration/documentation mismatch: `frontend/.env.example` and this frontend README describe an OpenStreetMap basemap that works without a Cesium Ion token, while `CesiumViewer.tsx` actually configured the Esri World Imagery tile endpoint. To align runtime behavior with the documented no-token setup, the fix branch switches the default `UrlTemplateImageryProvider` to the public OpenStreetMap raster tile URL and updates attribution.
+
+Verification still required after the Codespaces dev server reload:
+- [ ] Confirm OSM tiles and the globe render in the browser.
+- [ ] Confirm the 431 building footprints remain visible and camera flight works.
+- [ ] Inspect browser console and failed network requests if the map remains blank.
+- [ ] Re-run the spatial simulation E2E checklist with a completed run.
+
+Do not mark KAN-28 browser E2E or acceptance criteria complete based on this configuration change alone.
