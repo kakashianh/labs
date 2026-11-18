@@ -52,3 +52,15 @@ For the repeatable browser-level workflow (including live API checks, empty/erro
 - `VITE_API_BASE_URL` must point to the Axum API reachable from the browser.
 - `VITE_CESIUM_ION_TOKEN` is optional; the OSM basemap does not require it.
 - Never put PostgreSQL passwords, Supabase service-role keys, or other server credentials in Vite environment variables. Vite variables are bundled into browser assets.
+
+## Spatial SIR visualization (KAN-28)
+
+1. Initialize a spatial simulation and execute its run using the existing Phase 2 flow.
+2. Copy the returned `simulation_id` into the **Spatial SIR · 3D** panel on the map.
+3. The panel checks `GET /api/v1/simulations/{simulation_id}` and only visualizes runs with `status = completed`.
+4. Use the time-step slider to load all pages from the building-results and risk-results APIs, together with SIR/risk aggregates and hotspot geometry for the same time step.
+5. The default building style is the backend's `risk_level` classification. `infection_ratio` is available as an alternative. The legend reads its thresholds from the saved KAN-26 risk snapshot.
+6. Click a building to inspect S/I/R/N, infection ratio and risk. Click a hotspot polygon to inspect its cluster statistics and highlight member buildings.
+7. Building thematic styling and hotspot geometry can be toggled independently.
+
+The timeline displays the backend-provided simulation time and does not convert it to a real-world date. Missing or unclassified data is rendered in neutral grey, never as Low risk. Changing time steps cancels/ignores stale requests so an older response cannot replace the currently selected frame.
