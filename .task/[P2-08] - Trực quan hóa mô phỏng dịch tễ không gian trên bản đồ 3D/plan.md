@@ -71,52 +71,52 @@ Threshold colors must map to named labels and have a legend; color is not the on
 ## 6. Implementation Plan
 
 ### Step 1 – Inspect Existing Cesium Entity and UI Contracts
-- [ ] Inspect building entity IDs/properties and selection flow.
-- [ ] Inspect current API client/query patterns.
-- [ ] Inspect existing building detail panel and map layers.
-- [ ] Define mapping API building_id to Cesium entity.
-- [ ] Define simulation/time_step state ownership.
+- [x] Inspect building entity IDs/properties and selection flow.
+- [x] Inspect current API client/query patterns.
+- [x] Inspect existing building detail panel and map layers.
+- [x] Define mapping API building_id to Cesium entity.
+- [x] Define simulation/time_step state ownership.
 
 ### Step 2 – Integrate Simulation Result APIs
-- [ ] Add typed DTOs for per-building states, aggregates, risk and hotspots.
-- [ ] Add API client methods.
-- [ ] Handle loading, empty, error and abort/stale responses.
-- [ ] Handle pagination or bounded region responses.
-- [ ] Ensure responses correspond to selected simulation_id/time_step.
+- [x] Add typed DTOs for per-building states, aggregates, risk and hotspots.
+- [x] Add API client methods.
+- [x] Handle loading, empty, error and abort/stale responses.
+- [x] Handle pagination or bounded region responses.
+- [x] Ensure responses correspond to selected simulation_id/time_step.
 
 ### Step 3 – Implement Time-step Controls
-- [ ] Add timeline/slider for available time_steps.
-- [ ] Show current step/time.
-- [ ] Fetch or select data for new time_step.
-- [ ] Prevent stale response from replacing newer selection.
-- [ ] Debounce or cancel rapid time-step requests where appropriate.
-- [ ] Keep selected step within run's valid range.
+- [x] Add timeline/slider for available time_steps.
+- [x] Show current step/time.
+- [x] Fetch or select data for new time_step.
+- [x] Prevent stale response from replacing newer selection.
+- [x] Debounce or cancel rapid time-step requests where appropriate.
+- [x] Keep selected step within run's valid range.
 
 ### Step 4 – Style Building Entities
-- [ ] Join state by stable building_id.
-- [ ] Apply risk/ratio/count style.
-- [ ] Define unknown/no-data style separately.
-- [ ] Restore base building style when simulation layer is disabled.
-- [ ] Avoid mutating shared source properties irreversibly.
-- [ ] Add accessible legend and textual risk labels.
+- [x] Join state by stable building_id.
+- [x] Apply risk/ratio/count style.
+- [x] Define unknown/no-data style separately.
+- [x] Restore base building style when simulation layer is disabled.
+- [x] Avoid mutating shared source properties irreversibly.
+- [x] Add accessible legend and textual risk labels.
 
 ### Step 5 – Building Details and Hotspot Layer
-- [ ] Extend building selection details with N, S, I, R and ratio.
-- [ ] Add risk level and threshold context.
-- [ ] Render hotspot geometry in separate layer.
-- [ ] Display hotspot stats on selection/hover if interaction supports it.
-- [ ] Add hotspot layer visibility toggle.
-- [ ] Cleanup Cesium primitives/data sources on unmount or run change.
+- [x] Extend building selection details with N, S, I, R and ratio.
+- [x] Add risk level and threshold context.
+- [x] Render hotspot geometry in separate layer.
+- [x] Display hotspot stats on selection/hover if interaction supports it.
+- [x] Add hotspot layer visibility toggle.
+- [x] Cleanup Cesium primitives/data sources on unmount or run change.
 
 ### Step 6 – Tests and Manual E2E
-- [ ] Unit test DTO mapping and style classification.
+- [x] Unit test DTO mapping and unknown-style classification.
 - [ ] Test selected simulation/time_step synchronization.
-- [ ] Test missing state uses unknown style.
+- [x] Test missing state uses unknown style.
 - [ ] Test stale requests do not overwrite latest time_step.
 - [ ] Test building selection shows matching state.
 - [ ] Test hotspot layer rendering and cleanup.
 - [ ] Test legend consistency with backend thresholds.
-- [ ] Run frontend lint, type checks, unit tests and production build.
+- [x] Run frontend lint, type checks, unit tests and production build (GitHub Actions).
 - [ ] Run browser E2E/manual test with a completed spatial simulation.
 - [ ] Capture evidence for timeline, building details and hotspots.
 
@@ -211,10 +211,18 @@ KAN-28 hoàn thành khi CesiumJS thể hiện được spatial SIR theo building
 - [ ] Verify risk threshold snapshot is used by legend and risk styling without repeated POST calls.
 - [ ] Verify default `risk_level` mode and alternate `infection_ratio` mode.
 - [ ] Verify infected count appears in detail/tooltip and is not a separate color mode.
-- [ ] Verify Unclassified/missing data never appears as Low.
+- [x] Verify Unclassified/missing data never appears as Low (unit test + map style guard).
 - [ ] Verify hotspot selection displays backend statistics and highlights members by `building_ids`.
 - [ ] Verify building and hotspot layers can be toggled independently.
 - [ ] Verify changing run removes old styles, hotspot geometry and event handlers.
 - [ ] Verify empty hotspot response does not hide valid building results.
 - [ ] Verify stale requests cannot overwrite the currently selected simulation/time step.
 
+
+
+## 11. Implementation Status
+
+- Frontend implementation is on `feat/p2-08-3d-epidemic-visualization`.
+- The map now loads completed spatial runs by `simulation_id`, supports time-step navigation, risk/ratio styling, S/I/R building details, aggregate summaries and a separate clickable hotspot layer.
+- Frontend unit tests, lint and production build have passed in GitHub Actions. Backend formatting, Clippy, Rust tests and Testcontainers/PostGIS integration tests have also passed in the current workflow; backend Docker image build is the remaining CI job at the time of this update.
+- Browser-based manual E2E and evidence capture are intentionally left unchecked until the feature is tested in Codespaces with a real completed spatial simulation.
