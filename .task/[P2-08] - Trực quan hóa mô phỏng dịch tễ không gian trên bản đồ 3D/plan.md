@@ -288,3 +288,13 @@ KAN-28 hoàn thành khi CesiumJS thể hiện được spatial SIR theo building
 - Each selected building requires manually entered population and initial infected count; recovered defaults to zero in the form but is sent explicitly.
 - Default SIR form values are editable demonstration parameters, not epidemiological calibration or medical guidance.
 - The launch flow is a client-side orchestration of existing APIs; no backend endpoint or database migration is introduced by this follow-up.
+
+
+## 13. UI panel visibility controls
+
+- [x] Add an `Ẩn / Hiện` control to **Spatial SIR · 3D**; collapse the entire simulation controls and launch form while retaining its compact header.
+- [x] Add an `Ẩn / Hiện` control to **SIMULATION RESULT**; collapse chart, metrics, and playback controls while retaining the panel header.
+- [x] Add an `Ẩn / Hiện` control to **SIMULATION SETUP**; collapse input fields and submit action while retaining the panel header.
+- [x] Keep panel state local to each component so hiding one panel does not hide or reset the other panels or simulation data.
+- [ ] Verify the three controls in browser at desktop and mobile viewport sizes.
+- [ ] Verify each panel can be hidden and restored independently, including result loading/error/empty states.
