@@ -144,7 +144,11 @@ async function fetchAllResultPages(
       ),
     ),
   )
-  return { ...first, data: [...first.data, ...pages.flatMap((page) => page.data)] }
+  const data = [...first.data, ...pages.flatMap((page) => page.data)]
+  if (data.length !== first.pagination.total) {
+    throw new Error('Không tải đủ các trang spatial building results.')
+  }
+  return { ...first, data }
 }
 
 async function fetchAllRiskPages(
@@ -164,7 +168,11 @@ async function fetchAllRiskPages(
       ),
     ),
   )
-  return { ...first, data: [...first.data, ...pages.flatMap((page) => page.data)] }
+  const data = [...first.data, ...pages.flatMap((page) => page.data)]
+  if (data.length !== first.pagination.total) {
+    throw new Error('Không tải đủ các trang spatial risk results.')
+  }
+  return { ...first, data }
 }
 
 export async function fetchSpatialSimulationSummary(
@@ -214,13 +222,24 @@ export async function fetchSpatialSimulationFrame(
     throw new Error('Backend trả về dữ liệu không khớp simulation/time step đang chọn.')
   }
 
+  const thresholds = risks.thresholds
+  const hotspotThresholds = hotspots.configuration.risk_thresholds
+  if (
+    thresholds.version !== hotspotThresholds.version ||
+    thresholds.source !== hotspotThresholds.source ||
+    thresholds.risk_low_max !== hotspotThresholds.risk_low_max ||
+    thresholds.risk_medium_max !== hotspotThresholds.risk_medium_max
+  ) {
+    throw new Error('Risk threshold snapshot giữa risk-results và hotspots không đồng nhất.')
+  }
+
   const buildings = mergeSpatialBuildingData(results.data, risks.data)
 
   return {
     summary,
     time_step: timeStep,
     time: results.time,
-    thresholds: risks.thresholds,
+    thresholds,
     buildings,
     hotspots: hotspots.hotspots,
   }
