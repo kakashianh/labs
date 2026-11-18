@@ -123,7 +123,15 @@ export default function CesiumViewer() {
     const primaryImageryLayer = viewer.imageryLayers.addImageryProvider(primaryImageryProvider)
     let fallbackImageryActivated = false
     const removeImageryErrorListener = primaryImageryProvider.errorEvent.addEventListener((tileError) => {
-      if (fallbackImageryActivated || tileError.timesRetried < 2 || viewer.isDestroyed()) return
+      if (fallbackImageryActivated || viewer.isDestroyed()) return
+
+      // Cesium only retries a failed imagery request when the error listener
+      // explicitly opts in. Retry transient failures twice, then switch source.
+      if (tileError.timesRetried < 2) {
+        tileError.retry = true
+        return
+      }
+
       fallbackImageryActivated = true
       viewer.imageryLayers.remove(primaryImageryLayer, true)
       viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
