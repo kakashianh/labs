@@ -274,7 +274,7 @@ KAN-28 hoàn thành khi CesiumJS thể hiện được spatial SIR theo building
 - [x] Validate required numeric fields, population bounds, duplicate IDs, and run parameter bounds before sending requests.
 - [x] After a successful completed run, automatically load time step 0 into the existing Cesium visualization; preserve manual Simulation ID loading for previously created runs.
 - [x] Add unit tests for initialize request construction and invalid input boundaries.
-- [ ] Verify frontend lint, type checks, unit tests and production build in GitHub Actions.
+- [x] Verify frontend lint, TypeScript build, unit tests and production build in GitHub Actions (run #44263115132 frontend job passed at code commit `9fe25d7`).
 - [ ] Browser E2E: select multiple buildings on map, enter manual populations, create run, and verify returned ID is loaded automatically.
 - [ ] Verify failed initialize/run requests show an actionable error and do not load a partial run.
 - [ ] Verify clearing selection and toggling selection mode do not break normal building detail selection.
