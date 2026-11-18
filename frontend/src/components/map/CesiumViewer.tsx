@@ -14,10 +14,10 @@ const DEFAULT_BUILDING_FILL = Cesium.Color.CORNFLOWERBLUE.withAlpha(0.35)
 const SELECTED_BUILDING_FILL = Cesium.Color.ORANGE.withAlpha(0.75)
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
-const BASEMAP_URL =
-  'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-const BASEMAP_CREDIT =
-  'Sources: Esri, DigitalGlobe, GeoEye, i-cubed, USDA FSA, USGS, AEX, Getmapping, Aerogrid, IGN, IGP, swisstopo, and the GIS User Community'
+// Keep the default basemap independent from Cesium Ion credentials. This is
+// also the provider documented in frontend/.env.example and frontend/README.md.
+const BASEMAP_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+const BASEMAP_CREDIT = '© OpenStreetMap contributors'
 
 export default function CesiumViewer() {
   const [loadState, setLoadState] = useState<LoadState>('loading')
