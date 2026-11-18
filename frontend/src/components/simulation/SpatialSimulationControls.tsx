@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   fetchSpatialSimulationFrame,
   fetchSpatialSimulationSummary,
@@ -35,6 +35,11 @@ export default function SpatialSimulationControls({
   const [hotspotVisible, setHotspotVisible] = useState(true)
   const requestController = useRef<AbortController | null>(null)
   const requestVersion = useRef(0)
+
+  useEffect(() => () => {
+    requestController.current?.abort()
+    requestVersion.current += 1
+  }, [])
 
   const loadStep = async (id: string, step: number, nextSummary?: SpatialSimulationSummary) => {
     requestController.current?.abort()
@@ -92,6 +97,7 @@ export default function SpatialSimulationControls({
       setSummary(nextSummary)
       setTimeStep(0)
       setTimeValue(frame.time)
+      setFrame(frame)
       onFrameChange(frame)
     } catch (requestError) {
       if (controller.signal.aborted || version !== requestVersion.current) return
@@ -102,7 +108,6 @@ export default function SpatialSimulationControls({
   }
 
   const handleStepChange = (step: number) => {
-    setTimeStep(step)
     void loadStep(simulationId.trim(), step, summary ?? undefined)
   }
 
