@@ -80,7 +80,7 @@ Set up consistent local commands for formatting, linting, type checking, and tes
 - [x] Configure Ruff for linting and formatting, with project-wide rules in `pyproject.toml`
 - [x] Configure Mypy for static type checking; install pytest into its isolated tool environment so test markers are typed
 - [x] Configure pytest discovery and separate unit from integration tests
-- [ ] Add Makefile targets for environment setup, lint, format-check, type-check, unit tests, integration tests, and the aggregate check
+- [x] Add Makefile targets for environment setup, lint, format-check, type-check, unit tests, integration tests, smoke, and aggregate check
 - [x] Ensure project commands use the locked `uv` environment and quality tools use explicitly pinned `uvx` versions; commands fail on non-zero check results
 - [x] Add unit tests for package import/version and CLI parser bootstrap
 
