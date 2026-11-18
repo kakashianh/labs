@@ -173,17 +173,13 @@ fn thresholds_from_config(config: &Value) -> Result<RiskThresholds> {
     Ok(thresholds)
 }
 
-async fn load_run_configuration(
-    db: &sqlx::PgPool,
-    simulation_id: Uuid,
-) -> Result<RiskThresholds> {
-    let row = sqlx::query(
-        "SELECT status, simulation_config FROM public.simulation_runs WHERE id = $1",
-    )
-    .bind(simulation_id)
-    .fetch_optional(db)
-    .await?
-    .ok_or(AppError::NotFound)?;
+async fn load_run_configuration(db: &sqlx::PgPool, simulation_id: Uuid) -> Result<RiskThresholds> {
+    let row =
+        sqlx::query("SELECT status, simulation_config FROM public.simulation_runs WHERE id = $1")
+            .bind(simulation_id)
+            .fetch_optional(db)
+            .await?
+            .ok_or(AppError::NotFound)?;
 
     let status: String = row.try_get("status")?;
     if status != "completed" {
@@ -193,11 +189,7 @@ async fn load_run_configuration(
     thresholds_from_config(&config.unwrap_or_else(|| serde_json::json!({})))
 }
 
-async fn validate_time_step(
-    db: &sqlx::PgPool,
-    simulation_id: Uuid,
-    time_step: i32,
-) -> Result<f64> {
+async fn validate_time_step(db: &sqlx::PgPool, simulation_id: Uuid, time_step: i32) -> Result<f64> {
     sqlx::query_scalar::<_, Option<f64>>(
         "SELECT MIN(time) FROM public.simulation_building_results WHERE simulation_id=$1 AND time_step=$2",
     )
@@ -420,10 +412,12 @@ async fn load_cluster_geometries(
             )));
         }
         let geometry = geometry.ok_or_else(|| {
-            AppError::BadRequest(format!("hotspot geometry for cluster {cluster_id} is empty"))
+            AppError::BadRequest(format!(
+                "hotspot geometry for cluster {cluster_id} is empty"
+            ))
         })?;
-        let value: Value = serde_json::from_str(&geometry)
-            .map_err(|error| AppError::Internal(error.into()))?;
+        let value: Value =
+            serde_json::from_str(&geometry).map_err(|error| AppError::Internal(error.into()))?;
         if value.get("type").and_then(Value::as_str) != Some("MultiPolygon") {
             return Err(AppError::BadRequest(format!(
                 "hotspot geometry for cluster {cluster_id} is not a MultiPolygon"
@@ -625,7 +619,11 @@ mod tests {
         let a = Uuid::from_u128(30);
         let b = Uuid::from_u128(10);
         let c = Uuid::from_u128(20);
-        let candidates = vec![candidate(a, region), candidate(b, region), candidate(c, region)];
+        let candidates = vec![
+            candidate(a, region),
+            candidate(b, region),
+            candidate(c, region),
+        ];
         let components = connected_components(&candidates, &[(a, b), (b, c)], true);
         assert_eq!(components[0].0, b);
         assert_eq!(components[0].1, vec![b, c, a]);
