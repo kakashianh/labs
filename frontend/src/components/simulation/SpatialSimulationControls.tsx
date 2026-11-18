@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import SpatialSimulationLaunch from './SpatialSimulationLaunch'
 import {
   fetchSpatialSimulationFrame,
   fetchSpatialSimulationSummary,
@@ -9,6 +10,10 @@ import {
 export type SpatialColorMetric = 'risk_level' | 'infection_ratio'
 
 interface SpatialSimulationControlsProps {
+  selectedBuildingIds: string[]
+  selectionMode: boolean
+  onSelectionModeChange: (enabled: boolean) => void
+  onClearSelection: () => void
   onFrameChange: (frame: SpatialSimulationFrame | null) => void
   onMetricChange: (metric: SpatialColorMetric) => void
   onLayerVisibilityChange: (buildingVisible: boolean, hotspotVisible: boolean) => void
@@ -19,6 +24,10 @@ function formatNumber(value: number): string {
 }
 
 export default function SpatialSimulationControls({
+  selectedBuildingIds,
+  selectionMode,
+  onSelectionModeChange,
+  onClearSelection,
   onFrameChange,
   onMetricChange,
   onLayerVisibilityChange,
@@ -65,8 +74,9 @@ export default function SpatialSimulationControls({
     }
   }
 
-  const handleLoad = async () => {
-    const id = simulationId.trim()
+  const handleLoad = async (simulationIdOverride?: string) => {
+    const id = simulationIdOverride ?? simulationId.trim()
+    if (simulationIdOverride) setSimulationId(simulationIdOverride)
     if (!id) {
       setError('Nhập simulation ID được trả về từ luồng khởi tạo mô phỏng.')
       return
@@ -141,6 +151,15 @@ export default function SpatialSimulationControls({
         </div>
         <span className="spatial-status">{summary ? summary.status : 'Chưa chọn run'}</span>
       </header>
+
+      <SpatialSimulationLaunch
+        selectedBuildingIds={selectedBuildingIds}
+        selectionMode={selectionMode}
+        onSelectionModeChange={onSelectionModeChange}
+        onClearSelection={onClearSelection}
+        disabled={loading}
+        onRunCreated={async (id) => { await handleLoad(id) }}
+      />
 
       <label className="spatial-field">
         <span>Simulation ID</span>
