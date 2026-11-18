@@ -234,6 +234,15 @@ KAN-28 hoàn thành khi CesiumJS thể hiện được spatial SIR theo building
 - [ ] Inspect browser console and network responses to identify any independent WebGL, Cesium asset, or GeoJSON rendering errors.
 - [ ] Re-run the complete spatial simulation E2E after loading a real completed `simulation_id`.
 
+### 11.2 Browser Smoke-test Follow-up (2026-11-18)
+
+- Made the Building thematic layer and Hotspot layer controls visible before a run is loaded; controls remain disabled until a completed simulation is loaded, with an explanation shown to the user. This avoids interpreting their absence on the initial screen as a missing feature.
+- Added Cesium `scene.renderError` and WebGL context lost/restored handling to surface renderer failures in the map status instead of leaving an unexplained black canvas.
+- Kept the ArcGIS imagery retry + OpenStreetMap fallback from the previous fix.
+- [ ] Verify both layer controls are visible on initial load and become interactive after loading a completed run.
+- [ ] Verify renderer diagnostics are clear in the browser and no WebGL/render errors remain.
+- [ ] Verify the Cesium globe/building footprints render in the Codespaces browser after the latest changes.
+
 
 - Frontend implementation is on `feat/p2-08-3d-epidemic-visualization`.
 - The map now loads completed spatial runs by `simulation_id`, supports time-step navigation, risk/ratio styling, S/I/R building details, aggregate summaries and a separate clickable hotspot layer.
