@@ -225,6 +225,7 @@ export default function SirResultPanel({ result, loading, error }: SirResultPane
     () => (result && isSirSimulationResult(result) ? result : null),
     [result],
   )
+  const [collapsed, setCollapsed] = useState(false)
   const [selectedTimeStep, setSelectedTimeStep] = useState(0)
   const [playing, setPlaying] = useState(false)
 
@@ -256,41 +257,74 @@ export default function SirResultPanel({ result, loading, error }: SirResultPane
     if (playing && isAtEnd) setPlaying(false)
   }, [playing, isAtEnd])
 
+  const panelClassName = 'sir-result-panel' + (collapsed ? ' is-collapsed' : '')
+  const toggleButton = (
+    <button type="button" className="sir-panel-toggle" aria-expanded={!collapsed} aria-label={collapsed ? 'Hiện kết quả mô phỏng SIR' : 'Ẩn kết quả mô phỏng SIR'} onClick={() => setCollapsed((value) => !value)}>
+      {collapsed ? 'Hiện' : 'Ẩn'}
+    </button>
+  )
+
   if (loading) {
-    return <section className="sir-result-panel" aria-live="polite"><p className="sir-state">Đang tải kết quả mô phỏng SIR…</p></section>
+    return (
+      <section className={panelClassName} aria-live="polite">
+        <header className="sir-panel-header">
+          <div><p className="sir-eyebrow">SIMULATION RESULT</p><h2>Kết quả mô phỏng SIR</h2></div>
+          {toggleButton}
+        </header>
+        {!collapsed && <p className="sir-state">Đang tải kết quả mô phỏng SIR…</p>}
+      </section>
+    )
   }
 
   if (error) {
-    return <section className="sir-result-panel" role="alert"><p className="sir-state sir-state-error">{error}</p></section>
+    return (
+      <section className={panelClassName} role="alert">
+        <header className="sir-panel-header">
+          <div><p className="sir-eyebrow">SIMULATION RESULT</p><h2>Kết quả mô phỏng SIR</h2></div>
+          {toggleButton}
+        </header>
+        {!collapsed && <p className="sir-state sir-state-error">{error}</p>}
+      </section>
+    )
   }
 
   if (!result) {
     return (
-      <section className="sir-result-panel">
+      <section className={panelClassName}>
         <header className="sir-panel-header">
           <div><p className="sir-eyebrow">SIMULATION</p><h2>Kết quả mô phỏng SIR</h2></div>
-          <span className="sir-status">Chưa có dữ liệu</span>
+          <div className="sir-result-header-actions">
+            <span className="sir-status">Chưa có dữ liệu</span>
+            {toggleButton}
+          </div>
         </header>
-        <p className="sir-state">Chạy một mô phỏng SIR để xem diễn biến Susceptible, Infected và Recovered tại đây.</p>
+        {!collapsed && <p className="sir-state">Chạy một mô phỏng SIR để xem diễn biến Susceptible, Infected và Recovered tại đây.</p>}
       </section>
     )
   }
 
   if (!validResult || !point) {
     return (
-      <section className="sir-result-panel" role="alert">
-        <header className="sir-panel-header"><h2>Kết quả mô phỏng SIR</h2></header>
-        <p className="sir-state sir-state-error">Response SIR không hợp lệ hoặc không khớp contract của Backend.</p>
+      <section className={panelClassName} role="alert">
+        <header className="sir-panel-header">
+          <h2>Kết quả mô phỏng SIR</h2>
+          {toggleButton}
+        </header>
+        {!collapsed && <p className="sir-state sir-state-error">Response SIR không hợp lệ hoặc không khớp contract của Backend.</p>}
       </section>
     )
   }
 
   return (
-    <section className="sir-result-panel">
+    <section className={panelClassName}>
       <header className="sir-panel-header">
         <div><p className="sir-eyebrow">SIMULATION RESULT</p><h2>Kết quả mô phỏng SIR</h2></div>
-        <span className="sir-status">{validResult.point_count} điểm dữ liệu</span>
+        <div className="sir-result-header-actions">
+          <span className="sir-status">{validResult.point_count} điểm dữ liệu</span>
+          {toggleButton}
+        </div>
       </header>
+      {!collapsed && <>
       <SirResultChart
         points={validResult.points}
         population={validResult.population}
@@ -307,6 +341,7 @@ export default function SirResultPanel({ result, loading, error }: SirResultPane
         onPause={() => setPlaying(false)}
         onReset={() => { setPlaying(false); setSelectedTimeStep(0) }}
       />
+      </>}
     </section>
   )
 }

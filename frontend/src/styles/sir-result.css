@@ -361,3 +361,48 @@
   .sir-config-fields { gap: 8px; }
   .sir-config-field input { padding: 7px; }
 }
+
+
+.sir-config-header-actions,
+.sir-result-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.sir-panel-toggle,
+.spatial-panel-toggle {
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  border: 1px solid rgb(148 163 184 / 38%);
+  border-radius: 7px;
+  background: rgb(51 65 85 / 82%);
+  color: #e2e8f0;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.sir-panel-toggle:hover,
+.spatial-panel-toggle:hover {
+  border-color: #93c5fd;
+  background: rgb(71 85 105 / 95%);
+}
+
+.sir-config-panel.is-collapsed,
+.sir-result-panel.is-collapsed {
+  max-height: none;
+  overflow: visible;
+}
+
+.sir-config-panel.is-collapsed,
+.sir-result-panel.is-collapsed {
+  padding-bottom: 12px;
+}
+
+.sir-result-panel.is-collapsed .sir-panel-header,
+.sir-config-panel.is-collapsed .sir-config-header {
+  margin-bottom: 0;
+}

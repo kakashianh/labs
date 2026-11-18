@@ -34,7 +34,6 @@ Expected result:
 - Rebuilding the Cesium map foundation.
 - 3D floor/room visualization without source geometry.
 - Animating individual people.
-- Editing simulation parameters in this task if simulation launch flow is not part of Jira.
 - Medical advice or real-time public health alerting.
 
 ## 4. Frontend Data Flow
@@ -259,3 +258,43 @@ KAN-28 hoàn thành khi CesiumJS thể hiện được spatial SIR theo building
 - [ ] Recheck the map after the Codespaces workspace is running the latest source; if it remains black, capture actual browser DevTools console and Network evidence before changing imagery/asset configuration.
 - [ ] Confirm the guarded initialization error state by checking the real browser runtime; do not infer the cause from the TinyFish headless rendering alone.
 - [ ] Run the completed spatial simulation E2E with a real `simulation_id`; no run was started during the read-only diagnostic.
+
+
+## 12. Follow-up: Initialize and Launch Spatial Simulation from UI
+
+### User-approved workflow
+
+- [x] Add a map-selection mode so users can click building footprints to add/remove them from the next simulation selection.
+- [x] Highlight selected buildings independently from the active simulation thematic layer.
+- [x] Show selected building IDs and allow clearing the selection.
+- [x] Collect manual `population`, `initial_infected`, and `initial_recovered` for every selected building; never infer population from geometry, floors, or building metadata.
+- [x] Expose editable `radius_m`, `beta`, `gamma`, `dt`, and `steps` parameters.
+- [x] Call `POST /api/v1/simulations/initialize` with a fresh UUID `request_id` and selected building payload.
+- [x] Use the returned `simulation_id` to call `POST /api/v1/simulations/{simulation_id}/run`.
+- [x] Validate required numeric fields, population bounds, duplicate IDs, and run parameter bounds before sending requests.
+- [x] After a successful completed run, automatically load time step 0 into the existing Cesium visualization; preserve manual Simulation ID loading for previously created runs.
+- [x] Add unit tests for initialize request construction and invalid input boundaries.
+- [x] Initial frontend lint, TypeScript build, unit tests and production build passed in GitHub Actions run #44263115132 at code commit `9fe25d7`.
+- [ ] Re-verify the final 500-building boundary test and latest frontend code in workflow run #44263249528 (currently in progress).
+- [ ] Browser E2E: select multiple buildings on map, enter manual populations, create run, and verify returned ID is loaded automatically.
+- [ ] Verify failed initialize/run requests show an actionable error and do not load a partial run.
+- [ ] Verify clearing selection and toggling selection mode do not break normal building detail selection.
+
+### API contract notes
+
+- Initialize request body is `{ request_id, buildings: [{ building_id, population, initial_infected, initial_recovered }] }`.
+- Initialize response's `simulation_id` is the sole identifier used for the run request and subsequent visualization.
+- The initialization API returns `status: initialized`; the run API must return `status: completed` before the UI loads the visualization.
+- Each selected building requires manually entered population and initial infected count; recovered defaults to zero in the form but is sent explicitly.
+- Default SIR form values are editable demonstration parameters, not epidemiological calibration or medical guidance.
+- The launch flow is a client-side orchestration of existing APIs; no backend endpoint or database migration is introduced by this follow-up.
+
+
+## 13. UI panel visibility controls
+
+- [x] Add an `Ẩn / Hiện` control to **Spatial SIR · 3D**; collapse the entire simulation controls and launch form while retaining its compact header.
+- [x] Add an `Ẩn / Hiện` control to **SIMULATION RESULT**; collapse chart, metrics, and playback controls while retaining the panel header.
+- [x] Add an `Ẩn / Hiện` control to **SIMULATION SETUP**; collapse input fields and submit action while retaining the panel header.
+- [x] Keep panel state local to each component so hiding one panel does not hide or reset the other panels or simulation data.
+- [ ] Verify the three controls in browser at desktop and mobile viewport sizes.
+- [ ] Verify each panel can be hidden and restored independently, including result loading/error/empty states.

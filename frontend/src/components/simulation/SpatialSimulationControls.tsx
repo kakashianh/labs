@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import SpatialSimulationLaunch from './SpatialSimulationLaunch'
 import {
   fetchSpatialSimulationFrame,
   fetchSpatialSimulationSummary,
@@ -9,6 +10,10 @@ import {
 export type SpatialColorMetric = 'risk_level' | 'infection_ratio'
 
 interface SpatialSimulationControlsProps {
+  selectedBuildingIds: string[]
+  selectionMode: boolean
+  onSelectionModeChange: (enabled: boolean) => void
+  onClearSelection: () => void
   onFrameChange: (frame: SpatialSimulationFrame | null) => void
   onMetricChange: (metric: SpatialColorMetric) => void
   onLayerVisibilityChange: (buildingVisible: boolean, hotspotVisible: boolean) => void
@@ -19,10 +24,15 @@ function formatNumber(value: number): string {
 }
 
 export default function SpatialSimulationControls({
+  selectedBuildingIds,
+  selectionMode,
+  onSelectionModeChange,
+  onClearSelection,
   onFrameChange,
   onMetricChange,
   onLayerVisibilityChange,
 }: SpatialSimulationControlsProps) {
+  const [collapsed, setCollapsed] = useState(false)
   const [simulationId, setSimulationId] = useState('')
   const [summary, setSummary] = useState<SpatialSimulationSummary | null>(null)
   const [frame, setFrame] = useState<SpatialSimulationFrame | null>(null)
@@ -65,8 +75,9 @@ export default function SpatialSimulationControls({
     }
   }
 
-  const handleLoad = async () => {
-    const id = simulationId.trim()
+  const handleLoad = async (simulationIdOverride?: string) => {
+    const id = simulationIdOverride ?? simulationId.trim()
+    if (simulationIdOverride) setSimulationId(simulationIdOverride)
     if (!id) {
       setError('Nhập simulation ID được trả về từ luồng khởi tạo mô phỏng.')
       return
@@ -133,14 +144,29 @@ export default function SpatialSimulationControls({
   }
 
   return (
-    <section className="spatial-simulation-panel" aria-label="Spatial SIR visualization">
+    <section className={`spatial-simulation-panel${collapsed ? " is-collapsed" : ""}`} aria-label="Spatial SIR visualization">
       <header className="spatial-panel-header">
         <div>
           <p className="spatial-eyebrow">PHASE 2 · KAN-28</p>
           <h2>Spatial SIR · 3D</h2>
         </div>
-        <span className="spatial-status">{summary ? summary.status : 'Chưa chọn run'}</span>
+        <div className="spatial-panel-header-actions">
+          <span className="spatial-status">{summary ? summary.status : 'Chưa chọn run'}</span>
+          <button type="button" className="spatial-panel-toggle" aria-expanded={!collapsed} aria-label={collapsed ? 'Hiện Spatial SIR' : 'Ẩn Spatial SIR'} onClick={() => setCollapsed((value) => !value)}>
+            {collapsed ? 'Hiện' : 'Ẩn'}
+          </button>
+        </div>
       </header>
+
+      {!collapsed && <div className="spatial-panel-body">
+      <SpatialSimulationLaunch
+        selectedBuildingIds={selectedBuildingIds}
+        selectionMode={selectionMode}
+        onSelectionModeChange={onSelectionModeChange}
+        onClearSelection={onClearSelection}
+        disabled={loading}
+        onRunCreated={async (id) => { await handleLoad(id) }}
+      />
 
       <label className="spatial-field">
         <span>Simulation ID</span>
@@ -152,7 +178,7 @@ export default function SpatialSimulationControls({
             aria-label="Simulation ID"
             spellCheck={false}
           />
-          <button type="button" onClick={handleLoad} disabled={loading}>
+          <button type="button" onClick={() => void handleLoad()} disabled={loading}>
             {loading ? 'Đang tải…' : 'Tải run'}
           </button>
         </div>
@@ -255,6 +281,7 @@ export default function SpatialSimulationControls({
         </label>
         {!summary && <small>Tải một simulation đã completed để bật/tắt các lớp dữ liệu.</small>}
       </section>
+      </div>}
     </section>
   )
 }
