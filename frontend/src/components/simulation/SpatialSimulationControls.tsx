@@ -171,7 +171,7 @@ export default function SpatialSimulationControls({
             aria-label="Simulation ID"
             spellCheck={false}
           />
-          <button type="button" onClick={handleLoad} disabled={loading}>
+          <button type="button" onClick={() => void handleLoad()} disabled={loading}>
             {loading ? 'Đang tải…' : 'Tải run'}
           </button>
         </div>
