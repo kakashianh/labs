@@ -309,7 +309,7 @@ export default function CesiumViewer() {
       entity.polygon.outline = highlightedIds.has(buildingId)
       entity.polygon.outlineColor = Cesium.Color.YELLOW
     }
-  }, [spatialFrame, spatialMetric, buildingLayerVisible, selectedHotspotId, selectedBuildingId])
+  }, [spatialFrame, spatialMetric, buildingLayerVisible, selectedHotspotId, selectedBuildingId, loadState])
 
   useEffect(() => {
     const viewer = viewerRef.current
@@ -364,7 +364,7 @@ export default function CesiumViewer() {
     return () => {
       hotspotLoadVersionRef.current += 1
     }
-  }, [spatialFrame, hotspotLayerVisible])
+  }, [spatialFrame, hotspotLayerVisible, loadState])
 
   const closeBuildingPanel = () => clearSelectionRef.current?.()
 
@@ -403,7 +403,7 @@ export default function CesiumViewer() {
           </p>
         )}
       </section>
-      <SpatialSimulationControls\n        onFrameChange={(frame) => { setSpatialFrame(frame); setSelectedHotspotId(null) }}\n        onMetricChange={setSpatialMetric}\n        onLayerVisibilityChange={(buildings, hotspots) => { setBuildingLayerVisible(buildings); setHotspotLayerVisible(hotspots) }}\n      />\n      {selectedHotspotId && spatialFrame && (() => {\n        const hotspot = spatialFrame.hotspots.find((item) => item.cluster_id === selectedHotspotId)\n        return hotspot ? (\n          <aside className="spatial-hotspot-detail" aria-label="Thông tin hotspot">\n            <button type="button" onClick={() => setSelectedHotspotId(null)} aria-label="Đóng hotspot">×</button>\n            <h3>Hotspot · {hotspot.risk_level.toUpperCase()}</h3>\n            <dl>\n              <div><dt>Cluster ID</dt><dd>{hotspot.cluster_id}</dd></div>\n              <div><dt>Buildings</dt><dd>{hotspot.member_count}</dd></div>\n              <div><dt>Population</dt><dd>{hotspot.population_total}</dd></div>\n              <div><dt>Infected</dt><dd>{hotspot.infected_total}</dd></div>\n              <div><dt>Infection ratio</dt><dd>{(hotspot.infection_ratio * 100).toFixed(2)}%</dd></div>\n              <div><dt>Members</dt><dd>{hotspot.building_ids.join(', ')}</dd></div>\n            </dl>\n          </aside>\n        ) : null\n      })()}\n      <SpatialSimulationControls
+      <SpatialSimulationControls
         onFrameChange={(frame) => { setSpatialFrame(frame); setSelectedHotspotId(null) }}
         onMetricChange={setSpatialMetric}
         onLayerVisibilityChange={(buildings, hotspots) => { setBuildingLayerVisible(buildings); setHotspotLayerVisible(hotspots) }}
