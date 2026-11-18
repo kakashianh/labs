@@ -46,6 +46,7 @@ export function buildSpatialInitializationPayload(
 ) {
   if (!requestId.trim()) throw new Error('request_id không được để trống.')
   if (buildings.length === 0) throw new Error('Chọn ít nhất một building trên bản đồ.')
+  if (buildings.length > 500) throw new Error('Spatial SIR hiện hỗ trợ tối đa 500 building trong một run.')
 
   const seen = new Set<string>()
   const normalized = buildings.map((building) => {
