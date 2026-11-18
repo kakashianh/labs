@@ -37,6 +37,7 @@ const FIELDS: {
 ]
 
 export default function HomePage() {
+  const [configCollapsed, setConfigCollapsed] = useState(false)
   const [formValues, setFormValues] = useState<SirFormValues>(INITIAL_VALUES)
   const [result, setResult] = useState<SirSimulationResult | null>(null)
   const [loading, setLoading] = useState(false)
@@ -99,15 +100,21 @@ export default function HomePage() {
     <main className="home-page">
       <CesiumViewer />
 
-      <form className="sir-config-panel" onSubmit={handleSubmit}>
+      <form className={`sir-config-panel${configCollapsed ? " is-collapsed" : ""}`} onSubmit={handleSubmit}>
         <header className="sir-config-header">
           <div>
             <p className="sir-eyebrow">SIMULATION SETUP</p>
             <h2>Cấu hình mô phỏng SIR</h2>
           </div>
-          <span className="sir-config-method">SIR · Euler</span>
+          <div className="sir-config-header-actions">
+            <span className="sir-config-method">SIR · Euler</span>
+            <button type="button" className="sir-panel-toggle" aria-expanded={!configCollapsed} aria-label={configCollapsed ? 'Hiện cấu hình mô phỏng SIR' : 'Ẩn cấu hình mô phỏng SIR'} onClick={() => setConfigCollapsed((value) => !value)}>
+              {configCollapsed ? 'Hiện' : 'Ẩn'}
+            </button>
+          </div>
         </header>
 
+        {!configCollapsed && <div className="sir-config-body">
         <div className="sir-config-fields">
           {FIELDS.map((field) => (
             <label className="sir-config-field" key={field.key} htmlFor={`sir-${field.key}`}>
@@ -141,6 +148,7 @@ export default function HomePage() {
         <button className="sir-config-submit" type="submit" disabled={loading}>
           {loading ? 'Đang mô phỏng…' : 'Chạy mô phỏng'}
         </button>
+        </div>}
       </form>
 
       <SirResultPanel result={result} loading={loading} error={error} />
