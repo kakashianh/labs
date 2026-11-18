@@ -14,7 +14,7 @@ format-check:
 	uvx --from ruff==$(RUFF_VERSION) ruff format --check .
 
 type-check:
-	uvx --from mypy==$(MYPY_VERSION) mypy src tests
+	uvx --from mypy==$(MYPY_VERSION) --with pytest==$(PYTEST_VERSION) mypy src tests
 
 test: test-unit test-integration
 
