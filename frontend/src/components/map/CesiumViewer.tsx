@@ -18,6 +18,7 @@ const BASEMAP_URL =
   'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
 const BASEMAP_CREDIT =
   'Sources: Esri, DigitalGlobe, GeoEye, i-cubed, USDA FSA, USGS, AEX, Getmapping, Aerogrid, IGN, IGP, swisstopo, and the GIS User Community'
+const FALLBACK_BASEMAP_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 
 export default function CesiumViewer() {
   const [loadState, setLoadState] = useState<LoadState>('loading')
@@ -25,6 +26,7 @@ export default function CesiumViewer() {
   const [buildingCount, setBuildingCount] = useState(0)
   const [skippedCount, setSkippedCount] = useState(0)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [basemapWarning, setBasemapWarning] = useState<string | null>(null)
   const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null)
   const [buildingDetail, setBuildingDetail] = useState<Building | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
@@ -104,15 +106,33 @@ export default function CesiumViewer() {
       fullscreenButton: false,
       infoBox: false,
       selectionIndicator: false,
-      baseLayer: new Cesium.ImageryLayer(
-        new Cesium.UrlTemplateImageryProvider({
-          url: BASEMAP_URL,
-          credit: new Cesium.Credit(BASEMAP_CREDIT),
-        }),
-      ),
+      // Add imagery after the Viewer is ready so a failed tile service can be
+      // replaced without taking down the globe or the building data source.
+      baseLayer: false,
     })
 
     viewerRef.current = viewer
+    viewer.scene.globe.show = true
+    viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#dbeafe')
+    viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#0b1220')
+
+    const primaryImageryProvider = new Cesium.UrlTemplateImageryProvider({
+      url: BASEMAP_URL,
+      credit: new Cesium.Credit(BASEMAP_CREDIT),
+    })
+    const primaryImageryLayer = viewer.imageryLayers.addImageryProvider(primaryImageryProvider)
+    let fallbackImageryActivated = false
+    const removeImageryErrorListener = primaryImageryProvider.errorEvent.addEventListener((tileError) => {
+      if (fallbackImageryActivated || tileError.timesRetried < 2 || viewer.isDestroyed()) return
+      fallbackImageryActivated = true
+      viewer.imageryLayers.remove(primaryImageryLayer, true)
+      viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
+        url: FALLBACK_BASEMAP_URL,
+        credit: new Cesium.Credit('© OpenStreetMap contributors'),
+      }))
+      setBasemapWarning('Không tải được ảnh nền vệ tinh; đã chuyển sang OpenStreetMap.')
+      viewer.scene.requestRender()
+    })
 
     viewer.camera.setView({
       destination: Cesium.Cartesian3.fromDegrees(105.8342, 21.0278, 8000),
@@ -256,6 +276,7 @@ export default function CesiumViewer() {
 
     return () => {
       controller.abort()
+      removeImageryErrorListener()
       cleanupDataSourceListeners?.()
       clearSelectionRef.current = null
       buildingDataSourceRef.current = null
@@ -383,6 +404,7 @@ export default function CesiumViewer() {
             <p>
               {regionCount} khu vực · {buildingCount - skippedCount} công trình hiển thị
             </p>
+            {basemapWarning && <p className="map-status-warning">{basemapWarning}</p>}
             {skippedCount > 0 && (
               <p className="map-status-warning">
                 Bỏ qua {skippedCount} công trình có geometry không hợp lệ.
