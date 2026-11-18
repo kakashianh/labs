@@ -207,7 +207,7 @@ export default function SpatialSimulationControls({
             {metric === 'risk_level' ? (
               <>
                 <div className="spatial-risk-legend-item"><i className="spatial-risk-swatch" style={{ background: '#22c55e' }} /> Low ≤ {formatNumber((frame?.thresholds.risk_low_max ?? 0) * 100)}%</div>
-                <div className="spatial-risk-legend-item"><i className="spatial-risk-swatch" style={{ background: '#f59e0b' }} /> Medium ≤ {formatNumber((frame?.thresholds.risk_medium_max ?? 0) * 100)}%</div>
+                <div className="spatial-risk-legend-item"><i className="spatial-risk-swatch" style={{ background: '#f59e0b' }} /> Medium &gt; {formatNumber((frame?.thresholds.risk_low_max ?? 0) * 100)}% and ≤ {formatNumber((frame?.thresholds.risk_medium_max ?? 0) * 100)}%</div>
                 <div className="spatial-risk-legend-item"><i className="spatial-risk-swatch" style={{ background: '#ef4444' }} /> High above medium threshold</div>
                 <div className="spatial-risk-legend-item"><i className="spatial-risk-swatch" style={{ background: '#94a3b8' }} /> Unclassified / no data</div>
                 {frame && <small>Source: {frame.thresholds.source} · {frame.thresholds.version}</small>}
@@ -220,6 +220,8 @@ export default function SpatialSimulationControls({
               </>
             )}
           </section>
+
+          {frame && frame.hotspots.length === 0 && <p className="spatial-loading">Không có hotspot tại time step này.</p>}
 
           <div className="spatial-layer-toggles">
             <label><input type="checkbox" checked={buildingVisible} onChange={(event) => handleBuildingVisibility(event.currentTarget.checked)} /> Building thematic layer</label>
