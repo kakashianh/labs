@@ -92,9 +92,7 @@ fn validate_query(query: RiskQuery) -> Result<ValidatedRiskQuery> {
         .as_deref()
         .ok_or_else(|| AppError::BadRequest("time_step is required".into()))?
         .parse::<i32>()
-        .map_err(|_| {
-            AppError::BadRequest("time_step must be a non-negative integer".into())
-        })?;
+        .map_err(|_| AppError::BadRequest("time_step must be a non-negative integer".into()))?;
     if time_step < 0 {
         return Err(AppError::BadRequest(
             "time_step must be a non-negative integer".into(),
@@ -140,17 +138,13 @@ fn parse_positive(value: Option<&str>, field: &str, default: u64) -> Result<u64>
     Ok(parsed)
 }
 
-async fn completed_run_config(
-    db: &sqlx::PgPool,
-    simulation_id: Uuid,
-) -> Result<serde_json::Value> {
-    let row = sqlx::query(
-        "SELECT status, simulation_config FROM public.simulation_runs WHERE id = $1",
-    )
-    .bind(simulation_id)
-    .fetch_optional(db)
-    .await?
-    .ok_or(AppError::NotFound)?;
+async fn completed_run_config(db: &sqlx::PgPool, simulation_id: Uuid) -> Result<serde_json::Value> {
+    let row =
+        sqlx::query("SELECT status, simulation_config FROM public.simulation_runs WHERE id = $1")
+            .bind(simulation_id)
+            .fetch_optional(db)
+            .await?
+            .ok_or(AppError::NotFound)?;
     let status: String = row.try_get("status")?;
     if status != "completed" {
         return Err(AppError::Conflict("simulation_not_completed".into()));
@@ -163,9 +157,8 @@ async fn completed_run_config(
 
 fn thresholds_from_config(config: &serde_json::Value) -> Result<RiskThresholds> {
     let thresholds: RiskThresholds = match config.get("risk_classification") {
-        Some(value) => {
-            serde_json::from_value(value.clone()).map_err(|error| AppError::Internal(error.into()))?
-        }
+        Some(value) => serde_json::from_value(value.clone())
+            .map_err(|error| AppError::Internal(error.into()))?,
         None => RiskThresholds::default(),
     };
     thresholds
@@ -204,9 +197,7 @@ async fn set_thresholds(
             previous.source
         },
         risk_low_max: request.risk_low_max.unwrap_or(previous.risk_low_max),
-        risk_medium_max: request
-            .risk_medium_max
-            .unwrap_or(previous.risk_medium_max),
+        risk_medium_max: request.risk_medium_max.unwrap_or(previous.risk_medium_max),
     };
     thresholds
         .validate()
@@ -303,10 +294,7 @@ async fn list_risk_results(
     let query = validate_query(query)?;
     let (thresholds, all, _) = load_building_risks(&state.db, simulation_id, &query).await?;
     let total = all.len() as u64;
-    let offset = query
-        .page
-        .saturating_sub(1)
-        .saturating_mul(query.page_size);
+    let offset = query.page.saturating_sub(1).saturating_mul(query.page_size);
     let data = all
         .into_iter()
         .skip(offset as usize)
