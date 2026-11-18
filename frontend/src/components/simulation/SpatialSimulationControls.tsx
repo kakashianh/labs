@@ -25,6 +25,7 @@ export default function SpatialSimulationControls({
 }: SpatialSimulationControlsProps) {
   const [simulationId, setSimulationId] = useState('')
   const [summary, setSummary] = useState<SpatialSimulationSummary | null>(null)
+  const [frame, setFrame] = useState<SpatialSimulationFrame | null>(null)
   const [timeStep, setTimeStep] = useState(0)
   const [timeValue, setTimeValue] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
@@ -49,6 +50,7 @@ export default function SpatialSimulationControls({
       setSummary(nextSummary ?? frame.summary)
       setTimeStep(step)
       setTimeValue(frame.time)
+      setFrame(frame)
       onFrameChange(frame)
     } catch (requestError) {
       if (controller.signal.aborted || version !== requestVersion.current) return
@@ -73,6 +75,7 @@ export default function SpatialSimulationControls({
     setError(null)
     setSummary(null)
     setTimeValue(null)
+    setFrame(null)
     onFrameChange(null)
 
     try {
@@ -178,6 +181,26 @@ export default function SpatialSimulationControls({
               <option value="infection_ratio">Infection ratio</option>
             </select>
           </label>
+
+
+          <section className="spatial-risk-legend" aria-label="Chú giải bản đồ">
+            <h3>{metric === 'risk_level' ? 'Risk level · threshold snapshot' : 'Infection ratio · 0% → 100%'}</h3>
+            {metric === 'risk_level' ? (
+              <>
+                <div className="spatial-risk-legend-item"><i className="spatial-risk-swatch" style={{ background: '#22c55e' }} /> Low ≤ {(frame?.thresholds.risk_low_max ?? 0) * 100}%</div>
+                <div className="spatial-risk-legend-item"><i className="spatial-risk-swatch" style={{ background: '#f59e0b' }} /> Medium ≤ {(frame?.thresholds.risk_medium_max ?? 0) * 100}%</div>
+                <div className="spatial-risk-legend-item"><i className="spatial-risk-swatch" style={{ background: '#ef4444' }} /> High above medium threshold</div>
+                <div className="spatial-risk-legend-item"><i className="spatial-risk-swatch" style={{ background: '#94a3b8' }} /> Unclassified / no data</div>
+                {frame && <small>Source: {frame.thresholds.source} · {frame.thresholds.version}</small>}
+              </>
+            ) : (
+              <>
+                <div className="spatial-ratio-gradient" />
+                <div className="spatial-risk-legend-item">Blue = lower ratio · Red = higher ratio</div>
+                <div className="spatial-risk-legend-item"><i className="spatial-risk-swatch" style={{ background: '#94a3b8' }} /> Unclassified / no data</div>
+              </>
+            )}
+          </section>
 
           <div className="spatial-layer-toggles">
             <label><input type="checkbox" checked={buildingVisible} onChange={(event) => handleBuildingVisibility(event.currentTarget.checked)} /> Building thematic layer</label>
