@@ -31,8 +31,8 @@ export default function SpatialSimulationControls({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [metric, setMetric] = useState<SpatialColorMetric>('risk_level')
-  const [buildingVisible, setBuildingVisible] = useState(true)
-  const [hotspotVisible, setHotspotVisible] = useState(true)
+  const [buildingVisible, setBuildingVisible] = useState(false)
+  const [hotspotVisible, setHotspotVisible] = useState(false)
   const requestController = useRef<AbortController | null>(null)
   const requestVersion = useRef(0)
 
@@ -81,7 +81,10 @@ export default function SpatialSimulationControls({
     setSummary(null)
     setTimeValue(null)
     setFrame(null)
+    setBuildingVisible(false)
+    setHotspotVisible(false)
     onFrameChange(null)
+    onLayerVisibilityChange(false, false)
 
     try {
       const nextSummary = await fetchSpatialSimulationSummary(id, controller.signal)
@@ -98,7 +101,10 @@ export default function SpatialSimulationControls({
       setTimeStep(0)
       setTimeValue(frame.time)
       setFrame(frame)
+      setBuildingVisible(true)
+      setHotspotVisible(true)
       onFrameChange(frame)
+      onLayerVisibilityChange(true, true)
     } catch (requestError) {
       if (controller.signal.aborted || version !== requestVersion.current) return
       setError(requestError instanceof Error ? requestError.message : 'Không thể tải spatial simulation.')
