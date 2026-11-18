@@ -222,6 +222,19 @@ KAN-28 hoàn thành khi CesiumJS thể hiện được spatial SIR theo building
 
 ## 11. Implementation Status
 
+### 11.1 Cesium Basemap Failure Follow-up (2026-11-18)
+
+- Browser smoke test found the Cesium canvas initialized but the map surface appeared blank; the test did not capture browser console/network logs, so the precise runtime cause is not yet confirmed.
+- Existing branch commit `ba595a8` added an ArcGIS imagery source with OpenStreetMap fallback.
+- Follow-up inspection found the imagery error handler checked `timesRetried` but did not set Cesium's `TileProviderError.retry` flag. Cesium therefore had no explicit opt-in to retry transient tile failures, so the fallback threshold could remain unreachable.
+- Updated the handler to opt into two retries and then switch to OpenStreetMap, while retaining the globe base color and warning state.
+- [ ] Verify ArcGIS imagery success path in browser.
+- [ ] Simulate/observe ArcGIS tile failure and verify OSM fallback activates.
+- [ ] Verify the globe and 431 building footprints remain visible when imagery is unavailable.
+- [ ] Inspect browser console and network responses to identify any independent WebGL, Cesium asset, or GeoJSON rendering errors.
+- [ ] Re-run the complete spatial simulation E2E after loading a real completed `simulation_id`.
+
+
 - Frontend implementation is on `feat/p2-08-3d-epidemic-visualization`.
 - The map now loads completed spatial runs by `simulation_id`, supports time-step navigation, risk/ratio styling, S/I/R building details, aggregate summaries and a separate clickable hotspot layer.
 - Frontend unit tests, lint and production build have passed in GitHub Actions. Backend formatting, Clippy, Rust tests and Testcontainers/PostGIS integration tests have also passed in the current workflow; backend Docker image build is the remaining CI job at the time of this update.
