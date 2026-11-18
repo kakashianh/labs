@@ -214,13 +214,7 @@ export async function fetchSpatialSimulationFrame(
     throw new Error('Backend trả về dữ liệu không khớp simulation/time step đang chọn.')
   }
 
-  const resultsById = new Map(results.data.map((item) => [item.building_id, item]))
-  const buildings = risks.data.map((risk) => ({
-    building_id: risk.building_id,
-    region_id: risk.region_id,
-    result: resultsById.get(risk.building_id) ?? null,
-    risk,
-  }))
+  const buildings = mergeSpatialBuildingData(results.data, risks.data)
 
   return {
     summary,
@@ -239,4 +233,18 @@ export function getBuildingDisplayRisk(
     return 'unclassified'
   }
   return building.risk.risk_level
+}
+
+/** Joins S/I/R values and risk classification by stable building UUID. */
+export function mergeSpatialBuildingData(
+  results: SpatialBuildingResult[],
+  risks: SpatialBuildingRisk[],
+): SpatialBuildingView[] {
+  const resultsById = new Map(results.map((item) => [item.building_id, item]))
+  return risks.map((risk) => ({
+    building_id: risk.building_id,
+    region_id: risk.region_id,
+    result: resultsById.get(risk.building_id) ?? null,
+    risk,
+  }))
 }
