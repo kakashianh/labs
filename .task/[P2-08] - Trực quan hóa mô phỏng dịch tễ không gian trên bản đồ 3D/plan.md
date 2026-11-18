@@ -248,3 +248,14 @@ KAN-28 hoàn thành khi CesiumJS thể hiện được spatial SIR theo building
 - The map now loads completed spatial runs by `simulation_id`, supports time-step navigation, risk/ratio styling, S/I/R building details, aggregate summaries and a separate clickable hotspot layer.
 - Frontend unit tests, lint and production build have passed in GitHub Actions. Backend formatting, Clippy, Rust tests and Testcontainers/PostGIS integration tests have also passed in the current workflow; backend Docker image build is the remaining CI job at the time of this update.
 - Browser-based manual E2E and evidence capture are intentionally left unchecked until the feature is tested in Codespaces with a real completed spatial simulation.
+
+
+### 11.3 Follow-up After TinyFish Read-only Diagnostic (2026-11-18)
+
+- TinyFish confirmed that the page shell and Cesium DOM elements load, and the API status label reports 1 region / 431 buildings; however, the map surface remains black. The automation could not inspect DevTools console or Network responses, so it did not establish whether this is a WebGL runtime limitation, Cesium asset/tile failure, or an application rendering defect.
+- TinyFish observed both layer checkboxes checked and reported no disabled state on the preview. The source code already gates them with `disabled={!summary}`; this mismatch may mean the Codespaces preview is serving an older workspace build. The controls now initialize unchecked, are reset when a new run starts, and are enabled visually only after a completed run and first frame load successfully.
+- Added a guarded Cesium Viewer constructor. If Cesium/WebGL initialization throws, the map status now reports the initialization error instead of leaving an unexplained blank surface.
+- [ ] Pull/reload the latest feature-branch commit in the Codespaces workspace and verify the initial layer controls are unchecked and disabled.
+- [ ] Recheck the map after the Codespaces workspace is running the latest source; if it remains black, capture actual browser DevTools console and Network evidence before changing imagery/asset configuration.
+- [ ] Confirm the guarded initialization error state by checking the real browser runtime; do not infer the cause from the TinyFish headless rendering alone.
+- [ ] Run the completed spatial simulation E2E with a real `simulation_id`; no run was started during the read-only diagnostic.
