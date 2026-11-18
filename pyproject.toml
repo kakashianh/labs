@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=80,<83"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "protein3d"
+version = "0.1.0"
+description = "Protein 3D structure and protein-protein interaction analysis workspace"
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+authors = [{ name = "Protein3D-PPI contributors" }]
+dependencies = []
+
+[dependency-groups]
+dev = []
+
+[project.scripts]
+protein3d = "protein3d.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra"
+markers = [
+  "unit: fast tests that do not require external services",
+  "integration: tests that verify boundaries or external infrastructure",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.13"
+mypy_path = "src"
+files = ["src", "tests"]
+strict = true
+warn_unused_configs = true
+
+[tool.uv]
+# Runtime dependencies are intentionally empty in PP-9. Domain dependencies belong
+# to the plans that introduce their owning modules.
