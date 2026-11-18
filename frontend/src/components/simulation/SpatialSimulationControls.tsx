@@ -223,14 +223,32 @@ export default function SpatialSimulationControls({
 
           {frame && frame.hotspots.length === 0 && <p className="spatial-loading">Không có hotspot tại time step này.</p>}
 
-          <div className="spatial-layer-toggles">
-            <label><input type="checkbox" checked={buildingVisible} onChange={(event) => handleBuildingVisibility(event.currentTarget.checked)} /> Building thematic layer</label>
-            <label><input type="checkbox" checked={hotspotVisible} onChange={(event) => handleHotspotVisibility(event.currentTarget.checked)} /> Hotspot layer</label>
-          </div>
-
           {loading && <p className="spatial-loading" aria-live="polite">Đang tải đầy đủ kết quả và hotspot cho step {timeStep}…</p>}
         </>
       )}
+
+      <section className="spatial-layer-toggles" aria-label="Điều khiển lớp bản đồ">
+        <h3>Lớp bản đồ</h3>
+        <label>
+          <input
+            type="checkbox"
+            checked={buildingVisible}
+            disabled={!summary}
+            onChange={(event) => handleBuildingVisibility(event.currentTarget.checked)}
+          />
+          Building thematic layer
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={hotspotVisible}
+            disabled={!summary}
+            onChange={(event) => handleHotspotVisibility(event.currentTarget.checked)}
+          />
+          Hotspot layer
+        </label>
+        {!summary && <small>Tải một simulation đã completed để bật/tắt các lớp dữ liệu.</small>}
+      </section>
     </section>
   )
 }
