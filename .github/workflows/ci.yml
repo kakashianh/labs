@@ -1,0 +1,51 @@
+name: Python CI
+
+on:
+  push:
+    branches:
+      - project/Protein3D-PPI
+      - feat/pp-9-python-development-environment
+  pull_request:
+    branches:
+      - project/Protein3D-PPI
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Quality gates (Python 3.13)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install locked project environment
+        run: uv sync --locked
+
+      - name: Ruff lint
+        run: uvx --from ruff==0.14.5 ruff check .
+
+      - name: Ruff format check
+        run: uvx --from ruff==0.14.5 ruff format --check .
+
+      - name: Mypy
+        run: uvx --from mypy==1.18.2 --with pytest==8.4.2 mypy src tests
+
+      - name: Pytest
+        run: uvx --from pytest==8.4.2 pytest
+
+      - name: Package and CLI smoke checks
+        run: |
+          uv run --locked protein3d --help
+          uv run --locked python -c "import protein3d; print(protein3d.__version__)"

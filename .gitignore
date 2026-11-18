@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Environments and local configuration
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+
+# Build and package artifacts
+build/
+dist/
+*.egg-info/
+
+# Generated data, structures, model weights, embeddings and runtime output
+/data/**
+!/data/.gitkeep
+/artifacts/
+/models/
+/checkpoints/
+*.pdb
+*.cif
+*.mmcif
+*.parquet
+*.pt
+*.pth
+*.ckpt
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
