@@ -51,3 +51,15 @@ test('rejects duplicate building IDs and empty request IDs', () => {
     /request_id/,
   )
 })
+
+
+test('rejects more than the backend-supported 500 buildings', () => {
+  const buildings = Array.from({ length: 501 }, (_, index) => ({
+    ...validBuilding,
+    building_id: `building-${index}`,
+  }))
+  assert.throws(
+    () => buildSpatialInitializationPayload(buildings, 'request-1'),
+    /tối đa 500 building/,
+  )
+})
