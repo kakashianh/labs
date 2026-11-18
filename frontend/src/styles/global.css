@@ -201,8 +201,8 @@ body {
 .spatial-simulation-panel {
   position: absolute;
   z-index: 18;
-  top: 16px;
-  right: 16px;
+  bottom: 16px;
+  left: 16px;
   width: min(390px, calc(100% - 32px));
   max-height: min(70vh, 680px);
   overflow: auto;
@@ -464,8 +464,8 @@ body {
 
 @media (max-width: 640px) {
   .spatial-simulation-panel {
-    top: 12px;
-    right: 12px;
+    bottom: 12px;
+    left: 12px;
     width: min(360px, calc(100% - 24px));
     max-height: 48vh;
     padding: 12px;
