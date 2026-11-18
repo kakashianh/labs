@@ -28,6 +28,43 @@ export interface SpatialBuildingResult {
   recovered: number
 }
 
+export interface SpatialSirAggregate {
+  simulation_id: string
+  time_step: number
+  time: number
+  building_count: number
+  population: number
+  susceptible: number
+  infected: number
+  recovered: number
+}
+
+export interface SpatialRiskBucket {
+  risk_level: SpatialRiskLevel
+  building_count: number
+  population: number
+  infected: number
+  infection_ratio: number | null
+}
+
+export interface SpatialRegionRiskAggregate {
+  region_id: string
+  total_building_count: number
+  classified_building_count: number
+  unclassified_building_count: number
+  population: number
+  infected: number
+  infection_ratio: number | null
+  buckets: SpatialRiskBucket[]
+}
+
+export interface SpatialRiskAggregate {
+  simulation_id: string
+  time_step: number
+  thresholds: SpatialRiskThresholds
+  data: SpatialRegionRiskAggregate[]
+}
+
 export interface SpatialRiskThresholds {
   version: string
   source: string
@@ -107,6 +144,8 @@ export interface SpatialSimulationFrame {
   time_step: number
   time: number
   thresholds: SpatialRiskThresholds
+  aggregate: SpatialSirAggregate
+  riskAggregate: SpatialRiskAggregate
   buildings: SpatialBuildingView[]
   hotspots: SpatialHotspot[]
 }
@@ -202,11 +241,19 @@ export async function fetchSpatialSimulationFrame(
     throw new Error('Time step nằm ngoài phạm vi của simulation.')
   }
 
-  const [results, risks, hotspots] = await Promise.all([
+  const [results, risks, hotspots, aggregate, riskAggregate] = await Promise.all([
     fetchAllResultPages(simulationId, timeStep, signal),
     fetchAllRiskPages(simulationId, timeStep, signal),
     getJson<SpatialHotspotsResponse>(
       queryPath(simulationId, 'hotspots', timeStep),
+      signal,
+    ),
+    getJson<SpatialSirAggregate>(
+      `/api/v1/simulations/${encodeURIComponent(simulationId)}/aggregate?time_step=${timeStep}`,
+      signal,
+    ),
+    getJson<SpatialRiskAggregate>(
+      `/api/v1/simulations/${encodeURIComponent(simulationId)}/risk-aggregate?time_step=${timeStep}`,
       signal,
     ),
   ])
@@ -215,9 +262,13 @@ export async function fetchSpatialSimulationFrame(
     results.simulation_id !== simulationId ||
     risks.simulation_id !== simulationId ||
     hotspots.simulation_id !== simulationId ||
+    aggregate.simulation_id !== simulationId ||
+    riskAggregate.simulation_id !== simulationId ||
     results.time_step !== timeStep ||
     risks.time_step !== timeStep ||
-    hotspots.time_step !== timeStep
+    hotspots.time_step !== timeStep ||
+    aggregate.time_step !== timeStep ||
+    riskAggregate.time_step !== timeStep
   ) {
     throw new Error('Backend trả về dữ liệu không khớp simulation/time step đang chọn.')
   }
@@ -240,6 +291,8 @@ export async function fetchSpatialSimulationFrame(
     time_step: timeStep,
     time: results.time,
     thresholds,
+    aggregate,
+    riskAggregate,
     buildings,
     hotspots: hotspots.hotspots,
   }
