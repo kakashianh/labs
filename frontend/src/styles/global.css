@@ -626,3 +626,21 @@ body {
   color: #dcfce7;
   font-size: 9px;
 }
+
+
+.spatial-panel-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.spatial-simulation-panel.is-collapsed {
+  max-height: none;
+  overflow: visible;
+  padding-bottom: 12px;
+}
+
+.spatial-simulation-panel.is-collapsed .spatial-panel-header {
+  margin-bottom: 0;
+}
