@@ -38,8 +38,7 @@ async fn risk_classification_persists_thresholds_and_aggregates_all_buildings() 
     let region = insert_region(&pool, "risk-region").await;
     let low_building = insert_building(&pool, region, "way/92001", 92001).await;
     let high_building = insert_building(&pool, region, "way/92002", 92002).await;
-    let missing_population_building =
-        insert_building(&pool, region, "way/92003", 92003).await;
+    let missing_population_building = insert_building(&pool, region, "way/92003", 92003).await;
     let simulation_id: Uuid = sqlx::query_scalar(
         "INSERT INTO public.simulation_runs (request_id, request_payload, status) VALUES ($1, '{}'::jsonb, 'completed') RETURNING id",
     )
@@ -96,13 +95,12 @@ async fn risk_classification_persists_thresholds_and_aggregates_all_buildings() 
     let configured_body = read_json(configured).await;
     assert_eq!(configured_body["thresholds"]["source"], "request_override");
     assert_eq!(configured_body["thresholds"]["risk_low_max"], 0.04);
-    let saved_config: Value = sqlx::query_scalar(
-        "SELECT simulation_config FROM public.simulation_runs WHERE id = $1",
-    )
-    .bind(simulation_id)
-    .fetch_one(&pool)
-    .await
-    .unwrap();
+    let saved_config: Value =
+        sqlx::query_scalar("SELECT simulation_config FROM public.simulation_runs WHERE id = $1")
+            .bind(simulation_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
     assert_eq!(saved_config["risk_classification"]["risk_medium_max"], 0.10);
 
     let listed = app

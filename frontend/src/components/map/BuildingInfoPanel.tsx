@@ -1,4 +1,5 @@
 import type { Building } from '../../types/gis'
+import type { SpatialBuildingView } from '../../services/spatial-simulation.ts'
 
 interface BuildingInfoPanelProps {
   building: Building | null
@@ -6,6 +7,8 @@ interface BuildingInfoPanelProps {
   error: string | null
   selectedBuildingId: string
   onClose: () => void
+  spatialData?: SpatialBuildingView | null
+  simulationTime?: { simulationId: string; timeStep: number; time: number } | null
 }
 
 function displayValue(value: string | null | undefined): string | null {
@@ -19,6 +22,8 @@ export default function BuildingInfoPanel({
   error,
   selectedBuildingId,
   onClose,
+  spatialData = null,
+  simulationTime = null,
 }: BuildingInfoPanelProps) {
   const name = displayValue(building?.name)
   const buildingType = displayValue(building?.building_type)
@@ -74,6 +79,29 @@ export default function BuildingInfoPanel({
             <dd>{buildingType ?? 'Chưa có dữ liệu'}</dd>
           </div>
         </dl>
+      )}
+
+
+      {spatialData && (
+        <section className="building-spatial-state" aria-label="Trạng thái dịch tễ">
+          <h3>Spatial SIR · {spatialData.risk.risk_level.toUpperCase()}</h3>
+          {simulationTime && (
+            <p className="building-spatial-context">
+              Step {simulationTime.timeStep} · t = {simulationTime.time} · {simulationTime.simulationId}
+            </p>
+          )}
+          <dl className="building-info-fields">
+            <div><dt>Population (N)</dt><dd>{spatialData.result?.population ?? 'Không có dữ liệu'}</dd></div>
+            <div><dt>Susceptible (S)</dt><dd>{spatialData.result?.susceptible ?? 'Không có dữ liệu'}</dd></div>
+            <div><dt>Infected (I)</dt><dd>{spatialData.result?.infected ?? 'Không có dữ liệu'}</dd></div>
+            <div><dt>Recovered (R)</dt><dd>{spatialData.result?.recovered ?? 'Không có dữ liệu'}</dd></div>
+            <div><dt>Infection ratio</dt><dd>{spatialData.risk.infection_ratio === null ? 'Unclassified' : `${(spatialData.risk.infection_ratio * 100).toFixed(2)}%`}</dd></div>
+            <div><dt>Risk</dt><dd>{spatialData.risk.risk_level}</dd></div>
+          </dl>
+          {spatialData.risk.unclassified_reason && (
+            <p className="building-info-hint">Lý do: {spatialData.risk.unclassified_reason}</p>
+          )}
+        </section>
       )}
 
       {!loading && !error && !building && (

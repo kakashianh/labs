@@ -68,14 +68,7 @@ async fn hotspot_api_builds_transitive_components_and_returns_union_geometry() {
         .unwrap();
     }
 
-    let medium_building = insert_building(
-        &pool,
-        region_id,
-        "way/93006",
-        93006,
-        106.15000,
-    )
-    .await;
+    let medium_building = insert_building(&pool, region_id, "way/93006", 93006, 106.15000).await;
     sqlx::query(
         "INSERT INTO public.simulation_building_states (simulation_id,building_id,population,initial_s,initial_i,initial_r) VALUES ($1,$2,100,90,10,0)",
     )
@@ -94,14 +87,7 @@ async fn hotspot_api_builds_transitive_components_and_returns_union_geometry() {
     .unwrap();
 
     let low_region_id = insert_region(&pool, "hotspot-low-region").await;
-    let low_building = insert_building(
-        &pool,
-        low_region_id,
-        "way/93005",
-        93005,
-        106.20000,
-    )
-    .await;
+    let low_building = insert_building(&pool, low_region_id, "way/93005", 93005, 106.20000).await;
     sqlx::query(
         "INSERT INTO public.simulation_building_states (simulation_id,building_id,population,initial_s,initial_i,initial_r) VALUES ($1,$2,100,99,1,0)",
     )
@@ -171,7 +157,10 @@ async fn hotspot_api_builds_transitive_components_and_returns_union_geometry() {
     assert_eq!(cluster["infection_ratio"], 0.2);
     assert_eq!(cluster["risk_level"], "high");
     assert_eq!(cluster["geometry"]["type"], "MultiPolygon");
-    assert!(!cluster["geometry"]["coordinates"].as_array().unwrap().is_empty());
+    assert!(!cluster["geometry"]["coordinates"]
+        .as_array()
+        .unwrap()
+        .is_empty());
 
     let without_singletons = app
         .clone()
@@ -196,19 +185,17 @@ async fn hotspot_api_builds_transitive_components_and_returns_union_geometry() {
     let medium_candidates = read_json(medium_candidates).await;
     assert_eq!(medium_candidates["hotspot_count"], 3);
     let medium_building_id = medium_building.to_string();
-    assert!(
-        medium_candidates["hotspots"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|hotspot| {
-                hotspot["building_ids"]
-                    .as_array()
-                    .unwrap()
-                    .iter()
-                    .any(|id| id == &medium_building_id)
-            })
-    );
+    assert!(medium_candidates["hotspots"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|hotspot| {
+            hotspot["building_ids"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|id| id == &medium_building_id)
+        }));
 
     let no_hotspots = app
         .clone()
