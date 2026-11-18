@@ -138,75 +138,75 @@ GET /api/v1/simulations/{simulation_id}/hotspots
 ## 7. Implementation Plan
 
 ### Step 1 – Review Candidate and Adjacency Contracts
-- [ ] Kiểm tra risk threshold/config snapshot và route KAN-26.
-- [ ] Kiểm tra footprint geometry, SRID và neighbor distance contract KAN-21.
-- [ ] Kiểm tra S/I/R, population và completed-run/time_step contract KAN-24/KAN-25.
-- [ ] Chốt candidate: risk level >= configurable minimum (default High) và infected > 0.
-- [ ] Chốt singleton default true, có thể override.
-- [ ] Chốt radius_m default `100 m`, validation và maximum 5,000 m.
-- [ ] Chốt geometry MultiPolygon GeoJSON SRID 4326.
-- [ ] Chốt không persist hotspot result ở scope này; trả effective config snapshot.
+- [x] Kiểm tra risk threshold/config snapshot và route KAN-26.
+- [x] Kiểm tra footprint geometry, SRID và neighbor distance contract KAN-21.
+- [x] Kiểm tra S/I/R, population và completed-run/time_step contract KAN-24/KAN-25.
+- [x] Chốt candidate: risk level >= configurable minimum (default High) và infected > 0.
+- [x] Chốt singleton default true, có thể override.
+- [x] Chốt radius_m default `100 m`, validation và maximum 5,000 m.
+- [x] Chốt geometry MultiPolygon GeoJSON SRID 4326.
+- [x] Chốt không persist hotspot result ở scope này; trả effective config snapshot.
 
 ### Step 2 – Implement Cluster Identification
-- [ ] Tạo deterministic connected-components service/query.
-- [ ] Chỉ tạo edge giữa hai candidate nếu footprint distance <= radius_m.
-- [ ] Đảm bảo candidate filtering xảy ra trước clustering; non-candidate không làm cầu nối.
-- [ ] Xử lý tính bắc cầu của connected components.
-- [ ] Không duplicate building trong một cluster.
-- [ ] Tạo cluster_id bằng UUID nhỏ nhất trong component.
-- [ ] Stable ordering cho member buildings và hotspot list.
-- [ ] Xử lý singleton policy, no candidate và disconnected candidates.
+- [x] Tạo deterministic connected-components service/query.
+- [x] Chỉ tạo edge giữa hai candidate nếu footprint distance <= radius_m.
+- [x] Đảm bảo candidate filtering xảy ra trước clustering; non-candidate không làm cầu nối.
+- [x] Xử lý tính bắc cầu của connected components.
+- [x] Không duplicate building trong một cluster.
+- [x] Tạo cluster_id bằng UUID nhỏ nhất trong component.
+- [x] Stable ordering cho member buildings và hotspot list.
+- [x] Xử lý singleton policy, no candidate và disconnected candidates.
 
 ### Step 3 – Aggregate Hotspot Statistics
-- [ ] Đếm member buildings.
-- [ ] Tính tổng population và infected từ cùng simulation/time_step.
-- [ ] Tính ratio = total infected / total population, không average per-building ratios.
-- [ ] Phân loại aggregate risk_level bằng threshold snapshot KAN-26.
-- [ ] Loại Unclassified khỏi candidate và denominator; validate invariant dữ liệu hợp lệ.
-- [ ] Gắn simulation_id/time_step/region và configuration snapshot.
+- [x] Đếm member buildings.
+- [x] Tính tổng population và infected từ cùng simulation/time_step.
+- [x] Tính ratio = total infected / total population, không average per-building ratios.
+- [x] Phân loại aggregate risk_level bằng threshold snapshot KAN-26.
+- [x] Loại Unclassified khỏi candidate và denominator; validate invariant dữ liệu hợp lệ.
+- [x] Gắn simulation_id/time_step/region và configuration snapshot.
 
 ### Step 4 – Generate Spatial Output
-- [ ] Collect footprint members bằng PostGIS.
-- [ ] Chuẩn hóa output thành MultiPolygon.
-- [ ] Giữ SRID 4326 và GeoJSON coordinates theo longitude/latitude.
-- [ ] Kiểm tra geometry validity, null và empty result.
-- [ ] Không tạo buffer/convex hull hoặc simplify geometry trong task này.
-- [ ] Kiểm tra kích thước response với dataset hiện có.
+- [x] Collect footprint members bằng PostGIS.
+- [x] Chuẩn hóa output thành MultiPolygon.
+- [x] Giữ SRID 4326 và GeoJSON coordinates theo longitude/latitude.
+- [x] Kiểm tra geometry validity, null và empty result.
+- [x] Không tạo buffer/convex hull hoặc simplify geometry trong task này.
+- [x] Kiểm tra kích thước response với dataset hiện có.
 
 ### Step 5 – Expose API and Test
-- [ ] Expose hotspot query theo simulation_id/time_step/region và config.
-- [ ] Reuse completed-run, time_step, region validation theo KAN-25.
-- [ ] Cập nhật OpenAPI/docs và error contract.
-- [ ] Test adjacent candidates tạo cùng cluster.
-- [ ] Test non-adjacent candidates tạo cluster riêng.
-- [ ] Test transitive connectivity: A-B, B-C, A-C > radius vẫn là một component.
-- [ ] Test non-candidate không làm cầu nối hai candidate.
-- [ ] Test singleton included/excluded.
-- [ ] Test no candidate và all-singleton-excluded trả empty list.
-- [ ] Test minimum_risk_level High/Medium và infected=0 bị loại.
-- [ ] Test radius boundary: distance đúng radius được nối; lớn hơn radius không nối.
-- [ ] Test deterministic cluster_id và stable ordering.
-- [ ] Test population/infected/ratio aggregate khớp members, ratio weighted.
-- [ ] Test aggregate risk level theo KAN-26 thresholds.
-- [ ] Test geometry type MultiPolygon, SRID 4326, validity và non-empty.
-- [ ] Test invalid radius/config, unknown simulation/time_step/region và initialized run.
-- [ ] Chạy backend tests, fmt, Clippy và CI.
+- [x] Expose hotspot query theo simulation_id/time_step/region và config.
+- [x] Reuse completed-run, time_step, region validation theo KAN-25.
+- [x] Cập nhật OpenAPI/docs và error contract.
+- [x] Test adjacent candidates tạo cùng cluster.
+- [x] Test non-adjacent candidates tạo cluster riêng.
+- [x] Test transitive connectivity: A-B, B-C, A-C > radius vẫn là một component.
+- [x] Test non-candidate không làm cầu nối hai candidate.
+- [x] Test singleton included/excluded.
+- [x] Test no candidate và all-singleton-excluded trả empty list.
+- [x] Test minimum_risk_level High/Medium và infected=0 bị loại.
+- [x] Test radius boundary: distance đúng radius được nối; lớn hơn radius không nối.
+- [x] Test deterministic cluster_id và stable ordering.
+- [x] Test population/infected/ratio aggregate khớp members, ratio weighted.
+- [x] Test aggregate risk level theo KAN-26 thresholds.
+- [x] Test geometry type MultiPolygon, SRID 4326, validity và non-empty.
+- [x] Test invalid radius/config, unknown simulation/time_step/region và initialized run.
+- [x] Chạy backend tests, fmt, Clippy và CI.
 
 ## 8. Acceptance Criteria
 
-- [ ] Xác định hotspot theo simulation/time_step và filter region.
-- [ ] Candidate mặc định là building High có infected > 0; có thể cấu hình minimum risk level Medium/High.
-- [ ] Candidate chỉ được nối theo footprint distance <= radius_m.
-- [ ] Connected Components có tính bắc cầu và non-candidate không làm cầu nối.
-- [ ] Singleton được giữ mặc định và có thể cấu hình loại bỏ.
-- [ ] Mỗi hotspot có member buildings, deterministic cluster_id và stable ordering.
-- [ ] Population/infected/ratio được aggregate chính xác; ratio dùng SUM(I)/SUM(N).
-- [ ] Aggregate risk level dùng threshold snapshot KAN-26.
-- [ ] Geometry là MultiPolygon SRID 4326 hợp lệ, non-empty và renderable bằng CesiumJS.
-- [ ] Response chứa effective configuration snapshot.
-- [ ] Không có hotspot trả empty list.
-- [ ] Có unit/integration tests cho graph, boundary, stats, geometry và API errors.
-- [ ] Không yêu cầu thuật toán spatial statistics nâng cao.
+- [x] Xác định hotspot theo simulation/time_step và filter region.
+- [x] Candidate mặc định là building High có infected > 0; có thể cấu hình minimum risk level Medium/High.
+- [x] Candidate chỉ được nối theo footprint distance <= radius_m.
+- [x] Connected Components có tính bắc cầu và non-candidate không làm cầu nối.
+- [x] Singleton được giữ mặc định và có thể cấu hình loại bỏ.
+- [x] Mỗi hotspot có member buildings, deterministic cluster_id và stable ordering.
+- [x] Population/infected/ratio được aggregate chính xác; ratio dùng SUM(I)/SUM(N).
+- [x] Aggregate risk level dùng threshold snapshot KAN-26.
+- [x] Geometry là MultiPolygon SRID 4326 hợp lệ, non-empty và renderable bằng CesiumJS.
+- [x] Response chứa effective configuration snapshot.
+- [x] Không có hotspot trả empty list.
+- [x] Có unit/integration tests cho graph, boundary, stats, geometry và API errors.
+- [x] Không yêu cầu thuật toán spatial statistics nâng cao.
 
 ## 9. Deliverables
 
@@ -228,3 +228,5 @@ KAN-27 hoàn thành khi hệ thống xác định được connected spatial hot
 - Đã bổ sung OpenAPI và Testcontainers integration test cho transitive component, radius boundary (inclusive), singleton filtering, aggregate statistics và geometry.
 - Đã thêm integration test vào CI workflow.
 - Các TODO phía trên chưa được tick cho đến khi CI và kiểm thử thực tế xác nhận thành công.
+
+- CI GitHub Actions đã được người dùng xác nhận thành công; các kiểm thử trong workflow hoàn tất.
