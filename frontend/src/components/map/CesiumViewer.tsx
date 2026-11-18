@@ -116,6 +116,25 @@ export default function CesiumViewer() {
     viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#dbeafe')
     viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#0b1220')
 
+    // Surface renderer failures in the map status instead of leaving users with
+    // an unexplained black canvas. Preserve the globe/data layers when imagery
+    // or WebGL reports a recoverable problem.
+    const handleRenderError = (_scene: Cesium.Scene, error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error)
+      setBasemapWarning(`Cesium gặp lỗi khi render: ${message}`)
+    }
+    const handleWebglContextLost = (event: Event) => {
+      event.preventDefault()
+      setBasemapWarning('WebGL context bị mất; bản đồ đang chờ trình duyệt khôi phục đồ họa.')
+    }
+    const handleWebglContextRestored = () => {
+      setBasemapWarning(null)
+      if (!viewer.isDestroyed()) viewer.scene.requestRender()
+    }
+    viewer.scene.renderError.addEventListener(handleRenderError)
+    viewer.scene.canvas.addEventListener('webglcontextlost', handleWebglContextLost)
+    viewer.scene.canvas.addEventListener('webglcontextrestored', handleWebglContextRestored)
+
     const primaryImageryProvider = new Cesium.UrlTemplateImageryProvider({
       url: BASEMAP_URL,
       credit: new Cesium.Credit(BASEMAP_CREDIT),
@@ -285,6 +304,9 @@ export default function CesiumViewer() {
     return () => {
       controller.abort()
       removeImageryErrorListener()
+      viewer.scene.renderError.removeEventListener(handleRenderError)
+      viewer.scene.canvas.removeEventListener('webglcontextlost', handleWebglContextLost)
+      viewer.scene.canvas.removeEventListener('webglcontextrestored', handleWebglContextRestored)
       cleanupDataSourceListeners?.()
       clearSelectionRef.current = null
       buildingDataSourceRef.current = null
