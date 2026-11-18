@@ -36,12 +36,16 @@ export default function CesiumViewer() {
   const [buildingLayerVisible, setBuildingLayerVisible] = useState(false)
   const [hotspotLayerVisible, setHotspotLayerVisible] = useState(false)
   const [selectedHotspotId, setSelectedHotspotId] = useState<string | null>(null)
+  const [simulationSelectionMode, setSimulationSelectionMode] = useState(false)
+  const [simulationSelectedBuildingIds, setSimulationSelectedBuildingIds] = useState<string[]>([])
   const viewerRef = useRef<Cesium.Viewer | null>(null)
   const buildingDataSourceRef = useRef<Cesium.GeoJsonDataSource | null>(null)
   const hotspotDataSourceRef = useRef<Cesium.GeoJsonDataSource | null>(null)
   const hotspotLoadVersionRef = useRef(0)
   const clearSelectionRef = useRef<(() => void) | null>(null)
   const selectedBuildingIdRef = useRef<string | null>(null)
+  const selectionModeRef = useRef(false)
+  const simulationSelectionRef = useRef<string[]>([])
 
   useEffect(() => {
     if (!selectedBuildingId) {
@@ -287,6 +291,16 @@ export default function CesiumViewer() {
           const propertyId = entity.properties?.buildingId?.getValue(Cesium.JulianDate.now())
           if (typeof propertyId !== 'string' || !UUID_PATTERN.test(propertyId)) return
 
+          if (selectionModeRef.current) {
+            const current = new Set(simulationSelectionRef.current)
+            if (current.has(propertyId)) current.delete(propertyId)
+            else current.add(propertyId)
+            const next = [...current].sort()
+            simulationSelectionRef.current = next
+            setSimulationSelectedBuildingIds(next)
+            return
+          }
+
           if (selectedEntity !== entity) {
             restoreSelectedStyle()
             selectedEntity = entity
@@ -338,6 +352,7 @@ export default function CesiumViewer() {
     const byBuildingId = new Map(
       (spatialFrame?.buildings ?? []).map((item) => [item.building_id, item]),
     )
+    const launchSelectedIds = new Set(simulationSelectedBuildingIds)
     const selectedHotspot = spatialFrame?.hotspots.find(
       (item) => item.cluster_id === selectedHotspotId,
     )
@@ -367,12 +382,13 @@ export default function CesiumViewer() {
         }
       }
 
+      if (launchSelectedIds.has(buildingId)) fill = Cesium.Color.fromCssColorString('#a78bfa').withAlpha(0.82)
       if (buildingId === selectedBuildingId) fill = SELECTED_BUILDING_FILL
       entity.polygon.material = new Cesium.ColorMaterialProperty(fill)
-      entity.polygon.outline = new Cesium.ConstantProperty(highlightedIds.has(buildingId))
-      entity.polygon.outlineColor = new Cesium.ConstantProperty(Cesium.Color.YELLOW)
+      entity.polygon.outline = new Cesium.ConstantProperty(highlightedIds.has(buildingId) || launchSelectedIds.has(buildingId))
+      entity.polygon.outlineColor = new Cesium.ConstantProperty(launchSelectedIds.has(buildingId) ? Cesium.Color.VIOLET : Cesium.Color.YELLOW)
     }
-  }, [spatialFrame, spatialMetric, buildingLayerVisible, selectedHotspotId, selectedBuildingId, loadState])
+  }, [spatialFrame, spatialMetric, buildingLayerVisible, selectedHotspotId, selectedBuildingId, simulationSelectedBuildingIds, loadState])
 
   useEffect(() => {
     const viewer = viewerRef.current
@@ -429,6 +445,15 @@ export default function CesiumViewer() {
     }
   }, [spatialFrame, hotspotLayerVisible, loadState])
 
+  useEffect(() => {
+    selectionModeRef.current = simulationSelectionMode
+  }, [simulationSelectionMode])
+
+  const clearSimulationSelection = () => {
+    simulationSelectionRef.current = []
+    setSimulationSelectedBuildingIds([])
+  }
+
   const closeBuildingPanel = () => clearSelectionRef.current?.()
 
   return (
@@ -468,6 +493,10 @@ export default function CesiumViewer() {
         )}
       </section>
       <SpatialSimulationControls
+        selectedBuildingIds={simulationSelectedBuildingIds}
+        selectionMode={simulationSelectionMode}
+        onSelectionModeChange={setSimulationSelectionMode}
+        onClearSelection={clearSimulationSelection}
         onFrameChange={(frame) => { setSpatialFrame(frame); setSelectedHotspotId(null) }}
         onMetricChange={setSpatialMetric}
         onLayerVisibilityChange={(buildings, hotspots) => { setBuildingLayerVisible(buildings); setHotspotLayerVisible(hotspots) }}
