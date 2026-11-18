@@ -143,3 +143,78 @@ Threshold colors must map to named labels and have a legend; color is not the on
 ## 9. Definition of Done
 
 KAN-28 hoàn thành khi CesiumJS thể hiện được spatial SIR theo building/time_step, người dùng xem được S/I/R khi chọn building, hotspot hiển thị đúng geometry và legend phân biệt rõ cả dữ liệu thiếu.
+
+## 10. Decisions and Detailed Integration Contracts
+
+### 10.1 Simulation Run Selection and Metadata
+
+- KAN-28 does not introduce a simulation-history/list API.
+- The initial `simulation_id` is supplied by the existing simulation initialization/run flow.
+- Load run metadata from:
+  `GET /api/v1/simulations/{simulation_id}`.
+- Only a run with `status = completed` can enter the visualization flow.
+- Use `time_step_count` from the run summary. Valid steps are integer values from `0` through `time_step_count - 1`.
+- Do not infer calendar dates or clock times from simulation time.
+- Show the selected time as `Step {time_step} · t = {time}`, where `time` comes from the result API and uses the simulation's configured time unit.
+
+### 10.2 Risk Classification Snapshot
+
+- Read risk thresholds from KAN-26 response data; do not duplicate default threshold constants in the frontend.
+- KAN-27 hotspot requests and KAN-26 risk results must use the same completed `simulation_id` and selected `time_step`.
+- Do not POST `risk-classification` on every timeline change.
+- The POST endpoint is a configuration/write operation. Invoke it only when the user explicitly requests applying or changing risk thresholds; then refresh risk and hotspot data.
+- Preserve the threshold snapshot returned by the backend and use it consistently for the legend, building classification and hotspot context.
+
+### 10.3 API Loading, Pagination and Request Consistency
+
+- Fetch KAN-25 building results, KAN-26 risk results and KAN-27 hotspots for the same simulation and time step.
+- KAN-25 and KAN-26 paginated endpoints use `page_size <= 500`; fetch all required pages using `pagination.total_pages` before treating the dataset as complete.
+- Do not silently render only the first page as the complete simulation.
+- Aggregate and hotspot endpoints are not paginated; use their complete responses.
+- Join all building-related data using `building_id`, never array position or Cesium feature index.
+- Keep one source of truth for selected `simulation_id` and `time_step`.
+- Cancel in-flight requests where supported, or ignore responses whose selection key no longer matches the current selection.
+- Apply a new map state atomically after all required data for that selection is ready; do not mix responses from different runs or time steps.
+- Keep the previous stable map state or show an explicit loading state while the next selection is loading. Never present a partially fetched dataset as complete.
+
+### 10.4 Building Color Metric and Legend
+
+- Default building color mode: `risk_level` (Low, Medium, High, Unclassified).
+- Provide `infection_ratio` as the alternative continuous color mode.
+- `infected count` is shown in tooltip/detail panel, not as a separate color mode in KAN-28.
+- Risk colors and labels must be driven by KAN-26 classifications and its saved threshold snapshot; do not hardcode risk thresholds in frontend logic.
+- Unclassified, missing state and unavailable data must use a distinct neutral/unknown style, never the Low style.
+- For continuous infection-ratio styling, define a stable documented visual range and show the exact numeric ratio in the detail panel/tooltip.
+- Legend must identify the active metric and explain unknown/missing data. Color must not be the only signal; retain text labels.
+
+### 10.5 Hotspot Interaction and Layer Lifecycle
+
+- Render hotspot geometry in a separate Cesium data source/layer from building entities.
+- Provide independent visibility toggles for building thematic styling and hotspot layer.
+- Selecting/hovering a hotspot (where supported by the existing interaction model) shows `cluster_id`, member count, population total, infected total, infection ratio and aggregate risk level.
+- Use `building_ids` from the hotspot response to highlight or select member buildings; do not infer membership from geometry intersection.
+- Clear or replace hotspot and thematic layers when simulation changes, and remove Cesium data sources/primitives/listeners on unmount.
+- Preserve the base building appearance when the simulation layer is disabled.
+
+### 10.6 Error and Boundary Handling
+
+- Handle unknown simulation, non-completed run, invalid time step, empty result set, empty hotspot set, missing region/building data, and API failures as explicit UI states.
+- Do not convert absent or excluded population into zero population or Low risk.
+- A valid time step with no hotspot should show an empty hotspot state while still rendering available building results.
+- Do not update Cesium with stale API responses after the user changes simulation or time step.
+
+### 10.7 Additional Verification Cases
+
+- [ ] Reject or explain a run whose status is not `completed`.
+- [ ] Verify time-step lower/upper bounds and display backend-provided `time`.
+- [ ] Verify pagination loads every required page, including more than 500 buildings.
+- [ ] Verify risk threshold snapshot is used by legend and risk styling without repeated POST calls.
+- [ ] Verify default `risk_level` mode and alternate `infection_ratio` mode.
+- [ ] Verify infected count appears in detail/tooltip and is not a separate color mode.
+- [ ] Verify Unclassified/missing data never appears as Low.
+- [ ] Verify hotspot selection displays backend statistics and highlights members by `building_ids`.
+- [ ] Verify building and hotspot layers can be toggled independently.
+- [ ] Verify changing run removes old styles, hotspot geometry and event handlers.
+- [ ] Verify empty hotspot response does not hide valid building results.
+- [ ] Verify stale requests cannot overwrite the currently selected simulation/time step.
+
