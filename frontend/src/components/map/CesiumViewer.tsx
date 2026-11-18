@@ -307,8 +307,8 @@ export default function CesiumViewer() {
 
       if (buildingId === selectedBuildingId) fill = SELECTED_BUILDING_FILL
       entity.polygon.material = new Cesium.ColorMaterialProperty(fill)
-      entity.polygon.outline = highlightedIds.has(buildingId)
-      entity.polygon.outlineColor = Cesium.Color.YELLOW
+      entity.polygon.outline = new Cesium.ConstantProperty(highlightedIds.has(buildingId))
+      entity.polygon.outlineColor = new Cesium.ConstantProperty(Cesium.Color.YELLOW)
     }
   }, [spatialFrame, spatialMetric, buildingLayerVisible, selectedHotspotId, selectedBuildingId, loadState])
 
