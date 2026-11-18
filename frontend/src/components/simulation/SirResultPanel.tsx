@@ -316,7 +316,7 @@ export default function SirResultPanel({ result, loading, error }: SirResultPane
   }
 
   return (
-    <section className="sir-result-panel">
+    <section className={panelClassName}>
       <header className="sir-panel-header">
         <div><p className="sir-eyebrow">SIMULATION RESULT</p><h2>Kết quả mô phỏng SIR</h2></div>
         <div className="sir-result-header-actions">
