@@ -32,6 +32,7 @@ export default function SpatialSimulationControls({
   onMetricChange,
   onLayerVisibilityChange,
 }: SpatialSimulationControlsProps) {
+  const [collapsed, setCollapsed] = useState(false)
   const [simulationId, setSimulationId] = useState('')
   const [summary, setSummary] = useState<SpatialSimulationSummary | null>(null)
   const [frame, setFrame] = useState<SpatialSimulationFrame | null>(null)
@@ -143,15 +144,21 @@ export default function SpatialSimulationControls({
   }
 
   return (
-    <section className="spatial-simulation-panel" aria-label="Spatial SIR visualization">
+    <section className={`spatial-simulation-panel${collapsed ? " is-collapsed" : ""}`} aria-label="Spatial SIR visualization">
       <header className="spatial-panel-header">
         <div>
           <p className="spatial-eyebrow">PHASE 2 · KAN-28</p>
           <h2>Spatial SIR · 3D</h2>
         </div>
-        <span className="spatial-status">{summary ? summary.status : 'Chưa chọn run'}</span>
+        <div className="spatial-panel-header-actions">
+          <span className="spatial-status">{summary ? summary.status : 'Chưa chọn run'}</span>
+          <button type="button" className="spatial-panel-toggle" aria-expanded={!collapsed} aria-label={collapsed ? 'Hiện Spatial SIR' : 'Ẩn Spatial SIR'} onClick={() => setCollapsed((value) => !value)}>
+            {collapsed ? 'Hiện' : 'Ẩn'}
+          </button>
+        </div>
       </header>
 
+      {!collapsed && <div className="spatial-panel-body">
       <SpatialSimulationLaunch
         selectedBuildingIds={selectedBuildingIds}
         selectionMode={selectionMode}
@@ -274,6 +281,7 @@ export default function SpatialSimulationControls({
         </label>
         {!summary && <small>Tải một simulation đã completed để bật/tắt các lớp dữ liệu.</small>}
       </section>
+      </div>}
     </section>
   )
 }
