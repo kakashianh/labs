@@ -41,7 +41,7 @@ export default function SpatialSimulationControls({
     requestVersion.current += 1
   }, [])
 
-  const loadStep = async (id: string, step: number, nextSummary?: SpatialSimulationSummary) => {
+  const loadStep = async (id: string, step: number) => {
     requestController.current?.abort()
     const controller = new AbortController()
     requestController.current = controller
@@ -52,7 +52,7 @@ export default function SpatialSimulationControls({
     try {
       const frame = await fetchSpatialSimulationFrame(id, step, controller.signal)
       if (controller.signal.aborted || version !== requestVersion.current) return
-      setSummary(nextSummary ?? frame.summary)
+      setSummary(frame.summary)
       setTimeStep(step)
       setTimeValue(frame.time)
       setFrame(frame)
@@ -108,7 +108,7 @@ export default function SpatialSimulationControls({
   }
 
   const handleStepChange = (step: number) => {
-    void loadStep(simulationId.trim(), step, summary ?? undefined)
+    void loadStep(simulationId.trim(), step)
   }
 
   const handleMetricChange = (value: SpatialColorMetric) => {
