@@ -189,10 +189,7 @@ pub fn summarize_region(region_id: Uuid, items: &[BuildingRisk]) -> RegionRiskSu
         .iter()
         .filter(|item| item.region_id == region_id && item.risk_level != RiskLevel::Unclassified)
         .collect();
-    let population: f64 = classified
-        .iter()
-        .filter_map(|item| item.population)
-        .sum();
+    let population: f64 = classified.iter().filter_map(|item| item.population).sum();
     let infected: f64 = classified.iter().map(|item| item.infected).sum();
     let total_building_count = items
         .iter()
@@ -259,16 +256,10 @@ mod tests {
     fn rejects_invalid_thresholds_and_values() {
         let mut thresholds = RiskThresholds::default();
         thresholds.risk_low_max = 0.2;
-        assert_eq!(
-            thresholds.validate(),
-            Err(RiskError::InvalidThresholdOrder)
-        );
+        assert_eq!(thresholds.validate(), Err(RiskError::InvalidThresholdOrder));
 
         thresholds.risk_low_max = f64::NAN;
-        assert_eq!(
-            thresholds.validate(),
-            Err(RiskError::InvalidThresholdRange)
-        );
+        assert_eq!(thresholds.validate(), Err(RiskError::InvalidThresholdRange));
         assert_eq!(
             RiskThresholds::default().classify(input(Some(10.0), 11.0)),
             Err(RiskError::InvalidBuildingValues)
