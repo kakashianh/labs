@@ -6,7 +6,7 @@ import { fetchBuildingDetail, fetchAllBuildings, fetchRegions } from '../../serv
 import { buildingsToFeatureCollection, isSelectedEntityRemoved } from '../../services/gis-data'
 import type { Building } from '../../types/gis'
 import SpatialSimulationControls, { type SpatialColorMetric } from '../simulation/SpatialSimulationControls'
-import type { SpatialSimulationFrame } from '../../services/spatial-simulation.ts'
+import { getBuildingDisplayRisk, type SpatialSimulationFrame } from '../../services/spatial-simulation.ts'
 
 type LoadState = 'loading' | 'ready' | 'empty' | 'error'
 
@@ -288,19 +288,20 @@ export default function CesiumViewer() {
       const item = byBuildingId.get(buildingId)
       let fill = DEFAULT_BUILDING_FILL
 
-      if (spatialFrame && buildingLayerVisible && item) {
-        if (spatialMetric === 'risk_level') {
-          switch (item.risk.risk_level) {
+      if (spatialFrame && buildingLayerVisible) {
+        const riskLevel = item ? getBuildingDisplayRisk(item) : 'unclassified'
+        if (!item || riskLevel === 'unclassified') {
+          fill = Cesium.Color.fromCssColorString('#94a3b8').withAlpha(0.55)
+        } else if (spatialMetric === 'risk_level') {
+          switch (riskLevel) {
             case 'low': fill = Cesium.Color.fromCssColorString('#22c55e').withAlpha(0.72); break
             case 'medium': fill = Cesium.Color.fromCssColorString('#f59e0b').withAlpha(0.78); break
             case 'high': fill = Cesium.Color.fromCssColorString('#ef4444').withAlpha(0.82); break
             default: fill = Cesium.Color.fromCssColorString('#94a3b8').withAlpha(0.55)
           }
-        } else if (item.risk.infection_ratio !== null && item.result) {
+        } else if (item.risk.infection_ratio !== null) {
           const ratio = Math.max(0, Math.min(1, item.risk.infection_ratio))
           fill = Cesium.Color.fromHsl(0.62 * (1 - ratio), 0.82, 0.5, 0.78)
-        } else {
-          fill = Cesium.Color.fromCssColorString('#94a3b8').withAlpha(0.55)
         }
       }
 
