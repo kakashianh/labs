@@ -33,8 +33,8 @@ export default function CesiumViewer() {
   const [detailError, setDetailError] = useState<string | null>(null)
   const [spatialFrame, setSpatialFrame] = useState<SpatialSimulationFrame | null>(null)
   const [spatialMetric, setSpatialMetric] = useState<SpatialColorMetric>('risk_level')
-  const [buildingLayerVisible, setBuildingLayerVisible] = useState(true)
-  const [hotspotLayerVisible, setHotspotLayerVisible] = useState(true)
+  const [buildingLayerVisible, setBuildingLayerVisible] = useState(false)
+  const [hotspotLayerVisible, setHotspotLayerVisible] = useState(false)
   const [selectedHotspotId, setSelectedHotspotId] = useState<string | null>(null)
   const viewerRef = useRef<Cesium.Viewer | null>(null)
   const buildingDataSourceRef = useRef<Cesium.GeoJsonDataSource | null>(null)
@@ -95,21 +95,32 @@ export default function CesiumViewer() {
 
     if (ionToken) Cesium.Ion.defaultAccessToken = ionToken
 
-    const viewer = new Cesium.Viewer(container, {
-      animation: false,
-      timeline: false,
-      geocoder: false,
-      baseLayerPicker: false,
-      homeButton: false,
-      sceneModePicker: false,
-      navigationHelpButton: false,
-      fullscreenButton: false,
-      infoBox: false,
-      selectionIndicator: false,
-      // Add imagery after the Viewer is ready so a failed tile service can be
-      // replaced without taking down the globe or the building data source.
-      baseLayer: false,
-    })
+    let viewer: Cesium.Viewer
+    try {
+      viewer = new Cesium.Viewer(container, {
+        animation: false,
+        timeline: false,
+        geocoder: false,
+        baseLayerPicker: false,
+        homeButton: false,
+        sceneModePicker: false,
+        navigationHelpButton: false,
+        fullscreenButton: false,
+        infoBox: false,
+        selectionIndicator: false,
+        // Add imagery after the Viewer is ready so a failed tile service can be
+        // replaced without taking down the globe or the building data source.
+        baseLayer: false,
+      })
+    } catch (error) {
+      setLoadState('error')
+      setErrorMessage(
+        error instanceof Error
+          ? `Không thể khởi tạo Cesium/WebGL: ${error.message}`
+          : 'Không thể khởi tạo Cesium/WebGL trong trình duyệt này.',
+      )
+      return
+    }
 
     viewerRef.current = viewer
     viewer.scene.globe.show = true
