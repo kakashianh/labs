@@ -157,10 +157,24 @@ export default function SpatialSimulationControls({
       {summary && (
         <>
           <div className="spatial-summary">
-            <span>{summary.eligible_building_count} buildings</span>
+            <span>{summary.eligible_building_count} eligible</span>
             <span>{summary.excluded_building_count} excluded</span>
             <span>{summary.time_step_count} steps</span>
+            {frame && <span>Population {formatNumber(frame.aggregate.population)}</span>}
+            {frame && <span>Infected {formatNumber(frame.aggregate.infected)}</span>}
+            {frame && <span>Ratio {frame.aggregate.population > 0 ? formatNumber((frame.aggregate.infected / frame.aggregate.population) * 100) : '—'}%</span>}
           </div>
+          {frame && (
+            <div className="spatial-risk-counts" aria-label="Số lượng công trình theo mức rủi ro">
+              {(['low', 'medium', 'high', 'unclassified'] as const).map((level) => {
+                const count = frame.riskAggregate.data.reduce(
+                  (total, region) => total + (region.buckets.find((bucket) => bucket.risk_level === level)?.building_count ?? 0),
+                  0,
+                )
+                return <span key={level}>{level}: <strong>{count}</strong></span>
+              })}
+            </div>
+          )}
 
           <label className="spatial-field spatial-timeline">
             <span>Time step <strong>{timeStep} / {summary.time_step_count - 1}</strong></span>
@@ -192,8 +206,8 @@ export default function SpatialSimulationControls({
             <h3>{metric === 'risk_level' ? 'Risk level · threshold snapshot' : 'Infection ratio · 0% → 100%'}</h3>
             {metric === 'risk_level' ? (
               <>
-                <div className="spatial-risk-legend-item"><i className="spatial-risk-swatch" style={{ background: '#22c55e' }} /> Low ≤ {(frame?.thresholds.risk_low_max ?? 0) * 100}%</div>
-                <div className="spatial-risk-legend-item"><i className="spatial-risk-swatch" style={{ background: '#f59e0b' }} /> Medium ≤ {(frame?.thresholds.risk_medium_max ?? 0) * 100}%</div>
+                <div className="spatial-risk-legend-item"><i className="spatial-risk-swatch" style={{ background: '#22c55e' }} /> Low ≤ {formatNumber((frame?.thresholds.risk_low_max ?? 0) * 100)}%</div>
+                <div className="spatial-risk-legend-item"><i className="spatial-risk-swatch" style={{ background: '#f59e0b' }} /> Medium ≤ {formatNumber((frame?.thresholds.risk_medium_max ?? 0) * 100)}%</div>
                 <div className="spatial-risk-legend-item"><i className="spatial-risk-swatch" style={{ background: '#ef4444' }} /> High above medium threshold</div>
                 <div className="spatial-risk-legend-item"><i className="spatial-risk-swatch" style={{ background: '#94a3b8' }} /> Unclassified / no data</div>
                 {frame && <small>Source: {frame.thresholds.source} · {frame.thresholds.version}</small>}
