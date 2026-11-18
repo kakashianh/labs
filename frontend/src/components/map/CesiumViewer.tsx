@@ -6,7 +6,7 @@ import { fetchBuildingDetail, fetchAllBuildings, fetchRegions } from '../../serv
 import { buildingsToFeatureCollection, isSelectedEntityRemoved } from '../../services/gis-data'
 import type { Building } from '../../types/gis'
 import SpatialSimulationControls, { type SpatialColorMetric } from '../simulation/SpatialSimulationControls'
-import type { SpatialSimulationFrame, SpatialBuildingView } from '../../services/spatial-simulation.ts'
+import type { SpatialSimulationFrame } from '../../services/spatial-simulation.ts'
 
 type LoadState = 'loading' | 'ready' | 'empty' | 'error'
 
@@ -178,6 +178,7 @@ export default function CesiumViewer() {
         if (controller.signal.aborted || viewer.isDestroyed()) return
 
         await viewer.dataSources.add(dataSource)
+        buildingDataSourceRef.current = dataSource
         if (controller.signal.aborted || viewer.isDestroyed()) return
 
         // Keep React selection state in sync if a selected Cesium entity or its
@@ -212,9 +213,18 @@ export default function CesiumViewer() {
           // entity is ignored so it cannot accidentally replace the panel state.
           if (!entity) {
             clearSelection()
+            setSelectedHotspotId(null)
+            return
+          }
+
+          const clusterId = entity.properties?.clusterId?.getValue(Cesium.JulianDate.now())
+          if (typeof clusterId === 'string') {
+            setSelectedHotspotId(clusterId)
+            clearSelection()
             return
           }
           if (!entity.polygon) return
+          setSelectedHotspotId(null)
 
           const propertyId = entity.properties?.buildingId?.getValue(Cesium.JulianDate.now())
           if (typeof propertyId !== 'string' || !UUID_PATTERN.test(propertyId)) return
@@ -248,10 +258,113 @@ export default function CesiumViewer() {
       controller.abort()
       cleanupDataSourceListeners?.()
       clearSelectionRef.current = null
+      buildingDataSourceRef.current = null
+      hotspotDataSourceRef.current = null
+      viewerRef.current = null
+      hotspotLoadVersionRef.current += 1
       clickHandler.destroy()
       if (!viewer.isDestroyed()) viewer.destroy()
     }
   }, [])
+
+
+  useEffect(() => {
+    const viewer = viewerRef.current
+    const dataSource = buildingDataSourceRef.current
+    if (!viewer || viewer.isDestroyed() || !dataSource) return
+
+    const byBuildingId = new Map(
+      (spatialFrame?.buildings ?? []).map((item) => [item.building_id, item]),
+    )
+    const selectedHotspot = spatialFrame?.hotspots.find(
+      (item) => item.cluster_id === selectedHotspotId,
+    )
+    const highlightedIds = new Set(selectedHotspot?.building_ids ?? [])
+
+    for (const entity of dataSource.entities.values) {
+      if (!entity.polygon) continue
+      const propertyId = entity.properties?.buildingId?.getValue(Cesium.JulianDate.now())
+      const buildingId = typeof propertyId === 'string' ? propertyId : entity.id
+      const item = byBuildingId.get(buildingId)
+      let fill = DEFAULT_BUILDING_FILL
+
+      if (spatialFrame && buildingLayerVisible && item) {
+        if (spatialMetric === 'risk_level') {
+          switch (item.risk.risk_level) {
+            case 'low': fill = Cesium.Color.fromCssColorString('#22c55e').withAlpha(0.72); break
+            case 'medium': fill = Cesium.Color.fromCssColorString('#f59e0b').withAlpha(0.78); break
+            case 'high': fill = Cesium.Color.fromCssColorString('#ef4444').withAlpha(0.82); break
+            default: fill = Cesium.Color.fromCssColorString('#94a3b8').withAlpha(0.55)
+          }
+        } else if (item.risk.infection_ratio !== null && item.result) {
+          const ratio = Math.max(0, Math.min(1, item.risk.infection_ratio))
+          fill = Cesium.Color.fromHsl(0.62 * (1 - ratio), 0.82, 0.5, 0.78)
+        } else {
+          fill = Cesium.Color.fromCssColorString('#94a3b8').withAlpha(0.55)
+        }
+      }
+
+      if (buildingId === selectedBuildingId) fill = SELECTED_BUILDING_FILL
+      entity.polygon.material = new Cesium.ColorMaterialProperty(fill)
+      entity.polygon.outline = highlightedIds.has(buildingId)
+      entity.polygon.outlineColor = Cesium.Color.YELLOW
+    }
+  }, [spatialFrame, spatialMetric, buildingLayerVisible, selectedHotspotId, selectedBuildingId])
+
+  useEffect(() => {
+    const viewer = viewerRef.current
+    if (!viewer || viewer.isDestroyed()) return
+    const version = ++hotspotLoadVersionRef.current
+    const previous = hotspotDataSourceRef.current
+    hotspotDataSourceRef.current = null
+    if (previous) void viewer.dataSources.remove(previous, true)
+
+    if (!spatialFrame || !hotspotLayerVisible || spatialFrame.hotspots.length === 0) return
+
+    const featureCollection = {
+      type: 'FeatureCollection' as const,
+      features: spatialFrame.hotspots.map((hotspot) => ({
+        type: 'Feature' as const,
+        id: hotspot.cluster_id,
+        geometry: hotspot.geometry,
+        properties: {
+          clusterId: hotspot.cluster_id,
+          memberCount: hotspot.member_count,
+          populationTotal: hotspot.population_total,
+          infectedTotal: hotspot.infected_total,
+          infectionRatio: hotspot.infection_ratio,
+          riskLevel: hotspot.risk_level,
+          buildingIds: hotspot.building_ids.join(','),
+        },
+      })),
+    }
+
+    void Cesium.GeoJsonDataSource.load(featureCollection, {
+      clampToGround: true,
+      stroke: Cesium.Color.WHITE,
+      strokeWidth: 3,
+      fill: Cesium.Color.fromCssColorString('#a855f7').withAlpha(0.28),
+    }).then(async (dataSource) => {
+      if (version !== hotspotLoadVersionRef.current || viewer.isDestroyed()) {
+        dataSource.entities.removeAll()
+        return
+      }
+      await viewer.dataSources.add(dataSource)
+      if (version !== hotspotLoadVersionRef.current || viewer.isDestroyed()) {
+        if (!viewer.isDestroyed()) void viewer.dataSources.remove(dataSource, true)
+        return
+      }
+      hotspotDataSourceRef.current = dataSource
+    }).catch((error: unknown) => {
+      if (version === hotspotLoadVersionRef.current) {
+        setErrorMessage(error instanceof Error ? error.message : 'Không thể hiển thị hotspot.')
+      }
+    })
+
+    return () => {
+      hotspotLoadVersionRef.current += 1
+    }
+  }, [spatialFrame, hotspotLayerVisible])
 
   const closeBuildingPanel = () => clearSelectionRef.current?.()
 
@@ -290,13 +403,37 @@ export default function CesiumViewer() {
           </p>
         )}
       </section>
-      <SpatialSimulationControls\n        onFrameChange={(frame) => { setSpatialFrame(frame); setSelectedHotspotId(null) }}\n        onMetricChange={setSpatialMetric}\n        onLayerVisibilityChange={(buildings, hotspots) => { setBuildingLayerVisible(buildings); setHotspotLayerVisible(hotspots) }}\n      />\n      {selectedHotspotId && spatialFrame && (() => {\n        const hotspot = spatialFrame.hotspots.find((item) => item.cluster_id === selectedHotspotId)\n        return hotspot ? (\n          <aside className="spatial-hotspot-detail" aria-label="Thông tin hotspot">\n            <button type="button" onClick={() => setSelectedHotspotId(null)} aria-label="Đóng hotspot">×</button>\n            <h3>Hotspot · {hotspot.risk_level.toUpperCase()}</h3>\n            <dl>\n              <div><dt>Cluster ID</dt><dd>{hotspot.cluster_id}</dd></div>\n              <div><dt>Buildings</dt><dd>{hotspot.member_count}</dd></div>\n              <div><dt>Population</dt><dd>{hotspot.population_total}</dd></div>\n              <div><dt>Infected</dt><dd>{hotspot.infected_total}</dd></div>\n              <div><dt>Infection ratio</dt><dd>{(hotspot.infection_ratio * 100).toFixed(2)}%</dd></div>\n              <div><dt>Members</dt><dd>{hotspot.building_ids.join(', ')}</dd></div>\n            </dl>\n          </aside>\n        ) : null\n      })()}\n      {selectedBuildingId && (
+      <SpatialSimulationControls\n        onFrameChange={(frame) => { setSpatialFrame(frame); setSelectedHotspotId(null) }}\n        onMetricChange={setSpatialMetric}\n        onLayerVisibilityChange={(buildings, hotspots) => { setBuildingLayerVisible(buildings); setHotspotLayerVisible(hotspots) }}\n      />\n      {selectedHotspotId && spatialFrame && (() => {\n        const hotspot = spatialFrame.hotspots.find((item) => item.cluster_id === selectedHotspotId)\n        return hotspot ? (\n          <aside className="spatial-hotspot-detail" aria-label="Thông tin hotspot">\n            <button type="button" onClick={() => setSelectedHotspotId(null)} aria-label="Đóng hotspot">×</button>\n            <h3>Hotspot · {hotspot.risk_level.toUpperCase()}</h3>\n            <dl>\n              <div><dt>Cluster ID</dt><dd>{hotspot.cluster_id}</dd></div>\n              <div><dt>Buildings</dt><dd>{hotspot.member_count}</dd></div>\n              <div><dt>Population</dt><dd>{hotspot.population_total}</dd></div>\n              <div><dt>Infected</dt><dd>{hotspot.infected_total}</dd></div>\n              <div><dt>Infection ratio</dt><dd>{(hotspot.infection_ratio * 100).toFixed(2)}%</dd></div>\n              <div><dt>Members</dt><dd>{hotspot.building_ids.join(', ')}</dd></div>\n            </dl>\n          </aside>\n        ) : null\n      })()}\n      <SpatialSimulationControls
+        onFrameChange={(frame) => { setSpatialFrame(frame); setSelectedHotspotId(null) }}
+        onMetricChange={setSpatialMetric}
+        onLayerVisibilityChange={(buildings, hotspots) => { setBuildingLayerVisible(buildings); setHotspotLayerVisible(hotspots) }}
+      />
+      {selectedHotspotId && spatialFrame && (() => {
+        const hotspot = spatialFrame.hotspots.find((item) => item.cluster_id === selectedHotspotId)
+        return hotspot ? (
+          <aside className="spatial-hotspot-detail" aria-label="Thông tin hotspot">
+            <button type="button" onClick={() => setSelectedHotspotId(null)} aria-label="Đóng hotspot">×</button>
+            <h3>Hotspot · {hotspot.risk_level.toUpperCase()}</h3>
+            <dl>
+              <div><dt>Cluster ID</dt><dd>{hotspot.cluster_id}</dd></div>
+              <div><dt>Buildings</dt><dd>{hotspot.member_count}</dd></div>
+              <div><dt>Population</dt><dd>{hotspot.population_total}</dd></div>
+              <div><dt>Infected</dt><dd>{hotspot.infected_total}</dd></div>
+              <div><dt>Infection ratio</dt><dd>{(hotspot.infection_ratio * 100).toFixed(2)}%</dd></div>
+              <div><dt>Members</dt><dd>{hotspot.building_ids.join(', ')}</dd></div>
+            </dl>
+          </aside>
+        ) : null
+      })()}
+      {selectedBuildingId && (
         <BuildingInfoPanel
           building={buildingDetail}
           loading={detailLoading}
           error={detailError}
           selectedBuildingId={selectedBuildingId}
           onClose={closeBuildingPanel}
+          spatialData={spatialFrame?.buildings.find((item) => item.building_id === selectedBuildingId) ?? null}
+          simulationTime={spatialFrame ? { simulationId: spatialFrame.summary.simulation_id, timeStep: spatialFrame.time_step, time: spatialFrame.time } : null}
         />
       )}
     </div>
