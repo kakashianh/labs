@@ -332,7 +332,15 @@ body {
   display: grid;
   gap: 8px;
   margin-top: 13px;
+  padding-top: 12px;
+  border-top: 1px solid rgb(148 163 184 / 18%);
   color: #cbd5e1;
+  font-size: 11px;
+}
+
+.spatial-layer-toggles h3 {
+  margin: 0;
+  color: #f8fafc;
   font-size: 11px;
 }
 
@@ -344,6 +352,16 @@ body {
 
 .spatial-layer-toggles input {
   accent-color: #a78bfa;
+}
+
+.spatial-layer-toggles input:disabled {
+  cursor: not-allowed;
+  opacity: .5;
+}
+
+.spatial-layer-toggles small {
+  color: #94a3b8;
+  font-size: 10px;
 }
 
 .spatial-loading {
