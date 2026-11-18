@@ -5,6 +5,8 @@ import BuildingInfoPanel from './BuildingInfoPanel'
 import { fetchBuildingDetail, fetchAllBuildings, fetchRegions } from '../../services/gis-api'
 import { buildingsToFeatureCollection, isSelectedEntityRemoved } from '../../services/gis-data'
 import type { Building } from '../../types/gis'
+import SpatialSimulationControls, { type SpatialColorMetric } from '../simulation/SpatialSimulationControls'
+import type { SpatialSimulationFrame, SpatialBuildingView } from '../../services/spatial-simulation.ts'
 
 type LoadState = 'loading' | 'ready' | 'empty' | 'error'
 
@@ -27,6 +29,15 @@ export default function CesiumViewer() {
   const [buildingDetail, setBuildingDetail] = useState<Building | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState<string | null>(null)
+  const [spatialFrame, setSpatialFrame] = useState<SpatialSimulationFrame | null>(null)
+  const [spatialMetric, setSpatialMetric] = useState<SpatialColorMetric>('risk_level')
+  const [buildingLayerVisible, setBuildingLayerVisible] = useState(true)
+  const [hotspotLayerVisible, setHotspotLayerVisible] = useState(true)
+  const [selectedHotspotId, setSelectedHotspotId] = useState<string | null>(null)
+  const viewerRef = useRef<Cesium.Viewer | null>(null)
+  const buildingDataSourceRef = useRef<Cesium.GeoJsonDataSource | null>(null)
+  const hotspotDataSourceRef = useRef<Cesium.GeoJsonDataSource | null>(null)
+  const hotspotLoadVersionRef = useRef(0)
   const clearSelectionRef = useRef<(() => void) | null>(null)
   const selectedBuildingIdRef = useRef<string | null>(null)
 
@@ -100,6 +111,8 @@ export default function CesiumViewer() {
         }),
       ),
     })
+
+    viewerRef.current = viewer
 
     viewer.camera.setView({
       destination: Cesium.Cartesian3.fromDegrees(105.8342, 21.0278, 8000),
@@ -277,7 +290,7 @@ export default function CesiumViewer() {
           </p>
         )}
       </section>
-      {selectedBuildingId && (
+      <SpatialSimulationControls\n        onFrameChange={(frame) => { setSpatialFrame(frame); setSelectedHotspotId(null) }}\n        onMetricChange={setSpatialMetric}\n        onLayerVisibilityChange={(buildings, hotspots) => { setBuildingLayerVisible(buildings); setHotspotLayerVisible(hotspots) }}\n      />\n      {selectedHotspotId && spatialFrame && (() => {\n        const hotspot = spatialFrame.hotspots.find((item) => item.cluster_id === selectedHotspotId)\n        return hotspot ? (\n          <aside className="spatial-hotspot-detail" aria-label="Thông tin hotspot">\n            <button type="button" onClick={() => setSelectedHotspotId(null)} aria-label="Đóng hotspot">×</button>\n            <h3>Hotspot · {hotspot.risk_level.toUpperCase()}</h3>\n            <dl>\n              <div><dt>Cluster ID</dt><dd>{hotspot.cluster_id}</dd></div>\n              <div><dt>Buildings</dt><dd>{hotspot.member_count}</dd></div>\n              <div><dt>Population</dt><dd>{hotspot.population_total}</dd></div>\n              <div><dt>Infected</dt><dd>{hotspot.infected_total}</dd></div>\n              <div><dt>Infection ratio</dt><dd>{(hotspot.infection_ratio * 100).toFixed(2)}%</dd></div>\n              <div><dt>Members</dt><dd>{hotspot.building_ids.join(', ')}</dd></div>\n            </dl>\n          </aside>\n        ) : null\n      })()}\n      {selectedBuildingId && (
         <BuildingInfoPanel
           building={buildingDetail}
           loading={detailLoading}
