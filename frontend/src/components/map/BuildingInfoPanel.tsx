@@ -93,7 +93,7 @@ export default function BuildingInfoPanel({
           <dl className="building-info-fields">
             <div><dt>Population (N)</dt><dd>{spatialData.result?.population ?? 'Không có dữ liệu'}</dd></div>
             <div><dt>Susceptible (S)</dt><dd>{spatialData.result?.susceptible ?? 'Không có dữ liệu'}</dd></div>
-            <div><dt>Infected (I)</dt><dd>{spatialData.risk.infected}</dd></div>
+            <div><dt>Infected (I)</dt><dd>{spatialData.result?.infected ?? 'Không có dữ liệu'}</dd></div>
             <div><dt>Recovered (R)</dt><dd>{spatialData.result?.recovered ?? 'Không có dữ liệu'}</dd></div>
             <div><dt>Infection ratio</dt><dd>{spatialData.risk.infection_ratio === null ? 'Unclassified' : `${(spatialData.risk.infection_ratio * 100).toFixed(2)}%`}</dd></div>
             <div><dt>Risk</dt><dd>{spatialData.risk.risk_level}</dd></div>
