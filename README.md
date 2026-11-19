@@ -32,10 +32,11 @@ Python 3.13 is within the documented support ranges of these key libraries, whil
 #### First-time setup
 
 ```bash
+uv lock
 uv sync --locked
 ```
 
-The `uv.lock` file is committed to keep the project dependency graph reproducible. PP-9 intentionally declares no scientific/runtime dependencies yet; those are added with the domain tasks that own them.
+The `uv.lock` file records the resolved dependency graph. Whenever a task changes declared dependencies, run `uv lock` and commit the refreshed lockfile before relying on `uv sync --locked`.
 
 #### Common commands
 
