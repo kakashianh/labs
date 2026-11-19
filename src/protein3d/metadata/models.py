@@ -1,5 +1,7 @@
 """SQLAlchemy metadata models owned by PP-12."""
 
+# fmt: off
+
 from __future__ import annotations
 
 # ruff: noqa: I001
@@ -282,3 +284,4 @@ class Artifact(Base):
     )
 
     job: Mapped[Job | None] = relationship(back_populates="artifacts")
+# fmt: on
