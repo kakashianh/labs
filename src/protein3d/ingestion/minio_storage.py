@@ -60,9 +60,7 @@ class MinioObjectStore:
         region_key = _sign(date_key, self.region)
         service_key = _sign(region_key, "s3")
         signing_key = _sign(service_key, "aws4_request")
-        signature = hmac.new(
-            signing_key, string_to_sign.encode(), hashlib.sha256
-        ).hexdigest()
+        signature = hmac.new(signing_key, string_to_sign.encode(), hashlib.sha256).hexdigest()
         authorization = (
             f"AWS4-HMAC-SHA256 Credential={self.access_key}/{scope}, "
             f"SignedHeaders={signed_headers}, Signature={signature}"
