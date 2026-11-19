@@ -207,9 +207,7 @@ class AlphaFoldClient:
         checksum = hashlib.sha256(body).hexdigest()
         version = model.model_version or "unversioned"
         safe_model = re.sub(r"[^A-Za-z0-9_.-]", "_", model.model_entity_id)
-        object_key = str(
-            PurePosixPath("alphafold", protein_id, safe_model, version, "model.cif")
-        )
+        object_key = str(PurePosixPath("alphafold", protein_id, safe_model, version, "model.cif"))
         metadata = DownloadedCoordinate(
             source_url=model.cif_url,
             retrieved_at=datetime.now(UTC).isoformat(),
