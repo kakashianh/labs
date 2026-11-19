@@ -103,7 +103,7 @@ Make the environment straightforward to start, inspect, stop, and reset.
 - [x] Document raw Docker Compose commands and profile selection in the infrastructure guide.
 - [x] Document how to start graph and vector profiles independently or together.
 - [x] Provide a separate destructive `infra-reset`; ordinary shutdown preserves named volumes.
-- [ ] Document backup/restore expectations and the fact that deleting named volumes permanently removes local service data.
+- [ ] Document backup/restore procedures; the guide does clearly state that deleting named volumes permanently removes local service data.
 - [x] Document loopback port mappings, common startup diagnostics, and service log commands.
 
 ### Step 4 — Validate service readiness and integration
@@ -133,7 +133,7 @@ Publish a reliable handoff for developers and downstream implementation tasks.
 - [x] Add a CI job to validate default, graph, vector, and combined Compose rendering without starting service containers.
 - [ ] Add lightweight automated checks for environment templates and Compose configuration where practical.
 - [ ] Link PP-12, PP-26–PP-29, and PP-31–PP-33 to the infrastructure service names, connection endpoints, and readiness assumptions they consume.
-- [ ] Record version compatibility decisions and known limitations.
+- [x] Record pinned version compatibility decisions, upstream references, and known limitations.
 
 ## 5. Deliverables
 
