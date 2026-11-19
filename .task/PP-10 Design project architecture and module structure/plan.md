@@ -41,11 +41,11 @@ Document the role and boundary of each technology. Do not add dependencies or pr
 Describe the lifecycle from external biological data sources to user-facing search and visualization.
 
 **To-do**
-- [ ] Create a system context/component diagram showing external sources, ingestion, processing, structure analysis, graph/vector stores, ML, API, and UI.
-- [ ] Create a data-flow diagram from raw source data through normalized datasets, derived features, embeddings/predictions, and online queries.
-- [ ] Separate batch/offline processing paths from online request paths.
-- [ ] Identify the owner, input, output, and persistence boundary of each major component.
-- [ ] Document principal data and artifact formats at each boundary.
+- [x] Create a system context/component diagram showing external sources, ingestion, processing, structure analysis, graph/vector stores, ML, API, and UI.
+- [x] Create a data-flow diagram from raw source data through normalized datasets, derived features, embeddings/predictions, and online queries.
+- [x] Separate batch/offline processing paths from online request paths.
+- [x] Identify the owner, input, output, and persistence boundary of each major component.
+- [x] Document principal data and artifact formats at each boundary.
 
 ### Step 2 — Define module structure and dependency rules
 
@@ -92,12 +92,12 @@ src/protein3d/
 ~~~
 
 **To-do**
-- [ ] Document each package's responsibility, public interface, and ownership boundary.
-- [ ] Define dependency direction and prohibited imports, especially domain-to-infrastructure dependencies.
-- [ ] Identify ports/interfaces and the adapters that will implement them.
-- [ ] Distinguish shared domain contracts from pipeline-, storage-, API-, and UI-specific DTOs.
-- [ ] Document the approach to avoiding circular imports and cross-layer coupling.
-- [ ] Map package/module ownership to downstream PP tasks.
+- [x] Document each package's responsibility, public interface, and ownership boundary.
+- [x] Define dependency direction and prohibited imports, especially domain-to-infrastructure dependencies.
+- [x] Identify ports/interfaces and the adapters that will implement them.
+- [x] Distinguish shared domain contracts from pipeline-, storage-, API-, and UI-specific DTOs.
+- [x] Document the approach to avoiding circular imports and cross-layer coupling.
+- [x] Map package/module ownership to downstream PP tasks.
 
 ### Step 3 — Specify shared identifiers and data contracts
 
@@ -117,14 +117,14 @@ Define logical contracts and semantics only. Physical PostgreSQL DDL/ORM models 
 | Prediction | protein_id, go_id, score, model_version, dataset_version; score semantics and prediction provenance |
 
 **Contract rules to settle**
-- [ ] Use a canonical UniProt accession policy for cross-system protein identity while preserving original source IDs and mapping status.
-- [ ] Define behavior for merged, deprecated, unresolved, and one-to-many external identifiers.
-- [ ] Treat biological PPI as undirected unless a source explicitly represents directionality; define canonical endpoint ordering or an equivalent deduplication rule.
-- [ ] Keep interaction confidence, evidence strength, and ML prediction probability as distinct concepts.
-- [ ] Define nullability and distinguish missing/unknown/not-applicable from negative or zero values.
-- [ ] Define schema, source dataset, feature, embedding, and model version/provenance conventions.
-- [ ] Define units, coordinate conventions, and reference-frame expectations for structure-derived values where relevant.
-- [ ] Store large PDB/mmCIF, Parquet, embedding/model artifacts in object storage or their designated stores; metadata contracts carry references and checksums rather than large payloads.
+- [x] Use a canonical UniProt accession policy for cross-system protein identity while preserving original source IDs and mapping status.
+- [x] Define behavior for merged, deprecated, unresolved, and one-to-many external identifiers.
+- [x] Treat biological PPI as undirected unless a source explicitly represents directionality; define canonical endpoint ordering or an equivalent deduplication rule.
+- [x] Keep interaction confidence, evidence strength, and ML prediction probability as distinct concepts.
+- [x] Define nullability and distinguish missing/unknown/not-applicable from negative or zero values.
+- [x] Define schema, source dataset, feature, embedding, and model version/provenance conventions.
+- [x] Define units, coordinate conventions, and reference-frame expectations for structure-derived values where relevant.
+- [x] Store large PDB/mmCIF, Parquet, embedding/model artifacts in object storage or their designated stores; metadata contracts carry references and checksums rather than large payloads.
 
 ### Step 4 — Define component ownership and downstream handoff
 
@@ -147,19 +147,19 @@ Document the boundary between this architecture task and implementation tasks.
 
 **To-do**
 - [ ] Record input/output contracts consumed or produced by PP-11, PP-12, PP-17, PP-20, PP-26, PP-30, PP-34, PP-39, and PP-41.
-- [ ] State explicitly which downstream task owns each physical schema, service, pipeline, and endpoint.
-- [ ] Ensure PP-10 does not duplicate PP-11 infrastructure configuration or PP-12 database implementation.
-- [ ] Ensure model-specific embedding details remain in PP-30 and endpoint-level schemas remain in PP-39.
+- [x] State explicitly which downstream task owns each physical schema, service, pipeline, and endpoint.
+- [x] Ensure PP-10 does not duplicate PP-11 infrastructure configuration or PP-12 database implementation.
+- [x] Ensure model-specific embedding details remain in PP-30 and endpoint-level schemas remain in PP-39.
 - [ ] Identify conflicting or missing downstream assumptions and record required follow-up instead of silently redefining contracts.
 
 ### Step 5 — Publish architecture documentation and decision records
 
 **To-do**
-- [ ] Publish the architecture entry point and system overview.
-- [ ] Publish data-flow and component diagrams.
-- [ ] Publish module structure and dependency rules.
-- [ ] Publish one contract document for each shared record defined in Step 3.
-- [ ] Record architecture style, protein identity, and data-storage boundary decisions as ADRs.
+- [x] Publish the architecture entry point and system overview.
+- [x] Publish data-flow and component diagrams.
+- [x] Publish module structure and dependency rules.
+- [x] Publish one contract document for each shared record defined in Step 3.
+- [x] Record architecture style, protein identity, and data-storage boundary decisions as ADRs.
 - [ ] Add links from relevant downstream plans to the exact architecture/contract documents.
 
 **Expected documentation layout**
@@ -191,10 +191,10 @@ docs/
 Validation in PP-10 is documentation and contract review, not implementation of downstream services.
 
 **To-do**
-- [ ] Review diagrams, package ownership, and dependency rules for consistency.
-- [ ] Check every shared contract for field definitions, types, nullability, units where applicable, versioning, and provenance.
+- [x] Review diagrams, package ownership, and dependency rules for consistency.
+- [x] Check every shared contract for field definitions, types, nullability, units where applicable, versioning, and provenance.
 - [ ] Cross-check contracts against PP-11, PP-12, PP-17, PP-20, PP-26, PP-30, PP-34, PP-39, and PP-41.
-- [ ] Add representative JSON examples or fixtures for shared records where useful.
+- [x] Add representative JSON examples or fixtures for shared records where useful.
 - [ ] Document unresolved decisions, assumptions, and follow-up tasks.
 - [ ] Verify all architecture documentation links from the repository.
 
@@ -240,4 +240,10 @@ No production pipeline, API endpoint, database migration, graph schema, vector i
 
 ## 9. Completion notes
 
-Record final architecture decisions, documents/diagrams created, contract examples validated, downstream plans reviewed, commands and verification results, unresolved assumptions, and deviations from this plan.
+- Created the architecture entry point, system overview, batch/online data-flow diagrams, target module layout, and dependency rules under docs/architecture/.
+- Added eight logical contract documents: protein, protein ID mapping, PPI edge, GO annotation, structure metadata, feature vector, embedding, and prediction.
+- Added ADR-001 (architecture style), ADR-002 (protein identity), and ADR-003 (data/storage boundaries).
+- Verified the architecture, contract, and ADR directory contents on the feature branch.
+- Parsed the representative Protein and PPI JSON examples successfully. Other contracts are specified as field/semantic tables and do not yet have JSON fixtures.
+- Downstream task plans have not yet been edited to add direct links to the new contracts. Full downstream contract-by-contract validation and repository-wide Markdown/diagram rendering checks remain follow-up verification.
+- No application code, dependencies, database migrations, service configuration, or large datasets were added.
