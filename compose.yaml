@@ -40,23 +40,6 @@ services:
       start_period: 10s
     networks: [protein3d]
 
-  minio-init:
-    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
-    restart: "no"
-    depends_on:
-      minio:
-        condition: service_healthy
-    entrypoint: ["/bin/sh", "-ec"]
-    command:
-      - |
-        mc alias set local http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"
-        mc mb --ignore-existing local/protein3d-artifacts
-        mc mb --ignore-existing local/protein3d-milvus
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-protein3d}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-protein3d_minio_local_only}
-    networks: [protein3d]
-
   cassandra:
     image: cassandra:5.0.9
     profiles: ["graph"]
@@ -162,8 +145,8 @@ services:
     depends_on:
       etcd:
         condition: service_healthy
-      minio-init:
-        condition: service_completed_successfully
+      minio:
+        condition: service_healthy
     ports:
       - "127.0.0.1:${MILVUS_PORT:-19530}:19530"
       - "127.0.0.1:${MILVUS_METRICS_PORT:-9091}:9091"
