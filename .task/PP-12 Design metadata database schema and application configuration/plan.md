@@ -65,12 +65,12 @@ PPI edges remain owned by JanusGraph; embeddings remain owned by Milvus. Do not 
 - Reconcile PP-10 examples that could be read as accession-derived internal IDs (for example, `protein:Q9Y261`) with this opaque-UUID rule. Update the owning PP-10 contract/example in the same change set if it is genuinely contradictory; otherwise document the interpretation here and link the exact contract.
 
 **To-do**
-- [ ] Define entity relationship diagram and ownership notes.
+- [x] Define entity relationship diagram and ownership notes.
 - [ ] Define field-level data dictionary and nullability.
-- [ ] Confirm UUID internal identity and external mapping semantics against PP-10.
-- [ ] Define mapping status transitions and uniqueness scope.
-- [ ] Define dataset/job lifecycle states and allowed transitions.
-- [ ] Define structure-to-protein chain cardinality and association semantics.
+- [x] Confirm UUID internal identity and external mapping semantics against PP-10; corrected the Protein contract example to use an opaque UUID.
+- [x] Define mapping status transitions and uniqueness scope (source + source ID + source version).
+- [x] Define dataset/job lifecycle states and allowed transitions.
+- [x] Define structure-to-protein chain cardinality and association semantics.
 
 ### Step 2 — Design normalized PostgreSQL schema
 
@@ -99,20 +99,20 @@ Implement relational models with explicit constraints and indexes.
 - Use explicit delete/update behavior; avoid cascading deletion of provenance or artifacts without a documented reason.
 
 **To-do**
-- [ ] Implement SQLAlchemy 2.x models and PostgreSQL types.
-- [ ] Add required constraints, indexes, and relationship definitions.
-- [ ] Add deterministic fixtures for resolved, merged, deprecated, unresolved, and ambiguous mappings.
-- [ ] Document lifecycle transitions, uniqueness rules, and deletion semantics.
+- [x] Implement SQLAlchemy 2.x models and PostgreSQL types.
+- [x] Add required constraints, indexes, and relationship definitions.
+- [x] Add deterministic integration fixtures for resolved, merged, deprecated, unresolved, and ambiguous mappings.
+- [x] Document lifecycle transitions, uniqueness rules, and deletion semantics.
 
 ### Step 3 — Implement versioned migrations
 
 Use Alembic as the sole schema migration mechanism.
 
 **To-do**
-- [ ] Initialize Alembic and connect it to the application settings/model metadata.
-- [ ] Create the initial migration for all PP-12-owned tables, indexes, and constraints.
+- [x] Initialize Alembic and connect it to the application settings/model metadata.
+- [x] Create the initial migration for all PP-12-owned tables, indexes, and constraints.
 - [ ] Ensure migrations work on an empty PostgreSQL database.
-- [ ] Document upgrade, downgrade, and revision-generation commands.
+- [x] Document upgrade, downgrade, and revision-generation commands.
 - [ ] Test migration upgrade and downgrade/re-upgrade behavior; if a downgrade is intentionally unsupported for a data migration, document why.
 - [ ] Ensure application startup does not silently mutate the schema outside migrations.
 
@@ -136,10 +136,10 @@ Centralize environment-backed settings using Pydantic Settings.
 - Define safe defaults for connection/request timeouts and bounded retries; avoid infinite retry loops.
 
 **To-do**
-- [ ] Implement Pydantic Settings classes and environment variable naming convention.
-- [ ] Add validated defaults and conditional requirements for optional services.
-- [ ] Add a sanitized settings representation for diagnostics.
-- [ ] Update `.env.example` without real credentials.
+- [x] Implement Pydantic Settings classes and environment variable naming convention.
+- [x] Add validated defaults and conditional requirements for optional services.
+- [x] Add a sanitized settings representation for diagnostics.
+- [x] Update `.env.example` without real credentials.
 - [ ] Test valid config, missing required values, invalid values, and secret redaction.
 
 ### Step 5 — Integrate PostgreSQL and MinIO configuration
@@ -147,10 +147,10 @@ Centralize environment-backed settings using Pydantic Settings.
 Connect the application persistence layer to PP-11 infrastructure without taking ownership of Compose topology.
 
 **To-do**
-- [ ] Build SQLAlchemy engine/session lifecycle from typed settings.
-- [ ] Add a lightweight PostgreSQL connectivity/readiness check.
-- [ ] Define MinIO bucket and object-prefix conventions consistent with PP-11's dedicated storage configuration.
-- [ ] Define artifact URI format and backend abstraction; do not store object bytes in PostgreSQL.
+- [x] Build SQLAlchemy engine/session lifecycle from typed settings.
+- [x] Add a lightweight PostgreSQL connectivity/readiness check.
+- [x] Define MinIO bucket and object-prefix conventions consistent with PP-11's dedicated storage configuration.
+- [x] Define artifact URI format and metadata-only storage boundary; object bytes remain outside PostgreSQL.
 - [ ] Verify application can run with PostgreSQL only when graph/vector profiles are disabled.
 - [ ] Document local startup prerequisites and expected service endpoints without assuming Docker runtime validation has occurred.
 
@@ -223,6 +223,10 @@ Connect the application persistence layer to PP-11 infrastructure without taking
 - **Rule:** consume upstream outputs as defined. Do not silently redefine shared identifiers, schemas, storage ownership, or configuration. If a shared contract must change, update the owning plan and affected consumers in the same change set.
 
 ## 8. Completion notes
+
+Implementation status (2026-11-19): schema models, initial migration, typed settings, session/readiness helpers, unit/integration test cases, and schema documentation have been added on `feat/pp-12-metadata-schema-config`.
+
+Validation still pending: resolve and commit the refreshed `uv.lock` (the execution environment has no package-index network access), run Ruff/Mypy/pytest and PostgreSQL Testcontainers CI, review downstream PP-13–PP-20 and PP-39–PP-42 assumptions, and perform live MinIO connectivity checks when Docker runtime is available.
 
 Record:
 - Implemented schema/models and migration revision.
