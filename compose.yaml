@@ -140,8 +140,6 @@ services:
       MINIO_ADDRESS: minio:9000
       MINIO_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-protein3d}
       MINIO_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-protein3d_minio_local_only}
-      MINIO_BUCKET_NAME: protein3d-milvus
-      MINIO_USE_SSL: "false"
     depends_on:
       etcd:
         condition: service_healthy
@@ -152,6 +150,7 @@ services:
       - "127.0.0.1:${MILVUS_METRICS_PORT:-9091}:9091"
     volumes:
       - milvus_data:/var/lib/milvus
+      - ./configs/milvus.user.yaml:/milvus/configs/user.yaml:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:9091/healthz"]
       interval: 15s
