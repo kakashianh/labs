@@ -2,6 +2,7 @@
 from __future__ import annotations
 import enum
 import uuid
+from datetime import datetime
 from typing import Any
 from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint, Uuid, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -38,7 +39,7 @@ class Protein(Base):
     sequence: Mapped[str | None] = mapped_column(Text, nullable=True)
     organism_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     provenance: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
-    created_at: Mapped[Any] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[Any] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     mappings: Mapped[list[ProteinIdMapping]] = relationship(back_populates="protein")
     chain_associations: Mapped[list[StructureProteinChain]] = relationship(back_populates="protein")
@@ -97,7 +98,7 @@ class DatasetRun(Base):
     source_version: Mapped[str | None] = mapped_column(String(100), nullable=True)
     status: Mapped[str] = mapped_column(String(20), default=DatasetStatus.PENDING.value, nullable=False)
     provenance: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
-    started_at: Mapped[Any | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[Any | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[Any] = mapped_column(DateTime(timezone=True), server_default=func.now())
     jobs: Mapped[list[Job]] = relationship(back_populates="dataset_run")
