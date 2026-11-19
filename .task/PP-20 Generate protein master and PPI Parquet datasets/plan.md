@@ -17,8 +17,8 @@ Related implementation plans: [PP-17](../PP-17%20Build%20Spark%20ingestion%20pip
 Freeze column names, types, nullability, partition keys, and dataset versioning rules.
 
 **To-do**
-- [ ] Define protein master schema and stable primary key
-- [ ] Define PPI edge schema and stable edge key
+- [ ] Define protein master schema with opaque project-owned `protein_id` UUID primary key and UniProt accession as an external alternate identifier
+- [ ] Define PPI edge schema with `source_protein_id`/`target_protein_id` UUID endpoints and stable edge key; retain original source identifiers as provenance
 - [ ] Include source/run lineage and quality flags
 - [ ] Document schema evolution policy
 
@@ -38,7 +38,7 @@ Validate schemas, counts, relationships, and artifact checksums before marking a
 
 **To-do**
 - [ ] Check unique protein and edge keys
-- [ ] Check every PPI endpoint exists in protein master
+- [ ] Check every PPI endpoint UUID exists in protein master and its external mapping is traceable
 - [ ] Check non-null required fields and score ranges
 - [ ] Record dataset version, source versions, counts, and checksums
 
