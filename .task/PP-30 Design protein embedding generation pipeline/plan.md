@@ -24,10 +24,10 @@ Choose sequence and optional structure encoders based on compute budget and proj
 
 ### Step 2 — Define embedding record contract
 
-Specify canonical ID, modality, vector dimension, model version, normalization, and source artifact references.
+Specify internal `protein_id` UUID, external accession metadata, modality, vector dimension, model version, normalization, and source artifact references.
 
 **To-do**
-- [ ] Define embedding schema and unique key
+- [ ] Define embedding schema with `protein_id` UUID + modality/model version unique key; retain UniProt accession as metadata
 - [ ] Define float precision and vector normalization policy
 - [ ] Include model/checkpoint hash and preprocessing version
 - [ ] Define missing-structure and failed-inference states
