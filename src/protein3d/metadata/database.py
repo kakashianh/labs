@@ -1,5 +1,6 @@
 """SQLAlchemy engine and session lifecycle helpers."""
 from collections.abc import Iterator
+from contextlib import contextmanager
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -12,6 +13,7 @@ def build_engine(settings: Settings | None = None) -> Engine:
 def build_session_factory(engine: Engine) -> sessionmaker[Session]:
     return sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
+@contextmanager
 def session_scope(factory: sessionmaker[Session]) -> Iterator[Session]:
     session = factory()
     try:
