@@ -18,7 +18,7 @@ Specify search filters, pagination, protein detail fields, prediction response, 
 
 **To-do**
 - [ ] Define GET search endpoint and query parameters
-- [ ] Define protein detail response keyed by canonical UniProt accession
+- [ ] Define public protein detail lookup by UniProt accession (and optionally internal UUID); repository resolves external accession mappings to internal `protein_id` UUID
 - [ ] Define prediction summary, GO terms, and confidence/score semantics
 - [ ] Define not-found, invalid ID, and unavailable-model responses
 - [ ] Publish response examples and OpenAPI schemas
@@ -29,7 +29,7 @@ Build efficient lookup using indexed metadata and bounded pagination.
 
 **To-do**
 - [ ] Implement repository queries against metadata/curated datasets
-- [ ] Normalize accepted accession formats and aliases
+- [ ] Normalize accepted external accession formats and resolve them through `protein_id_mappings` to the internal UUID
 - [ ] Add filters and deterministic pagination
 - [ ] Avoid unbounded scans and N+1 data access
 - [ ] Add query/index tests using representative protein fixtures
