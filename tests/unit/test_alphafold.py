@@ -1,6 +1,7 @@
 """Unit tests for the AlphaFold API adapter and manifest contract."""
 
 import json
+from email.message import Message
 from io import BytesIO
 from unittest.mock import patch
 from urllib.error import HTTPError
@@ -91,7 +92,7 @@ def test_client_raises_not_found_without_retry() -> None:
         "https://alphafold.ebi.ac.uk/api/prediction/Q9Y261",
         404,
         "Not Found",
-        {},
+        Message(),
         None,
     )
     with patch("protein3d.ingestion.alphafold.urlopen", side_effect=error):
