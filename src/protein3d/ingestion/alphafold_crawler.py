@@ -117,9 +117,7 @@ def crawl_candidates(
                     body, coordinate = client.download_cif(
                         model, str(candidate.protein_id), max_bytes=max_coordinate_bytes
                     )
-                    object_store.put_object(
-                        coordinate.object_key, body, coordinate.content_type
-                    )
+                    object_store.put_object(coordinate.object_key, body, coordinate.content_type)
                     artifact_uri = artifact_storage.uri_for(coordinate.object_key)
                     persist_alpha_fold_artifacts(
                         session,
