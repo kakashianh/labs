@@ -36,10 +36,10 @@ class MinioObjectStore:
         date_stamp = now.strftime("%Y%m%d")
         payload_hash = hashlib.sha256(body).hexdigest()
         canonical_headers = (
+            f"content-type:{content_type}\n"
             f"host:{host}\n"
             f"x-amz-content-sha256:{payload_hash}\n"
             f"x-amz-date:{amz_date}\n"
-            f"content-type:{content_type}\n"
         )
         signed_headers = "content-type;host;x-amz-content-sha256;x-amz-date"
         canonical_request = "\n".join(
