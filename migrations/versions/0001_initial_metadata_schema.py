@@ -1,5 +1,7 @@
 """Create PP-12 relational metadata schema."""
 
+# fmt: off
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
@@ -250,3 +252,4 @@ def downgrade() -> None:
     op.drop_table("structures")
     op.drop_table("protein_id_mappings")
     op.drop_table("proteins")
+# fmt: on
