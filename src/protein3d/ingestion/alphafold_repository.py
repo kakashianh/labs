@@ -29,6 +29,7 @@ def persist_alpha_fold_artifacts(
     protein_id: uuid.UUID,
     model: AlphaFoldModel,
     coordinate: DownloadedCoordinate,
+    artifact_uri: str,
     *,
     dataset_run_id: uuid.UUID | None = None,
     job_id: uuid.UUID | None = None,
@@ -39,7 +40,7 @@ def persist_alpha_fold_artifacts(
     therefore retained in metadata_json until PP-21 creates chain associations.
     The caller owns the transaction and must call this only after MinIO upload.
     """
-    storage_uri = f"s3://{coordinate.object_key}"
+    storage_uri = artifact_uri
     source_version = model.model_version or "unversioned"
     structure = session.scalar(
         select(Structure).where(
