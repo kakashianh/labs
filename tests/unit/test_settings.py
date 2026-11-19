@@ -29,3 +29,9 @@ def test_sanitized_settings_redact_credentials() -> None:
     assert sanitized["object_storage_secret_key"] == "***"
     assert "super-secret" not in str(sanitized)
     assert "minio-secret" not in str(sanitized)
+
+
+@pytest.mark.unit
+def test_invalid_database_port_is_rejected() -> None:
+    with pytest.raises(ValidationError):
+        Settings(database_port=70000)
