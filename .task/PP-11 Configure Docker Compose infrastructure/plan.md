@@ -67,44 +67,44 @@ Use Compose profiles to avoid running every infrastructure service on every deve
 Translate the logical architecture into an explicit, minimal local service topology.
 
 **To-do**
-- [ ] Confirm core services: PostgreSQL and MinIO.
-- [ ] Confirm the `graph` profile: JanusGraph + Cassandra + Elasticsearch; record the selected compatible versions and required JanusGraph backend/index configuration.
-- [ ] Confirm the `vector` profile: Milvus standalone + etcd, reusing MinIO with a dedicated bucket/prefix.
-- [ ] Record each service's purpose, dependency, internal service DNS name, host port, health/readiness mechanism, and persistent data location.
+- [x] Confirm core services: PostgreSQL and MinIO.
+- [x] Confirm the `graph` profile: JanusGraph 1.2.0 + Cassandra 5.0.9 + Elasticsearch 9.5.4; configure the documented `cql-es` template.
+- [x] Confirm the `vector` profile: Milvus 2.6.26 standalone + etcd 3.5.18, reusing MinIO with a dedicated bucket.
+- [x] Record service purposes, dependencies, internal DNS names, host ports, health checks, and persistent data locations in `compose.yaml` and the infrastructure guide.
 - [ ] Document expected CPU, memory, and disk requirements for core, graph, and vector profiles based on selected image documentation and local validation.
-- [ ] Define the default profile behavior and ensure optional services do not start unless explicitly requested.
-- [ ] Confirm that no permanent Spark cluster or application/API container is needed in PP-11.
+- [x] Define the default profile behavior: only PostgreSQL and MinIO run by default; optional services require explicit profiles.
+- [x] Confirm that no permanent Spark cluster or application/API container is needed in PP-11.
 
 ### Step 2 — Implement Compose and service configuration
 
 Create reproducible Compose configuration with pinned images and isolated persistence.
 
 **To-do**
-- [ ] Add or update `compose.yaml` with explicit image versions (no `latest` tags).
-- [ ] Configure PostgreSQL and MinIO as default core services.
-- [ ] Add graph and vector services under their respective Compose profiles.
-- [ ] Configure service DNS-based internal connectivity; avoid hardcoding container IP addresses.
-- [ ] Configure named volumes for persistent database, graph, vector metadata, and object data.
-- [ ] Configure health checks and `depends_on: condition: service_healthy` where supported and appropriate; do not treat container startup order as application readiness.
-- [ ] Configure restart policies suitable for local development.
-- [ ] Bind host ports to loopback by default and document any intentional exception.
-- [ ] Configure Milvus to use the MinIO service with a dedicated bucket/prefix and configure required bucket initialization safely.
-- [ ] Keep service credentials and secret values out of Compose source; use environment interpolation and local ignored env files.
-- [ ] Pin compatible versions for JanusGraph, Cassandra, Elasticsearch, Milvus, etcd, PostgreSQL, and MinIO.
+- [x] Add `compose.yaml` with explicit image versions (no `latest` tags).
+- [x] Configure PostgreSQL and MinIO as default core services.
+- [x] Add graph and vector services under their respective Compose profiles.
+- [x] Configure service DNS-based internal connectivity; no container IP addresses are hardcoded.
+- [x] Configure named volumes for PostgreSQL, graph, vector metadata, and object data.
+- [x] Configure service health checks and readiness-gated dependencies.
+- [x] Configure restart policies suitable for local development.
+- [x] Bind published host ports to loopback by default.
+- [x] Configure Milvus to use the shared MinIO service with its own bucket; Milvus creates the bucket when absent, while the application artifact bucket is deferred to its owning downstream task.
+- [x] Keep credentials out of committed Compose values; use environment interpolation and ignored local `.env` files.
+- [x] Pin explicit image versions, including the documented JanusGraph/Cassandra/Elasticsearch compatibility set.
 
 ### Step 3 — Environment, lifecycle commands, and safe operations
 
 Make the environment straightforward to start, inspect, stop, and reset.
 
 **To-do**
-- [ ] Provide a complete `.env.example` containing variable names and safe placeholders only.
-- [ ] Ensure real `.env` files are ignored by Git and never required to be pasted into chat or committed.
-- [ ] Add or update Makefile targets for core startup, graph startup, vector startup, shutdown, logs, status, and configuration validation.
-- [ ] Document equivalent raw Docker Compose commands for every target.
-- [ ] Document how to start optional profiles without accidentally enabling all heavyweight services.
-- [ ] Provide an explicit destructive data-reset command; make its volume deletion behavior clear and never run it as part of ordinary shutdown.
-- [ ] Document backup/restore expectations and the fact that deleting named volumes permanently removes local service data.
-- [ ] Document port conflicts, common startup failures, and how to inspect service logs.
+- [x] Provide a complete `.env.example` with local-only placeholder credentials and port overrides.
+- [x] Confirm `.env` is ignored by Git; documentation explicitly prohibits committing or sharing local credentials.
+- [x] Add Makefile targets for core/graph/vector startup, all-profile startup, shutdown, logs, status, and validation.
+- [x] Document raw Docker Compose commands and profile selection in the infrastructure guide.
+- [x] Document how to start graph and vector profiles independently or together.
+- [x] Provide a separate destructive `infra-reset`; ordinary shutdown preserves named volumes.
+- [ ] Document backup/restore procedures; the guide does clearly state that deleting named volumes permanently removes local service data.
+- [x] Document loopback port mappings, common startup diagnostics, and service log commands.
 
 ### Step 4 — Validate service readiness and integration
 
@@ -127,13 +127,13 @@ Verify that the documented environment works from a clean checkout and survives 
 Publish a reliable handoff for developers and downstream implementation tasks.
 
 **To-do**
-- [ ] Document architecture, profile selection, services, ports, volumes, dependencies, and resource expectations.
-- [ ] Document setup prerequisites and clean-checkout startup instructions.
-- [ ] Document health/readiness checks, lifecycle commands, troubleshooting, and destructive reset behavior.
-- [ ] Add a CI job or workflow step to run Compose configuration validation without requiring all heavyweight services to start.
+- [ ] Document architecture, profile selection, services, ports, volumes, dependencies, and measured resource expectations.
+- [x] Document prerequisites, `.env` setup, and clean-checkout startup.
+- [x] Document readiness checks, lifecycle commands, troubleshooting, and destructive reset behavior.
+- [x] Add a CI job to validate default, graph, vector, and combined Compose rendering without starting service containers.
 - [ ] Add lightweight automated checks for environment templates and Compose configuration where practical.
 - [ ] Link PP-12, PP-26–PP-29, and PP-31–PP-33 to the infrastructure service names, connection endpoints, and readiness assumptions they consume.
-- [ ] Record version compatibility decisions and known limitations.
+- [x] Record pinned version compatibility decisions, upstream references, and known limitations.
 
 ## 5. Deliverables
 
@@ -181,4 +181,17 @@ Publish a reliable handoff for developers and downstream implementation tasks.
 
 ## 9. Completion notes
 
-Record implementation decisions, exact image versions, compatibility references, commands and test results, resource observations, artifacts produced, and deviations from this plan.
+### Implemented on `feat/pp-11-docker-compose-infrastructure`
+
+- Added `compose.yaml` with only PostgreSQL and MinIO in the default profile and opt-in `graph` and `vector` profiles; Milvus object-storage overrides live in `configs/milvus.user.yaml`.
+- Pinned PostgreSQL 17.6, MinIO RELEASE.2025-09-06T17-38-46Z, JanusGraph 1.2.0, Cassandra 5.0.9, Elasticsearch 9.5.4, Milvus 2.6.26, and etcd 3.5.18.
+- JanusGraph compatibility follows the 1.2.0 release matrix; Milvus uses the documented standalone topology and a dedicated MinIO bucket (auto-created by Milvus if absent).
+- Added `.env.example`, Makefile lifecycle/validation targets, `docs/infrastructure/docker-compose.md`, and README quick-start instructions.
+- Extended `.github/workflows/ci.yml` with Compose rendering checks for default and optional profiles; pushes to `feat/**` now trigger CI.
+
+### Verification still required
+
+- GitHub Actions must pass the Python quality gates and Compose configuration job before merge.
+- A developer with Docker must start each profile and verify actual container health, service connectivity, MinIO object operations, and named-volume persistence. These runtime checks have not been claimed as completed in this implementation session.
+- Confirm image availability and health-check behavior on the target Docker host; optional graph/vector profiles require substantial local resources.
+- Record any deviations and measured resource observations after the runtime smoke test.

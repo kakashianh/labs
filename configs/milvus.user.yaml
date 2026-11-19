@@ -1,0 +1,5 @@
+# Milvus standalone overrides for the shared local MinIO instance.
+# Credentials and endpoint are injected via the documented MINIO_* environment variables.
+minio:
+  bucketName: protein3d-milvus
+  rootPath: protein3d

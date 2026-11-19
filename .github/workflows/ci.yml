@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - project/Protein3D-PPI
-      - feat/pp-9-python-development-environment
+      - 'feat/**'
   pull_request:
     branches:
       - project/Protein3D-PPI
@@ -49,3 +49,20 @@ jobs:
         run: |
           uv run --locked protein3d --help
           uv run --locked python -c "import protein3d; print(protein3d.__version__)"
+
+  compose:
+    name: Docker Compose validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify Docker Compose
+        run: docker compose version
+
+      - name: Validate default and optional profiles
+        run: |
+          docker compose --env-file .env.example config --quiet
+          docker compose --env-file .env.example --profile graph config --quiet
+          docker compose --env-file .env.example --profile vector config --quiet
+          docker compose --env-file .env.example --profile graph --profile vector config --quiet
