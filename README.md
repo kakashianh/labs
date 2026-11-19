@@ -66,6 +66,22 @@ Copy `.env.example` to `.env` for local-only settings. Never commit `.env`, cred
 
 Do not commit downloaded protein structures, large source datasets, model weights, embeddings, or generated pipeline outputs. Keep small synthetic test fixtures in version control; use the storage locations and lifecycle conventions defined by downstream tasks for larger artifacts.
 
+
+### Local infrastructure (PP-11)
+
+Docker Compose provides PostgreSQL and MinIO by default. Start optional graph and vector services only when needed:
+
+```bash
+cp .env.example .env
+make infra-up
+make infra-up-graph   # optional JanusGraph + Cassandra + Elasticsearch
+make infra-up-vector  # optional Milvus + etcd
+make infra-status
+make infra-down
+```
+
+See [Local infrastructure guide](docs/infrastructure/docker-compose.md) for service profiles, ports, readiness checks, data persistence, troubleshooting, and the explicitly destructive `make infra-reset` command. Never commit the local `.env` file or its credentials.
+
 ### Project layout
 
 ```text
