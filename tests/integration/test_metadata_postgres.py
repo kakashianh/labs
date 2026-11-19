@@ -1,8 +1,8 @@
 """PostgreSQL migration and persistence integration tests."""
 
+import pytest
 from alembic import command
 from alembic.config import Config
-import pytest
 from sqlalchemy import create_engine, inspect, select
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import IntegrityError
