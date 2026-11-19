@@ -2,6 +2,7 @@
 
 from collections.abc import Iterator
 from contextlib import contextmanager
+from typing import cast
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
@@ -40,4 +41,5 @@ def session_scope(factory: sessionmaker[Session]) -> Iterator[Session]:
 
 def check_database_ready(engine: Engine) -> bool:
     with engine.connect() as connection:
-        return connection.execute(text("SELECT 1")).scalar_one() == 1
+        value = connection.execute(text("SELECT 1")).scalar_one()
+        return cast(int, value) == 1
