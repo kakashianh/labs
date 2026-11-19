@@ -47,7 +47,7 @@ Split by protein and, where appropriate, sequence similarity/cluster to reduce h
 Package features, labels, split manifest, and label dictionary with version metadata.
 
 **To-do**
-- [ ] Join PP-33 features to label matrix by canonical accession
+- [ ] Join PP-33 features to label matrix by internal `protein_id` UUID; preserve UniProt accession as external/reporting metadata
 - [ ] Report class imbalance and label frequency distribution
 - [ ] Export sparse targets and dataset manifest
 - [ ] Hand off frozen dataset to PP-35–PP-38
@@ -75,7 +75,7 @@ Package features, labels, split manifest, and label dictionary with version meta
 
 ## 7. Cross-task handoff
 
-- **Upstream:** PP-15 GO annotations; PP-20 protein master; PP-33 fused features; PP-10 data contracts.
+- **Upstream:** PP-12 internal protein UUID/mapping contract; PP-15 GO annotations; PP-20 protein master; PP-33 fused features; PP-10 data contracts.
 - **Consumers / coordination:** PP-15, PP-20, PP-25, PP-29, PP-30, PP-33, PP-35, PP-36, PP-38
 - **Contract rule:** publish frozen split IDs, label dictionary, feature schema, model version, inference signature, and evaluation results. Any target/feature changes require synchronized updates to linked plans.
 
