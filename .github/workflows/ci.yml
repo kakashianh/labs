@@ -42,7 +42,7 @@ jobs:
         run: uvx --from ruff==0.14.5 ruff format --check .
 
       - name: Mypy
-        run: uvx --from mypy==1.18.2 --with pytest==8.4.2 mypy src tests
+        run: uv run --locked mypy src tests
 
       - name: Unit tests
         run: uv run --locked pytest -m unit
