@@ -1,7 +1,8 @@
 """Validated environment-backed application settings."""
 from functools import lru_cache
 from typing import Literal
-from pydantic import Field, SecretStr, model_validator
+from urllib.parse import quote_plus
+from pydantic import AliasChoices, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -9,17 +10,17 @@ class Settings(BaseSettings):
     app_env: Literal["local", "test", "staging", "production"] = "local"
     log_level: str = "INFO"
     database_host: str = "127.0.0.1"
-    database_port: int = Field(default=5432, ge=1, le=65535)
-    database_name: str = "protein3d"
-    database_user: str = "protein3d"
-    database_password: SecretStr = SecretStr("change_me_local_postgres")
+    database_port: int = Field(default=5432, ge=1, le=65535, validation_alias=AliasChoices("PROTEIN3D_DATABASE_PORT", "POSTGRES_PORT"))
+    database_name: str = Field(default="protein3d", validation_alias=AliasChoices("PROTEIN3D_DATABASE_NAME", "POSTGRES_DB"))
+    database_user: str = Field(default="protein3d", validation_alias=AliasChoices("PROTEIN3D_DATABASE_USER", "POSTGRES_USER"))
+    database_password: SecretStr = Field(default=SecretStr("change_me_local_postgres"), validation_alias=AliasChoices("PROTEIN3D_DATABASE_PASSWORD", "POSTGRES_PASSWORD"))
     database_pool_size: int = Field(default=5, ge=1, le=50)
     database_max_overflow: int = Field(default=10, ge=0, le=100)
     database_connect_timeout_seconds: int = Field(default=5, ge=1, le=120)
     object_storage_endpoint: str = "127.0.0.1:9000"
     object_storage_bucket: str = "protein3d-artifacts"
-    object_storage_access_key: str = "protein3d"
-    object_storage_secret_key: SecretStr = SecretStr("change_me_local_minio")
+    object_storage_access_key: str = Field(default="protein3d", validation_alias=AliasChoices("PROTEIN3D_OBJECT_STORAGE_ACCESS_KEY", "MINIO_ROOT_USER"))
+    object_storage_secret_key: SecretStr = Field(default=SecretStr("change_me_local_minio"), validation_alias=AliasChoices("PROTEIN3D_OBJECT_STORAGE_SECRET_KEY", "MINIO_ROOT_PASSWORD"))
     object_storage_secure: bool = False
     object_storage_prefix: str = "artifacts"
     graph_enabled: bool = False
@@ -41,8 +42,9 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
-        password = self.database_password.get_secret_value()
-        return f"postgresql+psycopg://{self.database_user}:{password}@{self.database_host}:{self.database_port}/{self.database_name}?connect_timeout={self.database_connect_timeout_seconds}"
+        username = quote_plus(self.database_user)
+        password = quote_plus(self.database_password.get_secret_value())
+        return f"postgresql+psycopg://{username}:{password}@{self.database_host}:{self.database_port}/{self.database_name}?connect_timeout={self.database_connect_timeout_seconds}"
 
     def sanitized(self) -> dict[str, object]:
         return {
