@@ -33,7 +33,7 @@ docker compose --profile vector up -d
 docker compose --profile graph --profile vector up -d
 ```
 
-Profiles can be started independently. Milvus reuses the core MinIO service and its dedicated `protein3d-milvus` bucket (created by Milvus when absent). Create the separate `protein3d-artifacts` bucket from the MinIO Console when the application-storage task is implemented. Do not point both workloads at the same bucket/prefix.
+Profiles can be started independently. Milvus reuses the core MinIO service and its dedicated `protein3d-milvus` bucket (configured in `configs/milvus.user.yaml` and created by Milvus when absent). The MinIO endpoint and credentials are injected through the documented `MINIO_*` environment variables. Create the separate `protein3d-artifacts` bucket from the MinIO Console when the application-storage task is implemented. Do not point both workloads at the same bucket/prefix.
 
 ## Lifecycle commands
 
@@ -73,7 +73,7 @@ Use `docker compose ps` and `docker compose logs <service>` to diagnose startup.
 
 - PostgreSQL `17.6-alpine`; MinIO `RELEASE.2025-09-06T17-38-46Z` (official Quay registry).
 - Graph: JanusGraph `1.2.0`, Cassandra `5.0.9`, Elasticsearch `9.5.4`. These versions follow JanusGraph 1.2.0's published tested compatibility matrix (Cassandra 5.0.x and Elasticsearch 9.5.x). JanusGraph uses the documented `cql-es` template.
-- Vector: Milvus `2.6.26` standalone and etcd `3.5.18`; MinIO is shared with the core profile using a dedicated bucket.
+- Vector: Milvus `2.6.26` standalone and etcd `3.5.18`; MinIO is shared with the core profile using a dedicated bucket and root prefix configured through Milvus `user.yaml`.
 
 Compatibility references: [JanusGraph release compatibility matrix](https://docs.janusgraph.org/changelog/), [Milvus 2.6 Docker Compose guide](https://milvus.io/docs/v2.6.x/install_standalone-docker-compose.md), [Milvus MinIO/S3 configuration](https://milvus.io/docs/configure_minio.md), and [MinIO Compose reference](https://github.com/minio/minio/tree/master/docs/orchestration/docker-compose). Recheck compatibility when upgrading any pinned image. These local settings disable Elasticsearch security for loopback-only development; do not reuse them in production.
 
