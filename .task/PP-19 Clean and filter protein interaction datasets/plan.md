@@ -6,9 +6,9 @@ Produce a biologically consistent high-confidence human PPI edge dataset suitabl
 
 ## 2. Scope and dependencies
 
-PP-14 STRING raw interactions; PP-15 identifier mappings; PP-17 Spark pipeline; PP-18 canonical IDs.
+PP-12 internal UUID/mapping schema; PP-14 STRING raw interactions; PP-15 identifier mappings; PP-17 Spark pipeline; PP-18 canonical IDs.
 
-Related implementation plans: [PP-14](../PP-14%20undefined/plan.md) · [PP-15](../PP-15%20undefined/plan.md) · [PP-17](../PP-17%20Build%20Spark%20ingestion%20pipeline/plan.md) · [PP-18](../PP-18%20Normalize%20protein%20identifiers%20and%20integrate%20biological%20datasets/plan.md) · [PP-20](../PP-20%20Generate%20protein%20master%20and%20PPI%20Parquet%20datasets/plan.md) · [PP-26](../PP-26%20Design%20JanusGraph%20protein%20interaction%20schema/plan.md) · [PP-27](../PP-27%20Import%20protein%20vertices%20and%20PPI%20edges/plan.md) · [PP-29](../PP-29%20Implement%20PPI%20network%20analytics%20and%20community%20detection/plan.md) · [PP-36](../PP-36%20Implement%20combined%20feature%20and%20graph-based%20prediction/plan.md). These are explicit handoff points; align schemas and versions rather than creating parallel definitions.
+Related implementation plans: [PP-12](../PP-12%20Design%20metadata%20database%20schema%20and%20application%20configuration/plan.md) · [PP-14](../PP-14%20Implement%20STRING%20PPI%20data%20crawler/plan.md) · [PP-15](../PP-15%20Integrate%20UniProt%20ID%20mapping%20and%20Gene%20Ontology%20annotations/plan.md) · [PP-17](../PP-17%20Build%20Spark%20ingestion%20pipeline/plan.md) · [PP-18](../PP-18%20Normalize%20protein%20identifiers%20and%20integrate%20biological%20datasets/plan.md) · [PP-20](../PP-20%20Generate%20protein%20master%20and%20PPI%20Parquet%20datasets/plan.md) · [PP-26](../PP-26%20Design%20JanusGraph%20protein%20interaction%20schema/plan.md) · [PP-27](../PP-27%20Import%20protein%20vertices%20and%20PPI%20edges/plan.md) · [PP-29](../PP-29%20Implement%20PPI%20network%20analytics%20and%20community%20detection/plan.md) · [PP-36](../PP-36%20Implement%20combined%20feature%20and%20graph-based%20prediction/plan.md). These are explicit handoff points; align schemas and versions rather than creating parallel definitions.
 
 ## 3. Step-by-step implementation and to-do
 
@@ -24,17 +24,17 @@ Specify organism, confidence threshold, self-loop policy, duplicate edge policy,
 
 ### Step 2 — Normalize endpoints and filter records
 
-Map both interaction endpoints to canonical protein IDs and reject invalid edges with reason codes.
+Resolve both interaction endpoints to project-owned `protein_id` UUIDs through the external mapping contract; retain original STRING IDs/accessions and reject invalid edges with reason codes.
 
 **To-do**
-- [ ] Map STRING protein IDs using PP-15/PP-18 outputs
+- [ ] Resolve STRING protein IDs through PP-15/PP-18 mappings to internal `protein_id` UUIDs
 - [ ] Remove or quarantine unmapped endpoints
 - [ ] Apply confidence and organism filters
 - [ ] Preserve original scores and evidence metadata
 
 ### Step 3 — Deduplicate and derive graph-ready edges
 
-Create stable edge keys and ensure scores are represented consistently.
+Create stable edge keys from internal endpoint UUIDs and ensure scores are represented consistently.
 
 **To-do**
 - [ ] Canonicalize endpoint ordering for undirected interactions
