@@ -108,3 +108,18 @@ See [Local infrastructure guide](docs/infrastructure/docker-compose.md) for serv
 - [PyTorch release compatibility matrix](https://github.com/pytorch/pytorch/blob/main/RELEASE.md)
 - [PySpark installation and supported Python versions](https://spark.apache.org/docs/latest/api/python/getting_started/install.html)
 - [Biopython release notes](https://github.com/biopython/biopython/blob/master/NEWS.rst)
+
+### Metadata database (PP-12)
+
+PP-12 introduces SQLAlchemy 2.x metadata models and Alembic migrations for proteins, external identifier mappings, structures/chains, dataset runs, jobs, and artifact references. PostgreSQL stores metadata only; large files remain in MinIO/S3-compatible object storage.
+
+```bash
+cp .env.example .env
+uv lock
+uv sync --locked
+uv run alembic upgrade head
+uv run pytest -m unit
+uv run pytest -m integration  # requires Docker / Testcontainers
+```
+
+See [metadata schema and identity contracts](docs/architecture/metadata-schema.md). The protein_id is an opaque project-owned UUID; UniProt accessions and other external identifiers are tracked separately in protein_id_mappings.
