@@ -20,7 +20,7 @@ Never commit `.env`, paste its secrets into issues/chat, or reuse these developm
 
 | Profile | Services | Host endpoints |
 |---|---|---|
-| Default | PostgreSQL, MinIO, one-shot MinIO bucket initializer | PostgreSQL `127.0.0.1:5432`; MinIO API `:9000`, Console `:9001` |
+| Default | PostgreSQL, MinIO | PostgreSQL `127.0.0.1:5432`; MinIO API `:9000`, Console `:9001` |
 | `graph` | Cassandra, Elasticsearch, JanusGraph | CQL `:9042`; Elasticsearch `:9200`; Gremlin Server `:8182` |
 | `vector` | etcd, Milvus standalone | Milvus gRPC `:19530`; health/metrics `:9091` |
 
@@ -33,7 +33,7 @@ docker compose --profile vector up -d
 docker compose --profile graph --profile vector up -d
 ```
 
-Profiles can be started independently. Milvus reuses the core MinIO service and its dedicated `protein3d-milvus` bucket; application artifacts use `protein3d-artifacts`. Do not point both workloads at the same bucket/prefix.
+Profiles can be started independently. Milvus reuses the core MinIO service and its dedicated `protein3d-milvus` bucket (created by Milvus when absent). Create the separate `protein3d-artifacts` bucket from the MinIO Console when the application-storage task is implemented. Do not point both workloads at the same bucket/prefix.
 
 ## Lifecycle commands
 
@@ -63,7 +63,7 @@ docker compose --profile graph --profile vector config --quiet
 ## Readiness and connectivity
 
 - PostgreSQL: `docker compose exec postgres pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"`.
-- MinIO: `docker compose exec minio mc ready local`; the initializer creates both project buckets.
+- MinIO: `docker compose exec minio mc ready local`; Milvus creates its configured bucket on first startup if it does not exist.
 - JanusGraph: wait for its health check after Cassandra and Elasticsearch become healthy; connect via Gremlin Server at `ws://127.0.0.1:8182/gremlin`.
 - Milvus: wait for its health check; connect using the SDK at `http://127.0.0.1:19530`.
 
