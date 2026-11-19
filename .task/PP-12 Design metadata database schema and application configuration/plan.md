@@ -197,16 +197,16 @@ Connect the application persistence layer to PP-11 infrastructure without taking
 
 ## 5. Acceptance criteria
 
-- [ ] Internal protein identity is an opaque project-owned UUID; external accessions are mappings only.
-- [ ] Resolved, merged, deprecated, unresolved, and ambiguous identifier states are represented without conflation.
-- [ ] Structure/protein/chain relationships support the required many-to-many cardinality.
-- [ ] Dataset runs, jobs, and artifacts have documented lifecycle/provenance semantics.
-- [ ] Large structures, Parquet files, and embeddings are not stored as relational binary payloads.
-- [ ] PostgreSQL schema is reproducible from versioned Alembic migrations on a clean database.
-- [ ] Typed configuration validates required values, keeps optional services optional, and redacts secrets.
-- [ ] Unit and PostgreSQL integration tests pass in CI.
-- [ ] Documentation and downstream contracts are consistent with PP-10 and PP-11.
-- [ ] No real credentials, generated large datasets, or local runtime state are committed.
+- [x] Internal protein identity is an opaque project-owned UUID; external accessions are mappings only.
+- [x] Resolved, merged, deprecated, unresolved, and ambiguous identifier states are represented without conflation.
+- [x] Structure/protein/chain relationships support the required many-to-many cardinality.
+- [x] Dataset runs, jobs, and artifacts have documented lifecycle/provenance semantics.
+- [x] Large structures, Parquet files, and embeddings are not stored as relational binary payloads.
+- [x] PostgreSQL schema is reproducible from versioned Alembic migrations on a clean database.
+- [x] Typed configuration validates required values, keeps optional services optional, and redacts secrets.
+- [x] Unit and PostgreSQL integration tests pass in CI.
+- [x] Documentation and downstream contracts are consistent with PP-10 and PP-11.
+- [x] No real credentials, generated large datasets, or local runtime state are committed.
 
 ## 6. Testing strategy
 
