@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from testcontainers.postgres import PostgresContainer  # type: ignore[import-untyped]
 
 from protein3d.config import get_settings
+from protein3d.metadata.database import check_database_ready
 from protein3d.metadata.models import (
     Artifact,
     DatasetRun,
@@ -42,6 +43,7 @@ def test_postgres_migrations_and_metadata_constraints(
         command.upgrade(cfg, "head")
         engine = create_engine(get_settings().database_url)
         try:
+            assert check_database_ready(engine)
             expected = {
                 "proteins",
                 "protein_id_mappings",
