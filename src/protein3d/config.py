@@ -15,6 +15,7 @@ class Settings(BaseSettings):
         env_prefix="PROTEIN3D_",
         extra="ignore",
         case_sensitive=False,
+        populate_by_name=True,
     )
 
     app_env: Literal["local", "test", "staging", "production"] = "local"
