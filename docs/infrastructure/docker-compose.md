@@ -67,7 +67,7 @@ docker compose --profile graph --profile vector config --quiet
 - JanusGraph: wait for its health check after Cassandra and Elasticsearch become healthy; connect via Gremlin Server at `ws://127.0.0.1:8182/gremlin`.
 - Milvus: wait for its health check; connect using the SDK at `http://127.0.0.1:19530`.
 
-Use `docker compose ps` and `docker compose logs <service>` to diagnose startup. First startup of Cassandra, Elasticsearch, JanusGraph, or Milvus can take several minutes. Elasticsearch may require host `vm.max_map_count` tuning on Linux; see the official Elasticsearch Docker documentation. Milvus standalone has substantial memory and fast-disk requirements; see the official [Milvus prerequisites](https://milvus.io/docs/prerequisite-docker.md).
+If a host port is already in use, change the corresponding `*_PORT` value in `.env` before starting the stack. Use `docker compose ps` and `docker compose logs <service>` to diagnose startup. First startup of Cassandra, Elasticsearch, JanusGraph, or Milvus can take several minutes. Elasticsearch may require host `vm.max_map_count` tuning on Linux; see the official Elasticsearch Docker documentation. Milvus standalone has substantial memory and fast-disk requirements; see the official [Milvus prerequisites](https://milvus.io/docs/prerequisite-docker.md).
 
 ## Version and compatibility decisions
 
