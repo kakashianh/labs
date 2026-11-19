@@ -2,85 +2,232 @@
 
 ## 1. Objective
 
-Define persistent metadata and configuration contracts for protein records, source provenance, jobs, and generated artifacts.
+Implement the PostgreSQL metadata persistence foundation and typed application configuration for protein identity, external identifier mappings, structure-chain associations, dataset/job lifecycle, and artifact metadata.
+
+This task establishes stable contracts for downstream ingestion, processing, search, and prediction tasks. It does not implement those downstream pipelines or APIs.
 
 ## 2. Scope and design context
 
-Keep large raw structures, Parquet files, and embeddings out of relational metadata tables; store references and lifecycle metadata instead.
+**Upstream dependencies**
+- PP-10 defines architecture, ownership, and data contracts.
+- PP-11 provides local PostgreSQL and MinIO services through Docker Compose.
 
-**Upstream dependencies:** PP-10 defines schemas; PP-11 provides local database services.
+**Related plans:** [PP-10](../PP-10%20Design%20project%20architecture%20and%20module%20structure/plan.md) · [PP-11](../PP-11%20Configure%20Docker%20Compose%20infrastructure/plan.md) · [PP-13](../PP-13%20Implement%20AlphaFold%20structure%20data%20crawler/plan.md) · [PP-16](../PP-16%20Implement%20ingestion%20validation%20and%20raw%20data%20management/plan.md) · [PP-17](../PP-17%20Build%20Spark%20ingestion%20pipeline/plan.md) · [PP-20](../PP-20%20Generate%20protein%20master%20and%20PPI%20Parquet%20datasets/plan.md) · [PP-39](../PP-39%20Implement%20protein%20search%20and%20detail%20REST%20APIs/plan.md) · [PP-42](../PP-42%20Integrate%20prediction%20results%20and%20perform%20end-to-end%20testing/plan.md).
 
-**Related plans:** [PP-10](../PP-10%20Design%20project%20architecture%20and%20module%20structure/plan.md) · [PP-11](../PP-11%20Configure%20Docker%20Compose%20infrastructure/plan.md) · [PP-13](../PP-13%20Implement%20AlphaFold%20structure%20data%20crawler/plan.md) · [PP-16](../PP-16%20Implement%20ingestion%20validation%20and%20raw%20data%20management/plan.md) · [PP-17](../PP-17%20Build%20Spark%20ingestion%20pipeline/plan.md) · [PP-20](../PP-20%20Generate%20protein%20master%20and%20PPI%20Parquet%20datasets/plan.md) · [PP-39](../PP-39%20Implement%20protein%20search%20and%20detail%20REST%20APIs/plan.md) · [PP-42](../PP-42%20Integrate%20prediction%20results%20and%20perform%20end-to-end%20testing/plan.md). Keep the contracts and dependency direction consistent with these linked tasks.
+### 2.1 Ownership boundaries
+
+PP-12 owns:
+- PostgreSQL metadata schema and migration history.
+- Protein master identity and external identifier mapping.
+- Structure metadata and protein-chain associations.
+- Dataset run and processing job metadata.
+- Artifact metadata and storage URI conventions.
+- Typed application settings for configured services.
+
+Out of scope:
+- JanusGraph PPI graph schema and graph operations.
+- Milvus collection, index, and vector lifecycle.
+- Spark ingestion/feature pipelines and crawler implementation.
+- Model training/inference implementation and full REST API endpoints.
+- Production secrets management or deployment orchestration.
+
+### 2.2 Technology decisions
+
+- PostgreSQL is the source of truth for relational metadata.
+- Use SQLAlchemy 2.x for persistence models and Alembic for versioned migrations.
+- Use Pydantic Settings for typed environment-backed configuration.
+- Use UUID primary keys for project-owned internal entities.
+- Store large structure files, Parquet datasets, model files, and embeddings outside PostgreSQL. PostgreSQL stores metadata and references only.
+- MinIO is the local object-storage target supplied by PP-11. Keep storage backend and URI explicit so another backend can be configured later.
 
 ## 3. Step-by-step implementation and to-do
 
-### Step 1 — Identify metadata entities and lifecycle
+### Step 1 — Define metadata domain model and identity rules
 
-Model protein identity, source cross-references, structure records, dataset runs, processing status, and artifact locations.
+Define entities, relationships, ownership, and lifecycle semantics before implementing persistence.
 
-**To-do**
-- [ ] Define entity relationships and ownership
-- [ ] Separate canonical protein identity from source-specific identifiers
-- [ ] Define dataset/run status and timestamps
-- [ ] Store artifact URI/checksum rather than large binary payloads
+**Required entities**
+- `proteins`: project-owned canonical protein records.
+- `protein_id_mappings`: external identifiers and their mapping/resolution state.
+- `structures`: source structure metadata and object location.
+- `structure_protein_chains`: association between a structure, a protein, and its chain identifier.
+- `dataset_runs`: source/dataset version, processing lifecycle, and provenance.
+- `jobs`: individual processing task lifecycle and execution metadata.
+- `artifacts`: metadata for files produced or consumed by a dataset/job.
 
-### Step 2 — Design schema and migrations
+PPI edges remain owned by JanusGraph; embeddings remain owned by Milvus. Do not create duplicate relational tables for either.
 
-Create normalized tables, constraints, indexes, and migration strategy.
-
-**To-do**
-- [ ] Define DDL/ORM models and primary/foreign keys
-- [ ] Add uniqueness constraints for canonical IDs and source mappings
-- [ ] Add indexes for common protein and job lookups
-- [ ] Define migration and rollback conventions
-
-### Step 3 — Define configuration model
-
-Centralize typed configuration for databases, external APIs, storage, Spark, graph/vector stores, and model paths.
+**Identity contract**
+- `protein_id` is an opaque, immutable UUID generated/owned by this project.
+- UniProt accession and identifiers from other providers are external keys stored in `protein_id_mappings`; never derive the internal primary key from an accession.
+- A mapping must identify its namespace/source and source identifier. Include source release/version where it affects interpretation.
+- Preserve mapping states such as `resolved`, `merged`, `deprecated`, `unresolved`, and `ambiguous`; unresolved or ambiguous identifiers must not be silently treated as absent proteins or negative biological evidence.
+- Reconcile PP-10 examples that could be read as accession-derived internal IDs (for example, `protein:Q9Y261`) with this opaque-UUID rule. Update the owning PP-10 contract/example in the same change set if it is genuinely contradictory; otherwise document the interpretation here and link the exact contract.
 
 **To-do**
-- [ ] Define environment-specific config profiles
-- [ ] Validate required settings at startup
-- [ ] Define timeout, retry, batch-size, and concurrency defaults
-- [ ] Ensure secrets are injected through environment/secret management
+- [ ] Define entity relationship diagram and ownership notes.
+- [ ] Define field-level data dictionary and nullability.
+- [ ] Confirm UUID internal identity and external mapping semantics against PP-10.
+- [ ] Define mapping status transitions and uniqueness scope.
+- [ ] Define dataset/job lifecycle states and allowed transitions.
+- [ ] Define structure-to-protein chain cardinality and association semantics.
 
-### Step 4 — Implement schema smoke checks
+### Step 2 — Design normalized PostgreSQL schema
 
-Apply migrations and test key constraints using local infrastructure.
+Implement relational models with explicit constraints and indexes.
+
+**Schema requirements**
+- `proteins`: UUID primary key, canonical metadata, timestamps, and only fields owned by the project.
+- `protein_id_mappings`: FK to `proteins` when resolved, source namespace, external ID, optional source version, mapping status, provenance, and timestamps. Support unresolved/ambiguous records without fabricating a protein FK.
+- `structures`: stable internal UUID, source/provider identifier, source version, structure format, sequence/quality metadata where available, and storage reference.
+- `structure_protein_chains`: FKs to structure and protein, chain identifier, optional residue/range metadata, and uniqueness appropriate to a structure-chain association.
+- `dataset_runs`: dataset name/type, source and source version, run status, start/end timestamps, and provenance.
+- `jobs`: job type, status, retry count, idempotency key where applicable, timestamps, error summary, and relation to its dataset run.
+- `artifacts`: artifact URI, storage backend, format/content type, size in bytes, checksum and checksum algorithm, source version, creation time, and optional owning job/dataset relation.
+
+**Lifecycle conventions**
+- Dataset run states: `pending`, `running`, `completed`, `failed`, `cancelled`.
+- Job states: `queued`, `running`, `succeeded`, `failed`, `cancelled`.
+- Record UTC timestamps consistently.
+- Define retry/resume and idempotency behavior; retries must not create duplicate logical outputs.
+- Preserve failure summaries and provenance without storing secrets or unbounded raw logs in metadata rows.
+
+**Constraints and indexes**
+- Add primary/foreign keys, check constraints, and uniqueness constraints for source mappings and structure-chain associations.
+- Define whether uniqueness is global or scoped by source namespace/version; document the decision.
+- Add indexes for canonical protein lookup, external-ID lookup, structure lookup, dataset/job status and chronology, and artifact ownership.
+- Use explicit delete/update behavior; avoid cascading deletion of provenance or artifacts without a documented reason.
 
 **To-do**
-- [ ] Apply migrations against Compose database
-- [ ] Test duplicate and invalid reference rejection
-- [ ] Test config loading and missing-secret failure behavior
-- [ ] Document schema and configuration changes
+- [ ] Implement SQLAlchemy 2.x models and PostgreSQL types.
+- [ ] Add required constraints, indexes, and relationship definitions.
+- [ ] Add deterministic fixtures for resolved, merged, deprecated, unresolved, and ambiguous mappings.
+- [ ] Document lifecycle transitions, uniqueness rules, and deletion semantics.
+
+### Step 3 — Implement versioned migrations
+
+Use Alembic as the sole schema migration mechanism.
+
+**To-do**
+- [ ] Initialize Alembic and connect it to the application settings/model metadata.
+- [ ] Create the initial migration for all PP-12-owned tables, indexes, and constraints.
+- [ ] Ensure migrations work on an empty PostgreSQL database.
+- [ ] Document upgrade, downgrade, and revision-generation commands.
+- [ ] Test migration upgrade and downgrade/re-upgrade behavior; if a downgrade is intentionally unsupported for a data migration, document why.
+- [ ] Ensure application startup does not silently mutate the schema outside migrations.
+
+### Step 4 — Implement typed application configuration
+
+Centralize environment-backed settings using Pydantic Settings.
+
+**Configuration groups**
+- Application: environment, log level, service name.
+- PostgreSQL: host, port, database, username, password, connection options/pool sizing.
+- MinIO/object storage: endpoint, bucket, access key, secret key, secure/TLS flag, and object prefix.
+- Optional graph/vector services: connection settings only; these must not be required for a PostgreSQL-only application startup.
+- External data sources: base URLs, request timeout, retry policy, and user-agent where applicable.
+- Processing defaults: batch size and concurrency, with conservative documented defaults.
+
+**Security and validation**
+- Load local development values from environment and an ignored local `.env`; commit only `.env.example`.
+- Never hardcode credentials or print secret values in logs/errors.
+- Validate required settings at startup and fail with actionable, redacted messages.
+- Keep optional service settings optional unless the corresponding feature is enabled.
+- Define safe defaults for connection/request timeouts and bounded retries; avoid infinite retry loops.
+
+**To-do**
+- [ ] Implement Pydantic Settings classes and environment variable naming convention.
+- [ ] Add validated defaults and conditional requirements for optional services.
+- [ ] Add a sanitized settings representation for diagnostics.
+- [ ] Update `.env.example` without real credentials.
+- [ ] Test valid config, missing required values, invalid values, and secret redaction.
+
+### Step 5 — Integrate PostgreSQL and MinIO configuration
+
+Connect the application persistence layer to PP-11 infrastructure without taking ownership of Compose topology.
+
+**To-do**
+- [ ] Build SQLAlchemy engine/session lifecycle from typed settings.
+- [ ] Add a lightweight PostgreSQL connectivity/readiness check.
+- [ ] Define MinIO bucket and object-prefix conventions consistent with PP-11's dedicated storage configuration.
+- [ ] Define artifact URI format and backend abstraction; do not store object bytes in PostgreSQL.
+- [ ] Verify application can run with PostgreSQL only when graph/vector profiles are disabled.
+- [ ] Document local startup prerequisites and expected service endpoints without assuming Docker runtime validation has occurred.
+
+### Step 6 — Automated tests and schema verification
+
+**Unit tests**
+- [ ] Test mapping-state validation and identity invariants.
+- [ ] Test configuration parsing, defaults, conditional requirements, and secret redaction.
+- [ ] Test lifecycle transition validation and artifact metadata validation.
+
+**PostgreSQL integration tests**
+- [ ] Use Testcontainers (or the repository's established equivalent) to provision an isolated PostgreSQL instance.
+- [ ] Apply Alembic migrations against a clean database.
+- [ ] Verify primary/foreign keys, uniqueness, check constraints, and indexes.
+- [ ] Verify unresolved/ambiguous mappings can be represented without inventing a protein record.
+- [ ] Verify structure-chain associations support multiple proteins/chains correctly.
+- [ ] Verify dataset/job/artifact relationships and idempotency constraints.
+- [ ] Verify migration upgrade and downgrade/re-upgrade behavior where supported.
+
+**CI and reproducibility**
+- [ ] Run formatting/lint/type checks and the full unit test suite.
+- [ ] Run PostgreSQL integration tests in CI with deterministic cleanup.
+- [ ] Ensure tests do not depend on a developer's local database or MinIO data.
+- [ ] Record exact commands and expected outcomes.
+
+### Step 7 — Documentation and downstream handoff
+
+**To-do**
+- [ ] Add ER diagram and concise schema/data dictionary documentation.
+- [ ] Document identity/mapping semantics and lifecycle states.
+- [ ] Document environment variables, local setup, migration, and test commands.
+- [ ] Document artifact URI/bucket/prefix convention and ownership boundary.
+- [ ] Review downstream PP-13–PP-20 and PP-39–PP-42 plans for compatibility; propose focused follow-up edits where their assumptions conflict, without implementing their scope here.
+- [ ] Record decisions, commands, test results, known limitations, and deferred runtime checks in completion notes.
 
 ## 4. Deliverables
 
-- Implementation/configuration and documentation within this ticket's scope.
-- Versioned interfaces and assumptions needed by dependent tasks.
-- Automated tests and reproducible verification instructions.
+- SQLAlchemy 2.x metadata models for all PP-12-owned entities.
+- Alembic initial migration and documented migration workflow.
+- Pydantic Settings configuration with safe defaults and validation.
+- PostgreSQL integration tests and configuration/domain unit tests.
+- ER diagram, data dictionary, identity/lifecycle documentation, and local setup guide.
+- Explicit downstream interface/ownership notes for dependent plans.
 
 ## 5. Acceptance criteria
 
-- [ ] All step to-dos are completed and reviewed.
-- [ ] Contracts, configuration, and operational assumptions are documented.
-- [ ] Failure cases are explicit; no credentials or generated large datasets are committed.
-- [ ] Tests pass from the documented local environment.
-- [ ] Downstream plans and interfaces remain consistent.
+- [ ] Internal protein identity is an opaque project-owned UUID; external accessions are mappings only.
+- [ ] Resolved, merged, deprecated, unresolved, and ambiguous identifier states are represented without conflation.
+- [ ] Structure/protein/chain relationships support the required many-to-many cardinality.
+- [ ] Dataset runs, jobs, and artifacts have documented lifecycle/provenance semantics.
+- [ ] Large structures, Parquet files, and embeddings are not stored as relational binary payloads.
+- [ ] PostgreSQL schema is reproducible from versioned Alembic migrations on a clean database.
+- [ ] Typed configuration validates required values, keeps optional services optional, and redacts secrets.
+- [ ] Unit and PostgreSQL integration tests pass in CI.
+- [ ] Documentation and downstream contracts are consistent with PP-10 and PP-11.
+- [ ] No real credentials, generated large datasets, or local runtime state are committed.
 
 ## 6. Testing strategy
 
-- **Unit:** validate core rules, configuration, schemas, and edge cases.
-- **Integration:** verify the relevant infrastructure or module boundary.
-- **Regression:** preserve stable IDs and contracts with fixed fixtures.
-- **Manual:** follow the documented clean-checkout workflow.
+- **Unit:** domain invariants, mapping states, lifecycle transitions, artifact metadata, settings validation, and secret redaction.
+- **Integration:** clean PostgreSQL provision, Alembic migrations, constraints, relationships, and persistence behavior.
+- **Regression:** fixed fixtures prove stable UUID identity and external mapping semantics.
+- **CI:** deterministic lint/type/unit/integration checks; no dependency on developer-local services.
+- **Manual:** follow clean-checkout setup and migration instructions. Validate MinIO connectivity when Docker runtime is available and record the result separately from CI configuration checks.
 
 ## 7. Cross-task links
 
-- **Upstream:** PP-10 defines schemas; PP-11 provides local database services.
-- **Downstream / coordination:** PP-13–PP-16, PP-17–PP-20, PP-39–PP-42
-- **Rule:** consume upstream outputs as defined; do not silently redefine shared identifiers, schemas, or configuration. If a contract must change, update the owning plan and all affected consumers in the same change set.
+- **Upstream:** PP-10 owns shared architecture/data contracts; PP-11 owns Compose infrastructure and service topology.
+- **Downstream:** PP-13–PP-16 consume protein identity, external mappings, structure metadata, and artifact references; PP-17–PP-20 consume dataset/run and artifact contracts; PP-39–PP-42 consume stable protein identifiers and metadata interfaces.
+- **Rule:** consume upstream outputs as defined. Do not silently redefine shared identifiers, schemas, storage ownership, or configuration. If a shared contract must change, update the owning plan and affected consumers in the same change set.
 
 ## 8. Completion notes
 
-Record implementation decisions, commands and test results, artifacts produced, data/source versions, and deviations from this plan.
+Record:
+- Implemented schema/models and migration revision.
+- Configuration variables and defaults.
+- Commands executed and test/CI results.
+- Artifacts/docs produced.
+- Runtime checks actually performed (distinguish CI config validation from live service connectivity).
+- Deviations, unresolved decisions, and downstream follow-up work.
