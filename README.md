@@ -32,10 +32,11 @@ Python 3.13 is within the documented support ranges of these key libraries, whil
 #### First-time setup
 
 ```bash
+uv lock
 uv sync --locked
 ```
 
-The `uv.lock` file is committed to keep the project dependency graph reproducible. PP-9 intentionally declares no scientific/runtime dependencies yet; those are added with the domain tasks that own them.
+The `uv.lock` file records the resolved dependency graph. Whenever a task changes declared dependencies, run `uv lock` and commit the refreshed lockfile before relying on `uv sync --locked`.
 
 #### Common commands
 
@@ -108,3 +109,18 @@ See [Local infrastructure guide](docs/infrastructure/docker-compose.md) for serv
 - [PyTorch release compatibility matrix](https://github.com/pytorch/pytorch/blob/main/RELEASE.md)
 - [PySpark installation and supported Python versions](https://spark.apache.org/docs/latest/api/python/getting_started/install.html)
 - [Biopython release notes](https://github.com/biopython/biopython/blob/master/NEWS.rst)
+
+### Metadata database (PP-12)
+
+PP-12 introduces SQLAlchemy 2.x metadata models and Alembic migrations for proteins, external identifier mappings, structures/chains, dataset runs, jobs, and artifact references. PostgreSQL stores metadata only; large files remain in MinIO/S3-compatible object storage.
+
+```bash
+cp .env.example .env
+uv lock
+uv sync --locked
+uv run alembic upgrade head
+uv run pytest -m unit
+uv run pytest -m integration  # requires Docker / Testcontainers
+```
+
+See [metadata schema and identity contracts](docs/architecture/metadata-schema.md). The protein_id is an opaque project-owned UUID; UniProt accessions and other external identifiers are tracked separately in protein_id_mappings.

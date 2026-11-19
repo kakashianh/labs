@@ -9,10 +9,19 @@ description = "Protein 3D structure and protein-protein interaction analysis wor
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
 authors = [{ name = "Protein3D-PPI contributors" }]
-dependencies = []
+dependencies = [
+  "SQLAlchemy==2.0.44",
+  "alembic==1.17.1",
+  "pydantic-settings==2.11.0",
+  "psycopg[binary]==3.2.12",
+]
 
 [dependency-groups]
-dev = []
+dev = [
+  "mypy==1.18.2",
+  "pytest==8.4.2",
+  "testcontainers[postgres]==4.13.2",
+]
 
 [project.scripts]
 protein3d = "protein3d.cli:main"
@@ -47,7 +56,3 @@ mypy_path = "src"
 files = ["src", "tests"]
 strict = true
 warn_unused_configs = true
-
-[tool.uv]
-# Runtime dependencies are intentionally empty in PP-9. Domain dependencies belong
-# to the plans that introduce their owning modules.

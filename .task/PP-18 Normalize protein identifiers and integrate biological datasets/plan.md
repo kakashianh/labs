@@ -6,25 +6,25 @@ Join source datasets through canonical UniProt accessions while preserving cross
 
 ## 2. Scope and dependencies
 
-PP-15 identifier mappings and GO annotations; PP-17 Spark readers; PP-10 shared schemas.
+PP-12 internal protein UUID and mapping schema; PP-15 identifier mappings and GO annotations; PP-17 Spark readers; PP-10 shared schemas.
 
-Related implementation plans: [PP-15](../PP-15%20undefined/plan.md) · [PP-17](../PP-17%20Build%20Spark%20ingestion%20pipeline/plan.md) · [PP-19](../PP-19%20Clean%20and%20filter%20protein%20interaction%20datasets/plan.md) · [PP-20](../PP-20%20Generate%20protein%20master%20and%20PPI%20Parquet%20datasets/plan.md) · [PP-21](../PP-21%20Implement%20PDB%2FmmCIF%20structure%20parser/plan.md) · [PP-26](../PP-26%20Design%20JanusGraph%20protein%20interaction%20schema/plan.md) · [PP-34](../PP-34%20Prepare%20multi-label%20protein%20function%20prediction%20dataset/plan.md). These are explicit handoff points; align schemas and versions rather than creating parallel definitions.
+Related implementation plans: [PP-12](../PP-12%20Design%20metadata%20database%20schema%20and%20application%20configuration/plan.md) · [PP-15](../PP-15%20Integrate%20UniProt%20ID%20mapping%20and%20Gene%20Ontology%20annotations/plan.md) · [PP-17](../PP-17%20Build%20Spark%20ingestion%20pipeline/plan.md) · [PP-19](../PP-19%20Clean%20and%20filter%20protein%20interaction%20datasets/plan.md) · [PP-20](../PP-20%20Generate%20protein%20master%20and%20PPI%20Parquet%20datasets/plan.md) · [PP-21](../PP-21%20Implement%20PDB%2FmmCIF%20structure%20parser/plan.md) · [PP-26](../PP-26%20Design%20JanusGraph%20protein%20interaction%20schema/plan.md) · [PP-34](../PP-34%20Prepare%20multi-label%20protein%20function%20prediction%20dataset/plan.md). These are explicit handoff points; align schemas and versions rather than creating parallel definitions.
 
 ## 3. Step-by-step implementation and to-do
 
 ### Step 1 — Define join rules and conflict policy
 
-Specify accession normalization, isoform policy, organism constraints, and how conflicting source values are retained.
+Specify accession normalization, isoform policy, organism constraints, and how conflicting source values are retained. The UniProt accession is an external join key; the project-owned `protein_id` UUID remains the persisted internal identity.
 
 **To-do**
-- [ ] Define canonical key and normalization functions
+- [ ] Define `protein_id` UUID resolution and external accession normalization functions
 - [ ] Specify handling for ambiguous or missing mappings
 - [ ] Define deduplication precedence without losing source provenance
 - [ ] Document taxonomy and isoform rules
 
 ### Step 2 — Implement mapping joins in Spark
 
-Join AlphaFold, STRING, UniProt, and GO data using explicit cardinality checks.
+Join AlphaFold, STRING, UniProt, and GO data using explicit cardinality checks; preserve the resolved internal UUID and source accessions.
 
 **To-do**
 - [ ] Join source IDs to canonical accessions
@@ -37,7 +37,7 @@ Join AlphaFold, STRING, UniProt, and GO data using explicit cardinality checks.
 Build consistent protein records and annotation relationships for downstream processing.
 
 **To-do**
-- [ ] Combine protein metadata and sequence attributes
+- [ ] Combine protein metadata and sequence attributes while preserving `protein_id` UUID and external accession mappings
 - [ ] Attach GO annotations with evidence codes
 - [ ] Keep annotation namespaces and source references
 - [ ] Record source snapshot and transformation version

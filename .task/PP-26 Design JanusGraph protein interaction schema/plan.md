@@ -8,7 +8,7 @@ Design a graph schema that represents canonical proteins and evidence-backed PPI
 
 PP-10 shared entity contracts; PP-11 graph infrastructure; PP-20 protein/PPI Parquet datasets.
 
-Related plans: [PP-10](../PP-10%20Design%20project%20architecture%20and%20module%20structure/plan.md) · [PP-11](../PP-11%20Configure%20Docker%20Compose%20infrastructure/plan.md) · [PP-19](../PP-19%20Clean%20and%20filter%20protein%20interaction%20datasets/plan.md) · [PP-20](../PP-20%20Generate%20protein%20master%20and%20PPI%20Parquet%20datasets/plan.md) · [PP-27](../PP-27%20Import%20protein%20vertices%20and%20PPI%20edges/plan.md) · [PP-28](../PP-28%20Implement%20graph%20query%20and%20neighborhood%20services/plan.md) · [PP-29](../PP-29%20Implement%20PPI%20network%20analytics%20and%20community%20detection/plan.md) · [PP-36](../PP-36%20Implement%20combined%20feature%20and%20graph-based%20prediction/plan.md) · [PP-40](../PP-40%20Implement%20PPI%20exploration%20and%20similarity%20search%20APIs/plan.md). Keep graph identifiers, schema version, query semantics, and vector feature versions consistent across these tasks.
+Related plans: [PP-10](../PP-10%20Design%20project%20architecture%20and%20module%20structure/plan.md) · [PP-12](../PP-12%20Design%20metadata%20database%20schema%20and%20application%20configuration/plan.md) · [PP-11](../PP-11%20Configure%20Docker%20Compose%20infrastructure/plan.md) · [PP-19](../PP-19%20Clean%20and%20filter%20protein%20interaction%20datasets/plan.md) · [PP-20](../PP-20%20Generate%20protein%20master%20and%20PPI%20Parquet%20datasets/plan.md) · [PP-27](../PP-27%20Import%20protein%20vertices%20and%20PPI%20edges/plan.md) · [PP-28](../PP-28%20Implement%20graph%20query%20and%20neighborhood%20services/plan.md) · [PP-29](../PP-29%20Implement%20PPI%20network%20analytics%20and%20community%20detection/plan.md) · [PP-36](../PP-36%20Implement%20combined%20feature%20and%20graph-based%20prediction/plan.md) · [PP-40](../PP-40%20Implement%20PPI%20exploration%20and%20similarity%20search%20APIs/plan.md). Keep graph identifiers, schema version, query semantics, and vector feature versions consistent across these tasks.
 
 ## 3. Step-by-step implementation and to-do
 
@@ -17,7 +17,7 @@ Related plans: [PP-10](../PP-10%20Design%20project%20architecture%20and%20module
 Define Protein vertices and INTERACTS edges with canonical identifiers and biological provenance.
 
 **To-do**
-- [ ] Define vertex label and canonical accession property
+- [ ] Define Protein vertex key as project-owned `protein_id` UUID and retain UniProt accession as a unique indexed external property
 - [ ] Define edge label, confidence score, evidence, source release, and direction policy
 - [ ] Decide whether self-interactions are retained
 - [ ] Define property cardinality and nullability
@@ -27,7 +27,7 @@ Define Protein vertices and INTERACTS edges with canonical identifiers and biolo
 Design unique and mixed indexes based on expected access patterns and backend support.
 
 **To-do**
-- [ ] Define unique index for canonical protein accession
+- [ ] Define unique index for internal `protein_id` and a unique/indexed external UniProt accession property
 - [ ] Define indexes for confidence, source, and selected protein properties
 - [ ] Define schema creation order and consistency settings
 - [ ] Document backend-specific limitations
@@ -39,7 +39,7 @@ Specify traversal patterns for neighbors, confidence filtering, degree, and comm
 **To-do**
 - [ ] Define request/response shapes for one-hop and k-hop neighbors
 - [ ] Define pagination and traversal limits
-- [ ] Define stable graph IDs versus canonical protein IDs
+- [ ] Define stable graph IDs versus project-owned `protein_id` UUIDs and external accession properties
 - [ ] Document query timeout and safety limits
 
 ### Step 4 — Validate schema against data and workloads
@@ -61,7 +61,7 @@ Use a small PP-20 sample to verify the schema supports graph loading and intende
 ## 5. Acceptance criteria
 
 - [ ] All step-level to-dos are complete.
-- [ ] Canonical protein accession remains the stable cross-system identifier.
+- [ ] Project-owned `protein_id` UUID is the stable internal cross-system identity; UniProt accession remains a searchable external identifier.
 - [ ] Imports/queries are bounded, observable, and safe to rerun where applicable.
 - [ ] Graph data reconciles with the source dataset version.
 - [ ] Unit and integration tests pass against a representative graph.

@@ -8,7 +8,7 @@ Define a reproducible pipeline to create sequence and structural embeddings with
 
 PP-20 protein master; PP-21/PP-22 structure parsing and coordinates; PP-25 structure feature vectors; PP-11 compute/runtime.
 
-Related plans: [PP-20](../PP-20%20Generate%20protein%20master%20and%20PPI%20Parquet%20datasets/plan.md) · [PP-21](../PP-21%20Implement%20PDB%2FmmCIF%20structure%20parser/plan.md) · [PP-22](../PP-22%20Extract%20protein%20residues%20and%20atomic%20coordinates/plan.md) · [PP-25](../PP-25%20Generate%20protein%20structure%20feature%20vectors/plan.md) · [PP-31](../PP-31%20Configure%20Milvus%20collections%20and%20vector%20indexing/plan.md) · [PP-32](../PP-32%20Implement%20protein%20similarity%20search/plan.md) · [PP-33](../PP-33%20Integrate%20structure%2C%20sequence%20and%20PPI%20features/plan.md) · [PP-34](../PP-34%20Prepare%20multi-label%20protein%20function%20prediction%20dataset/plan.md) · [PP-35](../PP-35%20Implement%20baseline%20protein%20function%20classification%20models/plan.md). These links define the expected producer/consumer relationships for this feature.
+Related plans: [PP-12](../PP-12%20Design%20metadata%20database%20schema%20and%20application%20configuration/plan.md) · [PP-20](../PP-20%20Generate%20protein%20master%20and%20PPI%20Parquet%20datasets/plan.md) · [PP-21](../PP-21%20Implement%20PDB%2FmmCIF%20structure%20parser/plan.md) · [PP-22](../PP-22%20Extract%20protein%20residues%20and%20atomic%20coordinates/plan.md) · [PP-25](../PP-25%20Generate%20protein%20structure%20feature%20vectors/plan.md) · [PP-31](../PP-31%20Configure%20Milvus%20collections%20and%20vector%20indexing/plan.md) · [PP-32](../PP-32%20Implement%20protein%20similarity%20search/plan.md) · [PP-33](../PP-33%20Integrate%20structure%2C%20sequence%20and%20PPI%20features/plan.md) · [PP-34](../PP-34%20Prepare%20multi-label%20protein%20function%20prediction%20dataset/plan.md) · [PP-35](../PP-35%20Implement%20baseline%20protein%20function%20classification%20models/plan.md). These links define the expected producer/consumer relationships for this feature.
 
 ## 3. Step-by-step implementation and to-do
 
@@ -24,10 +24,10 @@ Choose sequence and optional structure encoders based on compute budget and proj
 
 ### Step 2 — Define embedding record contract
 
-Specify canonical ID, modality, vector dimension, model version, normalization, and source artifact references.
+Specify internal `protein_id` UUID, external accession metadata, modality, vector dimension, model version, normalization, and source artifact references.
 
 **To-do**
-- [ ] Define embedding schema and unique key
+- [ ] Define embedding schema with `protein_id` UUID + modality/model version unique key; retain UniProt accession as metadata
 - [ ] Define float precision and vector normalization policy
 - [ ] Include model/checkpoint hash and preprocessing version
 - [ ] Define missing-structure and failed-inference states

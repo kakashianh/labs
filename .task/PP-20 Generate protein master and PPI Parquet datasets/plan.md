@@ -8,7 +8,7 @@ Publish the curated canonical protein table and graph-ready PPI table as version
 
 PP-18 integrated protein data; PP-19 cleaned PPI edges; PP-17 Spark orchestration; PP-12 metadata.
 
-Related implementation plans: [PP-17](../PP-17%20Build%20Spark%20ingestion%20pipeline/plan.md) · [PP-18](../PP-18%20Normalize%20protein%20identifiers%20and%20integrate%20biological%20datasets/plan.md) · [PP-19](../PP-19%20Clean%20and%20filter%20protein%20interaction%20datasets/plan.md) · [PP-21](../PP-21%20Implement%20PDB%2FmmCIF%20structure%20parser/plan.md) · [PP-26](../PP-26%20Design%20JanusGraph%20protein%20interaction%20schema/plan.md) · [PP-27](../PP-27%20Import%20protein%20vertices%20and%20PPI%20edges/plan.md) · [PP-30](../PP-30%20Design%20protein%20embedding%20generation%20pipeline/plan.md) · [PP-34](../PP-34%20Prepare%20multi-label%20protein%20function%20prediction%20dataset/plan.md). These are explicit handoff points; align schemas and versions rather than creating parallel definitions.
+Related implementation plans: [PP-12](../PP-12%20Design%20metadata%20database%20schema%20and%20application%20configuration/plan.md) · [PP-17](../PP-17%20Build%20Spark%20ingestion%20pipeline/plan.md) · [PP-18](../PP-18%20Normalize%20protein%20identifiers%20and%20integrate%20biological%20datasets/plan.md) · [PP-19](../PP-19%20Clean%20and%20filter%20protein%20interaction%20datasets/plan.md) · [PP-21](../PP-21%20Implement%20PDB%2FmmCIF%20structure%20parser/plan.md) · [PP-26](../PP-26%20Design%20JanusGraph%20protein%20interaction%20schema/plan.md) · [PP-27](../PP-27%20Import%20protein%20vertices%20and%20PPI%20edges/plan.md) · [PP-30](../PP-30%20Design%20protein%20embedding%20generation%20pipeline/plan.md) · [PP-34](../PP-34%20Prepare%20multi-label%20protein%20function%20prediction%20dataset/plan.md). These are explicit handoff points; align schemas and versions rather than creating parallel definitions.
 
 ## 3. Step-by-step implementation and to-do
 
@@ -17,8 +17,8 @@ Related implementation plans: [PP-17](../PP-17%20Build%20Spark%20ingestion%20pip
 Freeze column names, types, nullability, partition keys, and dataset versioning rules.
 
 **To-do**
-- [ ] Define protein master schema and stable primary key
-- [ ] Define PPI edge schema and stable edge key
+- [ ] Define protein master schema with opaque project-owned `protein_id` UUID primary key and UniProt accession as an external alternate identifier
+- [ ] Define PPI edge schema with `source_protein_id`/`target_protein_id` UUID endpoints and stable edge key; retain original source identifiers as provenance
 - [ ] Include source/run lineage and quality flags
 - [ ] Document schema evolution policy
 
@@ -38,7 +38,7 @@ Validate schemas, counts, relationships, and artifact checksums before marking a
 
 **To-do**
 - [ ] Check unique protein and edge keys
-- [ ] Check every PPI endpoint exists in protein master
+- [ ] Check every PPI endpoint UUID exists in protein master and its external mapping is traceable
 - [ ] Check non-null required fields and score ranges
 - [ ] Record dataset version, source versions, counts, and checksums
 

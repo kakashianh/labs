@@ -8,7 +8,7 @@ Build a leakage-aware supervised dataset using GO annotations as multi-label pro
 
 PP-15 GO annotations; PP-20 protein master; PP-33 fused features; PP-10 data contracts.
 
-Related plans: [PP-15](../PP-15%20Integrate%20UniProt%20ID%20mapping%20and%20Gene%20Ontology%20annotations/plan.md) · [PP-20](../PP-20%20Generate%20protein%20master%20and%20PPI%20Parquet%20datasets/plan.md) · [PP-25](../PP-25%20Generate%20protein%20structure%20feature%20vectors/plan.md) · [PP-29](../PP-29%20Implement%20PPI%20network%20analytics%20and%20community%20detection/plan.md) · [PP-30](../PP-30%20Design%20protein%20embedding%20generation%20pipeline/plan.md) · [PP-33](../PP-33%20Integrate%20structure%2C%20sequence%20and%20PPI%20features/plan.md) · [PP-35](../PP-35%20Implement%20baseline%20protein%20function%20classification%20models/plan.md) · [PP-36](../PP-36%20Implement%20combined%20feature%20and%20graph-based%20prediction/plan.md) · [PP-38](../PP-38%20Evaluate%20models%20and%20analyze%20prediction%20performance/plan.md). Preserve the shared protein accession, feature schema, annotation policy, and frozen split contract across these plans.
+Related plans: [PP-12](../PP-12%20Design%20metadata%20database%20schema%20and%20application%20configuration/plan.md) · [PP-15](../PP-15%20Integrate%20UniProt%20ID%20mapping%20and%20Gene%20Ontology%20annotations/plan.md) · [PP-20](../PP-20%20Generate%20protein%20master%20and%20PPI%20Parquet%20datasets/plan.md) · [PP-25](../PP-25%20Generate%20protein%20structure%20feature%20vectors/plan.md) · [PP-29](../PP-29%20Implement%20PPI%20network%20analytics%20and%20community%20detection/plan.md) · [PP-30](../PP-30%20Design%20protein%20embedding%20generation%20pipeline/plan.md) · [PP-33](../PP-33%20Integrate%20structure%2C%20sequence%20and%20PPI%20features/plan.md) · [PP-35](../PP-35%20Implement%20baseline%20protein%20function%20classification%20models/plan.md) · [PP-36](../PP-36%20Implement%20combined%20feature%20and%20graph-based%20prediction/plan.md) · [PP-38](../PP-38%20Evaluate%20models%20and%20analyze%20prediction%20performance/plan.md). Preserve the internal `protein_id` UUID, external UniProt accession, feature schema, annotation policy, and frozen split contract across these plans.
 
 ## 3. Step-by-step implementation and to-do
 
@@ -47,7 +47,7 @@ Split by protein and, where appropriate, sequence similarity/cluster to reduce h
 Package features, labels, split manifest, and label dictionary with version metadata.
 
 **To-do**
-- [ ] Join PP-33 features to label matrix by canonical accession
+- [ ] Join PP-33 features to label matrix by internal `protein_id` UUID; preserve UniProt accession as external/reporting metadata
 - [ ] Report class imbalance and label frequency distribution
 - [ ] Export sparse targets and dataset manifest
 - [ ] Hand off frozen dataset to PP-35–PP-38
@@ -75,7 +75,7 @@ Package features, labels, split manifest, and label dictionary with version meta
 
 ## 7. Cross-task handoff
 
-- **Upstream:** PP-15 GO annotations; PP-20 protein master; PP-33 fused features; PP-10 data contracts.
+- **Upstream:** PP-12 internal protein UUID/mapping contract; PP-15 GO annotations; PP-20 protein master; PP-33 fused features; PP-10 data contracts.
 - **Consumers / coordination:** PP-15, PP-20, PP-25, PP-29, PP-30, PP-33, PP-35, PP-36, PP-38
 - **Contract rule:** publish frozen split IDs, label dictionary, feature schema, model version, inference signature, and evaluation results. Any target/feature changes require synchronized updates to linked plans.
 

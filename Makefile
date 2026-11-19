@@ -1,10 +1,11 @@
-.PHONY: setup lint format-check type-check test test-unit test-integration smoke check clean infra-config infra-up infra-up-graph infra-up-vector infra-up-all infra-down infra-status infra-logs infra-reset
+.PHONY: setup lint format-check type-check test test-unit test-integration migrate migration-revision smoke check clean infra-config infra-up infra-up-graph infra-up-vector infra-up-all infra-down infra-status infra-logs infra-reset
 
 RUFF_VERSION ?= 0.14.5
 MYPY_VERSION ?= 1.18.2
 PYTEST_VERSION ?= 8.4.2
 
 setup:
+	uv lock
 	uv sync --locked
 
 lint:
@@ -14,15 +15,21 @@ format-check:
 	uvx --from ruff==$(RUFF_VERSION) ruff format --check .
 
 type-check:
-	uvx --from mypy==$(MYPY_VERSION) --with pytest==$(PYTEST_VERSION) mypy src tests
+	uv run --locked mypy src tests
 
 test: test-unit test-integration
 
 test-unit:
-	uvx --from pytest==$(PYTEST_VERSION) pytest -m unit
+	uv run --locked pytest -m unit
 
 test-integration:
-	uvx --from pytest==$(PYTEST_VERSION) pytest -m integration
+	uv run --locked pytest -m integration
+
+migrate:
+	uv run --locked alembic upgrade head
+
+migration-revision:
+	uv run --locked alembic revision --autogenerate -m "$(message)"
 
 smoke:
 	uv run --locked protein3d --help

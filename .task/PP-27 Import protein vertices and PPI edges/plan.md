@@ -8,7 +8,7 @@ Load curated protein and interaction datasets into JanusGraph with idempotency a
 
 PP-26 approved graph schema; PP-20 versioned Parquet datasets; PP-11 graph runtime.
 
-Related plans: [PP-20](../PP-20%20Generate%20protein%20master%20and%20PPI%20Parquet%20datasets/plan.md) · [PP-26](../PP-26%20Design%20JanusGraph%20protein%20interaction%20schema/plan.md) · [PP-28](../PP-28%20Implement%20graph%20query%20and%20neighborhood%20services/plan.md) · [PP-29](../PP-29%20Implement%20PPI%20network%20analytics%20and%20community%20detection/plan.md) · [PP-36](../PP-36%20Implement%20combined%20feature%20and%20graph-based%20prediction/plan.md) · [PP-40](../PP-40%20Implement%20PPI%20exploration%20and%20similarity%20search%20APIs/plan.md). Keep graph identifiers, schema version, query semantics, and vector feature versions consistent across these tasks.
+Related plans: [PP-12](../PP-12%20Design%20metadata%20database%20schema%20and%20application%20configuration/plan.md) · [PP-20](../PP-20%20Generate%20protein%20master%20and%20PPI%20Parquet%20datasets/plan.md) · [PP-26](../PP-26%20Design%20JanusGraph%20protein%20interaction%20schema/plan.md) · [PP-28](../PP-28%20Implement%20graph%20query%20and%20neighborhood%20services/plan.md) · [PP-29](../PP-29%20Implement%20PPI%20network%20analytics%20and%20community%20detection/plan.md) · [PP-36](../PP-36%20Implement%20combined%20feature%20and%20graph-based%20prediction/plan.md) · [PP-40](../PP-40%20Implement%20PPI%20exploration%20and%20similarity%20search%20APIs/plan.md). Keep graph identifiers, schema version, query semantics, and vector feature versions consistent across these tasks.
 
 ## 3. Step-by-step implementation and to-do
 
@@ -17,8 +17,8 @@ Related plans: [PP-20](../PP-20%20Generate%20protein%20master%20and%20PPI%20Parq
 Map Parquet columns to graph properties and define batch size, checkpoint, and rerun behavior.
 
 **To-do**
-- [ ] Map canonical accession to vertex key
-- [ ] Map PPI edge key, confidence, and provenance properties
+- [ ] Map project-owned `protein_id` UUID to vertex key and store UniProt accession as an indexed external property
+- [ ] Map PPI edge key, UUID endpoints, confidence, and source provenance properties
 - [ ] Define batch size, retry, and checkpoint strategy
 - [ ] Record source dataset version and graph load run ID
 
@@ -28,7 +28,7 @@ Load proteins before edges and make repeated imports safe.
 
 **To-do**
 - [ ] Read protein master in bounded batches
-- [ ] Upsert by canonical accession using schema index
+- [ ] Upsert by project-owned `protein_id` UUID using the graph schema index
 - [ ] Track created/updated/skipped/failed counts
 - [ ] Quarantine invalid records and preserve failure details
 
@@ -61,7 +61,7 @@ Compare counts, endpoints, scores, and representative traversals.
 ## 5. Acceptance criteria
 
 - [ ] All step-level to-dos are complete.
-- [ ] Canonical protein accession remains the stable cross-system identifier.
+- [ ] Project-owned `protein_id` UUID remains the stable internal identity; UniProt accession is retained as an external property.
 - [ ] Imports/queries are bounded, observable, and safe to rerun where applicable.
 - [ ] Graph data reconciles with the source dataset version.
 - [ ] Unit and integration tests pass against a representative graph.
