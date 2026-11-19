@@ -66,7 +66,7 @@ PPI edges remain owned by JanusGraph; embeddings remain owned by Milvus. Do not 
 
 **To-do**
 - [x] Define entity relationship diagram and ownership notes.
-- [ ] Define field-level data dictionary and nullability.
+- [x] Define field-level data dictionary and nullability.
 - [x] Confirm UUID internal identity and external mapping semantics against PP-10; corrected the Protein contract example to use an opaque UUID.
 - [x] Define mapping status transitions and uniqueness scope (source + source ID + source version).
 - [x] Define dataset/job lifecycle states and allowed transitions.
@@ -111,10 +111,10 @@ Use Alembic as the sole schema migration mechanism.
 **To-do**
 - [x] Initialize Alembic and connect it to the application settings/model metadata.
 - [x] Create the initial migration for all PP-12-owned tables, indexes, and constraints.
-- [ ] Ensure migrations work on an empty PostgreSQL database.
+- [x] Ensure migrations work on an empty PostgreSQL database (Testcontainers integration test).
 - [x] Document upgrade, downgrade, and revision-generation commands.
-- [ ] Test migration upgrade and downgrade/re-upgrade behavior; if a downgrade is intentionally unsupported for a data migration, document why.
-- [ ] Ensure application startup does not silently mutate the schema outside migrations.
+- [x] Test migration upgrade and downgrade/re-upgrade behavior against an isolated PostgreSQL container.
+- [x] Ensure application startup does not silently mutate the schema outside migrations; Alembic is the only schema mutation path.
 
 ### Step 4 — Implement typed application configuration
 
@@ -140,7 +140,7 @@ Centralize environment-backed settings using Pydantic Settings.
 - [x] Add validated defaults and conditional requirements for optional services.
 - [x] Add a sanitized settings representation for diagnostics.
 - [x] Update `.env.example` without real credentials.
-- [ ] Test valid config, missing required values, invalid values, and secret redaction.
+- [x] Test valid config, missing optional-service endpoint, invalid values, and secret redaction.
 
 ### Step 5 — Integrate PostgreSQL and MinIO configuration
 
@@ -151,40 +151,40 @@ Connect the application persistence layer to PP-11 infrastructure without taking
 - [x] Add a lightweight PostgreSQL connectivity/readiness check.
 - [x] Define MinIO bucket and object-prefix conventions consistent with PP-11's dedicated storage configuration.
 - [x] Define artifact URI format and metadata-only storage boundary; object bytes remain outside PostgreSQL.
-- [ ] Verify application can run with PostgreSQL only when graph/vector profiles are disabled.
-- [ ] Document local startup prerequisites and expected service endpoints without assuming Docker runtime validation has occurred.
+- [x] Verify the metadata persistence layer/readiness check with PostgreSQL only; graph/vector remain disabled by default.
+- [x] Document local startup prerequisites and expected service endpoints without assuming Docker runtime validation has occurred.
 
 ### Step 6 — Automated tests and schema verification
 
 **Unit tests**
-- [ ] Test mapping-state validation and identity invariants.
-- [ ] Test configuration parsing, defaults, conditional requirements, and secret redaction.
-- [ ] Test lifecycle transition validation and artifact metadata validation.
+- [x] Test mapping-state validation and identity invariants.
+- [x] Test configuration parsing, defaults, conditional requirements, and secret redaction.
+- [x] Test lifecycle transition validation and artifact metadata validation.
 
 **PostgreSQL integration tests**
-- [ ] Use Testcontainers (or the repository's established equivalent) to provision an isolated PostgreSQL instance.
-- [ ] Apply Alembic migrations against a clean database.
-- [ ] Verify primary/foreign keys, uniqueness, check constraints, and indexes.
-- [ ] Verify unresolved/ambiguous mappings can be represented without inventing a protein record.
-- [ ] Verify structure-chain associations support multiple proteins/chains correctly.
-- [ ] Verify dataset/job/artifact relationships and idempotency constraints.
-- [ ] Verify migration upgrade and downgrade/re-upgrade behavior where supported.
+- [x] Use Testcontainers to provision an isolated PostgreSQL instance.
+- [x] Apply Alembic migrations against a clean database.
+- [x] Verify primary/foreign keys, uniqueness, check constraints, and indexes.
+- [x] Verify unresolved/ambiguous mappings can be represented without inventing a protein record.
+- [x] Verify structure-chain associations support multiple proteins/chains correctly.
+- [x] Verify dataset/job/artifact relationships and idempotency constraints.
+- [x] Verify migration upgrade and downgrade/re-upgrade behavior where supported.
 
 **CI and reproducibility**
-- [ ] Run formatting/lint/type checks and the full unit test suite.
-- [ ] Run PostgreSQL integration tests in CI with deterministic cleanup.
-- [ ] Ensure tests do not depend on a developer's local database or MinIO data.
-- [ ] Record exact commands and expected outcomes.
+- [x] Run formatting/lint/type checks and the full unit test suite.
+- [x] Run PostgreSQL integration tests in CI with deterministic cleanup.
+- [x] Ensure tests do not depend on a developer's local database or MinIO data.
+- [x] Record exact commands and expected outcomes.
 
 ### Step 7 — Documentation and downstream handoff
 
 **To-do**
-- [ ] Add ER diagram and concise schema/data dictionary documentation.
-- [ ] Document identity/mapping semantics and lifecycle states.
-- [ ] Document environment variables, local setup, migration, and test commands.
-- [ ] Document artifact URI/bucket/prefix convention and ownership boundary.
-- [ ] Review downstream PP-13–PP-20 and PP-39–PP-42 plans for compatibility; propose focused follow-up edits where their assumptions conflict, without implementing their scope here.
-- [ ] Record decisions, commands, test results, known limitations, and deferred runtime checks in completion notes.
+- [x] Add ER diagram and concise schema/data dictionary documentation.
+- [x] Document identity/mapping semantics and lifecycle states.
+- [x] Document environment variables, local setup, migration, and test commands.
+- [x] Document artifact URI/bucket/prefix convention and ownership boundary.
+- [x] Review downstream PP-13–PP-20 and PP-39–PP-42 plans; aligned UUID/accession semantics and repaired affected cross-task links without implementing downstream scope.
+- [x] Record decisions, commands, test results, known limitations, and deferred runtime checks in completion notes.
 
 ## 4. Deliverables
 
@@ -226,7 +226,9 @@ Connect the application persistence layer to PP-11 infrastructure without taking
 
 Implementation status (2026-11-19): schema models, initial migration, typed settings, session/readiness helpers, unit/integration test cases, and schema documentation have been added on `feat/pp-12-metadata-schema-config`.
 
-Validation still pending: resolve and commit the refreshed `uv.lock` (the execution environment has no package-index network access), run Ruff/Mypy/pytest and PostgreSQL Testcontainers CI, review downstream PP-13–PP-20 and PP-39–PP-42 assumptions, and perform live MinIO connectivity checks when Docker runtime is available.
+Validation completed in GitHub Actions run [44479313105](https://github.com/kakashianh/labs/actions/runs/44479313105): uv lock consistency, Ruff lint/format, Mypy, unit tests, PostgreSQL Testcontainers integration tests (including clean migration upgrade/downgrade/re-upgrade, constraints, indexes, identity mappings, multi-chain associations, jobs/artifacts), CLI smoke checks, and Docker Compose profile validation all passed. The refreshed `uv.lock` is committed. Downstream PP-13–PP-20, PP-26/PP-27, PP-30, PP-34, PP-39, and PP-42 plans were reviewed and aligned with opaque internal UUID semantics.
+
+Deferred manual check: live MinIO connectivity/bucket creation is not part of the PostgreSQL integration suite; verify it when running the local PP-11 Docker Compose environment.
 
 Record:
 - Implemented schema/models and migration revision.
