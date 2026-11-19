@@ -1,5 +1,7 @@
 """Validated environment-backed application settings."""
 
+# fmt: off
+
 from functools import lru_cache
 from typing import Literal
 from urllib.parse import quote
@@ -119,3 +121,4 @@ class Settings(BaseSettings):
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     return Settings()
+# fmt: on
