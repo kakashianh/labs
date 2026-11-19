@@ -2,6 +2,8 @@
 
 # fmt: off
 
+import uuid
+
 import pytest
 from alembic import command
 from alembic.config import Config
@@ -49,17 +51,23 @@ def test_postgres_migrations_and_metadata_constraints(
                 "jobs",
                 "artifacts",
             }
-            assert expected <= set(inspect(engine).get_table_names())
+            inspector = inspect(engine)
+            assert expected <= set(inspector.get_table_names())
+            assert "ix_proteins_canonical_accession" in {
+                index["name"] for index in inspector.get_indexes("proteins")
+            }
+            assert "ix_jobs_status_created" in {
+                index["name"] for index in inspector.get_indexes("jobs")
+            }
 
             with Session(engine) as session:
                 protein = Protein(canonical_accession="P12345")
+                second_protein = Protein(canonical_accession="Q9Y261")
                 structure = Structure(
                     source="alphafold",
                     source_structure_id="AF-P12345-F1",
                     structure_format="cif",
-                    storage_uri=(
-                        "s3://protein3d-artifacts/structures/AF-P12345-F1.cif"
-                    ),
+                    storage_uri="s3://protein3d-artifacts/structures/AF-P12345-F1.cif",
                 )
                 dataset = DatasetRun(
                     dataset_name="protein-master",
@@ -67,7 +75,7 @@ def test_postgres_migrations_and_metadata_constraints(
                     source="uniprot",
                     source_version="2026_01",
                 )
-                session.add_all([protein, structure, dataset])
+                session.add_all([protein, second_protein, structure, dataset])
                 session.flush()
 
                 session.add_all(
@@ -109,6 +117,11 @@ def test_postgres_migrations_and_metadata_constraints(
                             protein=protein,
                             chain_id="A",
                         ),
+                        StructureProteinChain(
+                            structure=structure,
+                            protein=second_protein,
+                            chain_id="B",
+                        ),
                     ]
                 )
                 job = Job(
@@ -135,7 +148,7 @@ def test_postgres_migrations_and_metadata_constraints(
                 mappings = session.scalars(select(ProteinIdMapping)).all()
                 assert len(mappings) == 5
                 assert sum(mapping.protein_id is None for mapping in mappings) == 3
-                assert len(structure.chains) == 1
+                assert len(structure.chains) == 2
                 assert len(job.artifacts) == 1
 
                 session.add(
@@ -151,9 +164,71 @@ def test_postgres_migrations_and_metadata_constraints(
                     session.commit()
                 session.rollback()
 
+                session.add(
+                    ProteinIdMapping(
+                        protein_id=protein.protein_id,
+                        source="uniprot",
+                        source_id="P12345",
+                        source_version="2026_01",
+                        mapping_status="resolved",
+                    )
+                )
+                with pytest.raises(IntegrityError):
+                    session.commit()
+                session.rollback()
+
+                session.add(
+                    StructureProteinChain(
+                        structure_id=structure.structure_id,
+                        protein_id=protein.protein_id,
+                        chain_id="A",
+                    )
+                )
+                with pytest.raises(IntegrityError):
+                    session.commit()
+                session.rollback()
+
+                session.add(
+                    Job(
+                        dataset_run_id=dataset.dataset_run_id,
+                        job_type="duplicate",
+                        idempotency_key="index:AF-P12345-F1",
+                    )
+                )
+                with pytest.raises(IntegrityError):
+                    session.commit()
+                session.rollback()
+
+                session.add(
+                    Artifact(
+                        storage_backend="s3",
+                        uri="s3://protein3d-artifacts/test/invalid.cif",
+                        artifact_format="cif",
+                        size_bytes=-1,
+                    )
+                )
+                with pytest.raises(IntegrityError):
+                    session.commit()
+                session.rollback()
+
+                session.add(
+                    ProteinIdMapping(
+                        protein_id=uuid.uuid4(),
+                        source="uniprot",
+                        source_id="MISSING-PROTEIN",
+                        source_version="2026_01",
+                        mapping_status="resolved",
+                    )
+                )
+                with pytest.raises(IntegrityError):
+                    session.commit()
+                session.rollback()
+
             command.downgrade(cfg, "base")
             command.upgrade(cfg, "head")
         finally:
             engine.dispose()
             get_settings.cache_clear()
+
+
 # fmt: on
