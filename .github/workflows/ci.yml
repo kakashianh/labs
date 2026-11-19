@@ -32,15 +32,8 @@ jobs:
 
       - name: Resolve and install locked project environment
         run: |
-          uv lock
+          uv lock --check
           uv sync --locked
-
-      - name: Export resolved uv lock snapshot (temporary)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/feat/pp-12-metadata-schema-config'
-        run: |
-          echo "PP12_UV_LOCK_BEGIN"
-          cat uv.lock
-          echo "PP12_UV_LOCK_END"
 
       - name: Ruff lint
         run: uvx --from ruff==0.14.5 ruff check .
