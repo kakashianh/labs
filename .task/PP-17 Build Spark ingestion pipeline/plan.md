@@ -8,7 +8,7 @@ Create a repeatable PySpark batch pipeline that reads validated source manifests
 
 PP-16 validated raw manifests; PP-10 schema contracts; PP-11 runtime; PP-12 configuration.
 
-Related implementation plans: [PP-16](../PP-16%20undefined/plan.md) · [PP-18](../PP-18%20Normalize%20protein%20identifiers%20and%20integrate%20biological%20datasets/plan.md) · [PP-19](../PP-19%20Clean%20and%20filter%20protein%20interaction%20datasets/plan.md) · [PP-20](../PP-20%20Generate%20protein%20master%20and%20PPI%20Parquet%20datasets/plan.md) · [PP-21](../PP-21%20Implement%20PDB%2FmmCIF%20structure%20parser/plan.md) · [PP-34](../PP-34%20Prepare%20multi-label%20protein%20function%20prediction%20dataset/plan.md). These are explicit handoff points; align schemas and versions rather than creating parallel definitions.
+Related implementation plans: [PP-12](../PP-12%20Design%20metadata%20database%20schema%20and%20application%20configuration/plan.md) · [PP-16](../PP-16%20Implement%20ingestion%20validation%20and%20raw%20data%20management/plan.md) · [PP-18](../PP-18%20Normalize%20protein%20identifiers%20and%20integrate%20biological%20datasets/plan.md) · [PP-19](../PP-19%20Clean%20and%20filter%20protein%20interaction%20datasets/plan.md) · [PP-20](../PP-20%20Generate%20protein%20master%20and%20PPI%20Parquet%20datasets/plan.md) · [PP-21](../PP-21%20Implement%20PDB%2FmmCIF%20structure%20parser/plan.md) · [PP-34](../PP-34%20Prepare%20multi-label%20protein%20function%20prediction%20dataset/plan.md). These are explicit handoff points; align schemas and versions rather than creating parallel definitions.
 
 ## 3. Step-by-step implementation and to-do
 
