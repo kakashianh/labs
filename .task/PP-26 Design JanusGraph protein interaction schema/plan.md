@@ -17,7 +17,7 @@ Related plans: [PP-10](../PP-10%20Design%20project%20architecture%20and%20module
 Define Protein vertices and INTERACTS edges with canonical identifiers and biological provenance.
 
 **To-do**
-- [ ] Define vertex label and canonical accession property
+- [ ] Define Protein vertex key as project-owned `protein_id` UUID and retain UniProt accession as a unique indexed external property
 - [ ] Define edge label, confidence score, evidence, source release, and direction policy
 - [ ] Decide whether self-interactions are retained
 - [ ] Define property cardinality and nullability
@@ -27,7 +27,7 @@ Define Protein vertices and INTERACTS edges with canonical identifiers and biolo
 Design unique and mixed indexes based on expected access patterns and backend support.
 
 **To-do**
-- [ ] Define unique index for canonical protein accession
+- [ ] Define unique index for internal `protein_id` and a unique/indexed external UniProt accession property
 - [ ] Define indexes for confidence, source, and selected protein properties
 - [ ] Define schema creation order and consistency settings
 - [ ] Document backend-specific limitations
@@ -39,7 +39,7 @@ Specify traversal patterns for neighbors, confidence filtering, degree, and comm
 **To-do**
 - [ ] Define request/response shapes for one-hop and k-hop neighbors
 - [ ] Define pagination and traversal limits
-- [ ] Define stable graph IDs versus canonical protein IDs
+- [ ] Define stable graph IDs versus project-owned `protein_id` UUIDs and external accession properties
 - [ ] Document query timeout and safety limits
 
 ### Step 4 — Validate schema against data and workloads
@@ -61,7 +61,7 @@ Use a small PP-20 sample to verify the schema supports graph loading and intende
 ## 5. Acceptance criteria
 
 - [ ] All step-level to-dos are complete.
-- [ ] Canonical protein accession remains the stable cross-system identifier.
+- [ ] Project-owned `protein_id` UUID is the stable internal cross-system identity; UniProt accession remains a searchable external identifier.
 - [ ] Imports/queries are bounded, observable, and safe to rerun where applicable.
 - [ ] Graph data reconciles with the source dataset version.
 - [ ] Unit and integration tests pass against a representative graph.
