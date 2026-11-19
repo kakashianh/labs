@@ -1,11 +1,14 @@
 """Storage URI contract; object bytes are handled outside PostgreSQL."""
+
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 from typing import Protocol
 
+
 class ArtifactStorage(Protocol):
     def uri_for(self, object_key: str) -> str:
         """Return a stable URI for an object key."""
+
 
 @dataclass(frozen=True, slots=True)
 class S3ArtifactStorage:
@@ -20,7 +23,11 @@ class S3ArtifactStorage:
 
     def uri_for(self, object_key: str) -> str:
         key = PurePosixPath(object_key)
-        if not object_key or key.is_absolute() or any(part in {"", ".", ".."} for part in key.parts):
+        if (
+            not object_key
+            or key.is_absolute()
+            or any(part in {"", ".", ".."} for part in key.parts)
+        ):
             raise ValueError("Artifact object key must be a safe relative path")
         prefix = self.prefix.strip("/")
         path = f"{prefix}/{key.as_posix()}" if prefix else key.as_posix()
