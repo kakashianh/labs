@@ -1,7 +1,7 @@
 """Create PP-12 relational metadata schema."""
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision = "0001_initial_metadata"
