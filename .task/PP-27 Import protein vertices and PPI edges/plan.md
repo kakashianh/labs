@@ -17,8 +17,8 @@ Related plans: [PP-20](../PP-20%20Generate%20protein%20master%20and%20PPI%20Parq
 Map Parquet columns to graph properties and define batch size, checkpoint, and rerun behavior.
 
 **To-do**
-- [ ] Map canonical accession to vertex key
-- [ ] Map PPI edge key, confidence, and provenance properties
+- [ ] Map project-owned `protein_id` UUID to vertex key and store UniProt accession as an indexed external property
+- [ ] Map PPI edge key, UUID endpoints, confidence, and source provenance properties
 - [ ] Define batch size, retry, and checkpoint strategy
 - [ ] Record source dataset version and graph load run ID
 
@@ -61,7 +61,7 @@ Compare counts, endpoints, scores, and representative traversals.
 ## 5. Acceptance criteria
 
 - [ ] All step-level to-dos are complete.
-- [ ] Canonical protein accession remains the stable cross-system identifier.
+- [ ] Project-owned `protein_id` UUID remains the stable internal identity; UniProt accession is retained as an external property.
 - [ ] Imports/queries are bounded, observable, and safe to rerun where applicable.
 - [ ] Graph data reconciles with the source dataset version.
 - [ ] Unit and integration tests pass against a representative graph.
