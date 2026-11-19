@@ -1,7 +1,7 @@
 """Validated environment-backed application settings."""
 from functools import lru_cache
 from typing import Literal
-from urllib.parse import quote_plus
+from urllib.parse import quote
 from pydantic import AliasChoices, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -42,8 +42,8 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
-        username = quote_plus(self.database_user)
-        password = quote_plus(self.database_password.get_secret_value())
+        username = quote(self.database_user, safe='')
+        password = quote(self.database_password.get_secret_value(), safe='')
         return f"postgresql+psycopg://{username}:{password}@{self.database_host}:{self.database_port}/{self.database_name}?connect_timeout={self.database_connect_timeout_seconds}"
 
     def sanitized(self) -> dict[str, object]:
