@@ -211,12 +211,12 @@ No production pipeline, API endpoint, database migration, graph schema, vector i
 
 ## 6. Acceptance criteria
 
-- [ ] System overview clearly explains major components, data flow, and batch versus online paths.
-- [ ] Every module has a documented responsibility, owner, and dependency boundary.
-- [ ] Domain concepts do not depend on infrastructure-specific frameworks or SDKs.
-- [ ] All minimum shared contracts and their semantics are documented, including identifiers, nullability, versioning, and provenance.
-- [ ] Protein identity, PPI direction/deduplication, score semantics, missing-versus-negative behavior, and artifact storage rules are explicit.
-- [ ] ADRs capture decisions and relevant trade-offs.
+- [x] System overview clearly explains major components, data flow, and batch versus online paths.
+- [x] Every module has a documented responsibility, owner, and dependency boundary.
+- [x] Domain concepts do not depend on infrastructure-specific frameworks or SDKs.
+- [x] All minimum shared contracts and their semantics are documented, including identifiers, nullability, versioning, and provenance.
+- [x] Protein identity, PPI direction/deduplication, score semantics, missing-versus-negative behavior, and artifact storage rules are explicit.
+- [x] ADRs capture decisions and relevant trade-offs.
 - [ ] Downstream ownership is unambiguous and relevant plans link to the contracts they consume.
 - [ ] Documentation is internally consistent, links resolve, and representative contract examples are valid.
 - [ ] No credentials, generated large datasets, or out-of-scope implementation are committed.
@@ -247,3 +247,6 @@ No production pipeline, API endpoint, database migration, graph schema, vector i
 - Parsed the representative Protein and PPI JSON examples successfully. Other contracts are specified as field/semantic tables and do not yet have JSON fixtures.
 - Downstream task plans have not yet been edited to add direct links to the new contracts. Full downstream contract-by-contract validation and repository-wide Markdown/diagram rendering checks remain follow-up verification.
 - No application code, dependencies, database migrations, service configuration, or large datasets were added.
+
+- PR #29 was merged into `project/Protein3D-PPI` (merge commit `e764f85539da858b49052fb833786e3ff9a8b38b`); the Python CI quality-gates workflow passed before merge.
+- The six architecture/documentation acceptance criteria that are fully supported by the merged deliverables are now checked. Downstream consumer links, full consumer-by-consumer contract validation, and repository-wide link/diagram verification remain explicitly open; PP-10 should not be treated as fully closed until these handoffs are completed.
