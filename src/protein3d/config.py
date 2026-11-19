@@ -71,6 +71,10 @@ class Settings(BaseSettings):
 
     external_request_timeout_seconds: float = Field(default=20.0, gt=0, le=300)
     external_max_retries: int = Field(default=3, ge=0, le=10)
+    alphafold_api_base_url: str = "https://alphafold.ebi.ac.uk/api"
+    alphafold_taxonomy_id: int = Field(default=9606, ge=1)
+    alphafold_sample_limit: int | None = Field(default=None, ge=1)
+    alphafold_max_coordinate_bytes: int = Field(default=100_000_000, ge=1024)
     processing_batch_size: int = Field(default=500, ge=1, le=100_000)
     processing_concurrency: int = Field(default=2, ge=1, le=64)
 
