@@ -10,7 +10,6 @@ import pytest
 from protein3d.ingestion.alphafold import (
     AlphaFoldClient,
     AlphaFoldContractError,
-    AlphaFoldModel,
     AlphaFoldNotFound,
     _retry_delay,
     manifest_record,
