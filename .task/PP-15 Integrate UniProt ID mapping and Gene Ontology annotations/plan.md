@@ -14,10 +14,10 @@ Related plans: [PP-13](../PP-13%20Implement%20AlphaFold%20structure%20data%20cra
 
 ### Step 1 — Define canonical identifier strategy
 
-Use UniProt accession as canonical protein key while retaining STRING, Ensembl, and other source identifiers as cross-references.
+Use the project-owned `protein_id` UUID as the internal primary key. Treat UniProt accession as the canonical external/business identifier stored in `protein_id_mappings`; STRING, Ensembl, and other provider IDs remain external mappings. Resolve each source identifier to `protein_id` before persisting relational associations.
 
 **To-do**
-- [ ] Define accession normalization and isoform handling
+- [ ] Define accession normalization and isoform handling while preserving the opaque internal UUID
 - [ ] Specify mapping confidence and ambiguous/unmapped states
 - [ ] Define taxonomy filtering and reviewed/unreviewed policy
 
@@ -46,7 +46,7 @@ Collect GO terms with evidence codes, ontology namespace, and provenance.
 Produce joinable mapping and annotation tables for Spark and ML preparation.
 
 **To-do**
-- [ ] Generate mapping table with canonical accession and source IDs
+- [ ] Generate mapping table with `protein_id`, canonical UniProt accession, source IDs, source version, and mapping status
 - [ ] Generate GO annotation table with evidence metadata
 - [ ] Report mapping coverage and ambiguity rates
 - [ ] Provide fixtures for PP-18 and PP-34
