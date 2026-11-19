@@ -1,5 +1,7 @@
 """PostgreSQL migration and persistence integration tests."""
 
+# fmt: off
+
 import pytest
 from alembic import command
 from alembic.config import Config
@@ -154,3 +156,4 @@ def test_postgres_migrations_and_metadata_constraints(
         finally:
             engine.dispose()
             get_settings.cache_clear()
+# fmt: on
