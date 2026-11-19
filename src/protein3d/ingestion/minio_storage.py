@@ -25,7 +25,9 @@ class MinioObjectStore:
         """Upload a bounded payload to MinIO; raises if the PUT is not successful."""
         if not body:
             raise ValueError("Cannot upload an empty object")
-        if object_key.startswith("/") or any(part in {"", ".", ".."} for part in object_key.split("/")):
+        if object_key.startswith("/") or any(
+            part in {"", ".", ".."} for part in object_key.split("/")
+        ):
             raise ValueError("Object key must be a safe relative path")
         scheme = "https" if self.secure else "http"
         host = self.endpoint.removeprefix("http://").removeprefix("https://").rstrip("/")
