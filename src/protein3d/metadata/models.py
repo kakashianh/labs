@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+# ruff: noqa: I001
 import enum
 import uuid
 from datetime import datetime
