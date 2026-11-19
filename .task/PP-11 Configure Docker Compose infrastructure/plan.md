@@ -183,7 +183,7 @@ Publish a reliable handoff for developers and downstream implementation tasks.
 
 ### Implemented on `feat/pp-11-docker-compose-infrastructure`
 
-- Added `compose.yaml` with only PostgreSQL and MinIO in the default profile and opt-in `graph` and `vector` profiles.
+- Added `compose.yaml` with only PostgreSQL and MinIO in the default profile and opt-in `graph` and `vector` profiles; Milvus object-storage overrides live in `configs/milvus.user.yaml`.
 - Pinned PostgreSQL 17.6, MinIO RELEASE.2025-09-06T17-38-46Z, JanusGraph 1.2.0, Cassandra 5.0.9, Elasticsearch 9.5.4, Milvus 2.6.26, and etcd 3.5.18.
 - JanusGraph compatibility follows the 1.2.0 release matrix; Milvus uses the documented standalone topology and a dedicated MinIO bucket (auto-created by Milvus if absent).
 - Added `.env.example`, Makefile lifecycle/validation targets, `docs/infrastructure/docker-compose.md`, and README quick-start instructions.
