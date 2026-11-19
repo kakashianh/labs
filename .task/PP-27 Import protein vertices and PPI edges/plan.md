@@ -28,7 +28,7 @@ Load proteins before edges and make repeated imports safe.
 
 **To-do**
 - [ ] Read protein master in bounded batches
-- [ ] Upsert by canonical accession using schema index
+- [ ] Upsert by project-owned `protein_id` UUID using the graph schema index
 - [ ] Track created/updated/skipped/failed counts
 - [ ] Quarantine invalid records and preserve failure details
 
