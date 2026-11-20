@@ -1,14 +1,14 @@
-"""Minimal S3-compatible MinIO object writer using AWS Signature V4."""
+"""Streaming S3-compatible MinIO object operations using AWS Signature V4."""
 
 from __future__ import annotations
 
 import hashlib
 import hmac
+import http.client
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from urllib.error import HTTPError, URLError
-from urllib.parse import quote
-from urllib.request import Request, urlopen
+from pathlib import Path
+from urllib.parse import quote, urlsplit
 
 
 @dataclass(frozen=True, slots=True)
@@ -21,31 +21,33 @@ class MinioObjectStore:
     region: str = "us-east-1"
     timeout_seconds: float = 30.0
 
-    def put_object(self, object_key: str, body: bytes, content_type: str) -> None:
-        """Upload a bounded payload to MinIO; raises if the PUT is not successful."""
-        if not body:
-            raise ValueError("Cannot upload an empty object")
-        if object_key.startswith("/") or any(
-            part in {"", ".", ".."} for part in object_key.split("/")
-        ):
-            raise ValueError("Object key must be a safe relative path")
-        scheme = "https" if self.secure else "http"
-        host = self.endpoint.removeprefix("http://").removeprefix("https://").rstrip("/")
-        path = f"/{quote(self.bucket, safe='')}/{quote(object_key, safe='/')}"
-        url = f"{scheme}://{host}{path}"
+    def _connection(self) -> tuple[http.client.HTTPConnection, str]:
+        raw = self.endpoint if "://" in self.endpoint else f"{'https' if self.secure else 'http'}://{self.endpoint}"
+        parsed = urlsplit(raw)
+        if not parsed.hostname or parsed.path not in ("", "/"):
+            raise ValueError("MinIO endpoint must be a host with optional port")
+        host = parsed.netloc
+        connection_type = http.client.HTTPSConnection if parsed.scheme == "https" else http.client.HTTPConnection
+        return connection_type(host, timeout=self.timeout_seconds), host
+
+    def _signed_headers(
+        self, method: str, path: str, host: str, payload_hash: str, content_type: str | None
+    ) -> dict[str, str]:
         now = datetime.now(UTC)
         amz_date = now.strftime("%Y%m%dT%H%M%SZ")
         date_stamp = now.strftime("%Y%m%d")
-        payload_hash = hashlib.sha256(body).hexdigest()
-        canonical_headers = (
-            f"content-type:{content_type}\n"
-            f"host:{host}\n"
-            f"x-amz-content-sha256:{payload_hash}\n"
-            f"x-amz-date:{amz_date}\n"
-        )
-        signed_headers = "content-type;host;x-amz-content-sha256;x-amz-date"
+        headers = {
+            "host": host,
+            "x-amz-content-sha256": payload_hash,
+            "x-amz-date": amz_date,
+        }
+        if content_type:
+            headers["content-type"] = content_type
+        signed_names = sorted(headers)
+        canonical_headers = "".join(f"{name}:{headers[name]}\n" for name in signed_names)
+        signed_headers = ";".join(signed_names)
         canonical_request = "\n".join(
-            ["PUT", path, "", canonical_headers, signed_headers, payload_hash]
+            [method, path, "", canonical_headers, signed_headers, payload_hash]
         )
         scope = f"{date_stamp}/{self.region}/s3/aws4_request"
         string_to_sign = "\n".join(
@@ -61,28 +63,105 @@ class MinioObjectStore:
         service_key = _sign(region_key, "s3")
         signing_key = _sign(service_key, "aws4_request")
         signature = hmac.new(signing_key, string_to_sign.encode(), hashlib.sha256).hexdigest()
-        authorization = (
-            f"AWS4-HMAC-SHA256 Credential={self.access_key}/{scope}, "
-            f"SignedHeaders={signed_headers}, Signature={signature}"
-        )
-        request = Request(
-            url,
-            data=body,
-            method="PUT",
-            headers={
-                "Authorization": authorization,
-                "Content-Type": content_type,
-                "Host": host,
-                "x-amz-content-sha256": payload_hash,
-                "x-amz-date": amz_date,
-            },
-        )
+        result = {
+            "Host": host,
+            "x-amz-content-sha256": payload_hash,
+            "x-amz-date": amz_date,
+            "Authorization": (
+                f"AWS4-HMAC-SHA256 Credential={self.access_key}/{scope}, "
+                f"SignedHeaders={signed_headers}, Signature={signature}"
+            ),
+        }
+        if content_type:
+            result["Content-Type"] = content_type
+        return result
+
+    def _object_path(self, object_key: str) -> str:
+        if object_key.startswith("/") or any(
+            part in {"", ".", ".."} for part in object_key.split("/")
+        ):
+            raise ValueError("Object key must be a safe relative path")
+        return f"/{quote(self.bucket, safe='')}/{quote(object_key, safe='/')}"
+
+    def ensure_bucket(self) -> None:
+        """Create the bucket only when a signed HEAD confirms it is absent."""
+        connection, host = self._connection()
+        path = f"/{quote(self.bucket, safe='')}"
+        empty_hash = hashlib.sha256(b"").hexdigest()
         try:
-            with urlopen(request, timeout=self.timeout_seconds) as response:
-                if response.status not in (200, 201, 204):
-                    raise RuntimeError(f"MinIO returned HTTP {response.status}")
-        except (HTTPError, URLError, TimeoutError) as exc:
-            raise RuntimeError("MinIO object upload failed") from exc
+            connection.request(
+                "HEAD", path, headers=self._signed_headers("HEAD", path, host, empty_hash, None)
+            )
+            response = connection.getresponse()
+            response.read()
+            if response.status in (200, 204):
+                return
+            if response.status != 404:
+                raise RuntimeError(f"MinIO bucket check returned HTTP {response.status}")
+            connection.close()
+            connection, host = self._connection()
+            connection.request(
+                "PUT", path, body=b"",
+                headers=self._signed_headers("PUT", path, host, empty_hash, None),
+            )
+            response = connection.getresponse()
+            response.read()
+            if response.status not in (200, 201, 204):
+                raise RuntimeError(f"MinIO bucket creation returned HTTP {response.status}")
+        finally:
+            connection.close()
+
+    def put_file(
+        self,
+        object_key: str,
+        file_path: Path,
+        content_type: str,
+        sha256: str,
+        chunk_size: int = 1024 * 1024,
+    ) -> None:
+        """Upload a file in bounded chunks without loading it into memory."""
+        size = file_path.stat().st_size
+        if size <= 0:
+            raise ValueError("Cannot upload an empty object")
+        path = self._object_path(object_key)
+        connection, host = self._connection()
+        try:
+            headers = self._signed_headers(
+                "PUT", path, host, sha256, content_type
+            )
+            headers["Content-Length"] = str(size)
+            connection.putrequest("PUT", path, skip_accept_encoding=True)
+            for name, value in headers.items():
+                connection.putheader(name, value)
+            connection.endheaders()
+            with file_path.open("rb") as source:
+                while chunk := source.read(chunk_size):
+                    connection.send(chunk)
+            response = connection.getresponse()
+            response.read()
+            if response.status not in (200, 201, 204):
+                raise RuntimeError(f"MinIO object upload returned HTTP {response.status}")
+        finally:
+            connection.close()
+
+    def head_object(self, object_key: str) -> int:
+        """Return stored object size or raise when the object is unavailable."""
+        path = self._object_path(object_key)
+        connection, host = self._connection()
+        try:
+            empty_hash = hashlib.sha256(b"").hexdigest()
+            connection.request(
+                "HEAD",
+                path,
+                headers=self._signed_headers("HEAD", path, host, empty_hash, None),
+            )
+            response = connection.getresponse()
+            response.read()
+            if response.status not in (200, 204):
+                raise RuntimeError(f"MinIO object HEAD returned HTTP {response.status}")
+            return int(response.getheader("Content-Length", "0"))
+        finally:
+            connection.close()
 
 
 def _sign(key: bytes, value: str) -> bytes:
