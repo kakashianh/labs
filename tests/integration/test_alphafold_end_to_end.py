@@ -236,15 +236,11 @@ def test_fixture_crawl_persists_verified_minio_artifact_and_resumes(
 
                     runs = session.scalars(select(DatasetRun).order_by(DatasetRun.started_at)).all()
                     assert runs[0].status == DatasetStatus.FAILED.value
-                    assert all(
-                        run.status == DatasetStatus.COMPLETED.value for run in runs[1:]
-                    )
+                    assert all(run.status == DatasetStatus.COMPLETED.value for run in runs[1:])
                     assert runs[-1].provenance["downloaded"] == 1
                     jobs = session.scalars(select(Job).order_by(Job.started_at)).all()
                     assert jobs[0].status == JobStatus.FAILED.value
-                    assert all(
-                        job.status == JobStatus.SUCCEEDED.value for job in jobs[1:]
-                    )
+                    assert all(job.status == JobStatus.SUCCEEDED.value for job in jobs[1:])
 
                     structure = session.scalar(select(Structure))
                     assert structure is not None
