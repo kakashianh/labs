@@ -214,10 +214,18 @@ class AlphaFoldClient:
                 while chunk := response.read(1024 * 1024):
                     size += len(chunk)
                     if size > max_bytes:
-                        raise AlphaFoldError("Coordinate file exceeds configured size limit")
+                        raise AlphaFoldPermanentError("Coordinate file exceeds configured size limit")
                     chunks.append(chunk)
-        except (HTTPError, URLError, TimeoutError) as exc:
-            raise AlphaFoldError("Coordinate download failed") from exc
+        except HTTPError as exc:
+            if exc.code == 429 or exc.code >= 500:
+                raise AlphaFoldRetryableError(
+                    f"Coordinate download HTTP {exc.code}"
+                ) from exc
+            raise AlphaFoldPermanentError(
+                f"Coordinate download HTTP {exc.code}"
+            ) from exc
+        except (URLError, TimeoutError) as exc:
+            raise AlphaFoldRetryableError("Coordinate download failed") from exc
         body = b"".join(chunks)
         if not body or not _has_mmcif_data_block(body[:4096]):
             raise AlphaFoldContractError("Downloaded payload is empty or not recognizable mmCIF")
