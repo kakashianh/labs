@@ -101,10 +101,7 @@ def test_crawler_candidate_selection_and_metadata_upsert(
                     size_bytes=42,
                     sha256="a" * 64,
                 )
-                artifact_uri = (
-                    "s3://protein3d-artifacts/artifacts/"
-                    f"{coordinate.object_key}"
-                )
+                artifact_uri = f"s3://protein3d-artifacts/artifacts/{coordinate.object_key}"
                 dataset_run = DatasetRun(
                     dataset_name="alphafold-test",
                     dataset_type="structure_crawl",
