@@ -38,7 +38,8 @@ The crawler is a source-ingestion component only. It does not parse structures, 
 ### Out of scope
 
 - PDB or STRING crawling, bulk FTP proteome downloads, Spark processing, structural parsing, chain-to-protein mapping, JanusGraph/Milvus writes, prediction/training, and full public API endpoints.
-- Database schema changes. If PP-12 schema proves insufficient, stop and propose a separate migration/task rather than silently changing the schema here.
+- Database schema changes. PP-12 has no direct `structures.protein_id` FK; PP-13 records the internal UUID in `structures.metadata_json.protein_id` until PP-21 creates chain associations. No migration is introduced.
+- MinIO Community Edition's upstream container distribution has become unavailable to anonymous pulls; PP-11 Compose now uses the pinned `soldevelo/minio:2026.7.17` community-maintained packaging. Treat this as an explicit third-party S3-compatible dependency.
 
 ## 3. Step-by-step implementation and to-do
 
@@ -88,7 +89,7 @@ Download the selected mmCIF coordinate file from the API-provided URL and persis
 - [x] Use the configured MinIO bucket/prefix and existing storage URI contract; do not hardcode credentials or endpoints.
 - [x] Verify uploaded object size and streamed GET checksum/readback in a real-MinIO integration test.
 - [x] Persist artifact success only after storage upload and readback verification succeed; leave failed transfers retryable and avoid dangling “successful” metadata.
-- [ ] Skip unchanged artifacts by checksum and reuse existing object/metadata where safe.
+- [x] Skip unchanged artifacts by checksum: HEAD size is checked, then an existing object is streamed back and reused only when its SHA-256 matches; otherwise it is replaced and verified.
 
 ### Step 5 — Integrate PP-12 metadata persistence
 
@@ -100,7 +101,7 @@ Use existing SQLAlchemy models and repository/storage abstractions. No schema mi
 - [x] Preserve the correct internal `protein_id` UUID in structure metadata; never use a UniProt accession as an internal key or fabricate chain associations before PP-21.
 - [x] Record run/job state and counts using the PP-12 lifecycle conventions.
 - [x] Make database writes transactional per completed model and idempotent through PP-12 structure/artifact unique keys.
-- [ ] Confirm actual PP-12 constraints and model field names before implementation. If a required relationship or field is absent, document the gap and request a separate schema change.
+- [x] Confirm actual PP-12 constraints and model field names before implementation. The missing direct structure/protein FK is documented and handled through `metadata_json`; chain associations remain PP-21 scope.
 
 ### Step 6 — Validation, tests, and sample execution
 
