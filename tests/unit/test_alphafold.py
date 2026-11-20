@@ -12,8 +12,8 @@ import pytest
 
 from protein3d.ingestion.alphafold import (
     AlphaFoldClient,
-    AlphaFoldError,
     AlphaFoldContractError,
+    AlphaFoldError,
     AlphaFoldNotFound,
     _retry_delay,
     manifest_record,
