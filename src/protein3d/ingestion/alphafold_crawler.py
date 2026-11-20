@@ -187,27 +187,40 @@ def crawl_candidates(
                             or parsed_uri.netloc != artifact_storage.bucket
                         ):
                             raise ValueError("Artifact storage returned an unexpected S3 URI")
-                        object_store.put_file(
-                            object_key,
-                            local_path,
-                            coordinate.content_type,
-                            coordinate.sha256,
-                        )
-                        stored_size = object_store.head_object(object_key)
-                        if stored_size != coordinate.size_bytes:
-                            raise RuntimeError(
-                                f"MinIO HEAD size mismatch: expected "
-                                f"{coordinate.size_bytes}, got {stored_size}"
-                            )
                         readback_path = temp_root / f"{uuid.uuid4().hex}.readback.cif"
-                        readback_size, readback_sha256 = object_store.get_file(
-                            object_key, readback_path
-                        )
-                        if (
-                            readback_size != coordinate.size_bytes
-                            or readback_sha256 != coordinate.sha256
-                        ):
-                            raise RuntimeError("MinIO readback checksum/size verification failed")
+                        existing_size = object_store.head_object(object_key)
+                        reused = False
+                        if existing_size == coordinate.size_bytes:
+                            readback_size, readback_sha256 = object_store.get_file(
+                                object_key, readback_path
+                            )
+                            reused = (
+                                readback_size == coordinate.size_bytes
+                                and readback_sha256 == coordinate.sha256
+                            )
+                        if not reused:
+                            object_store.put_file(
+                                object_key,
+                                local_path,
+                                coordinate.content_type,
+                                coordinate.sha256,
+                            )
+                            stored_size = object_store.head_object(object_key)
+                            if stored_size != coordinate.size_bytes:
+                                raise RuntimeError(
+                                    f"MinIO HEAD size mismatch: expected "
+                                    f"{coordinate.size_bytes}, got {stored_size}"
+                                )
+                            readback_size, readback_sha256 = object_store.get_file(
+                                object_key, readback_path
+                            )
+                            if (
+                                readback_size != coordinate.size_bytes
+                                or readback_sha256 != coordinate.sha256
+                            ):
+                                raise RuntimeError(
+                                    "MinIO readback checksum/size verification failed"
+                                )
                         readback_path.unlink(missing_ok=True)
                         persist_alpha_fold_artifacts(
                             session,
@@ -222,6 +235,7 @@ def crawl_candidates(
                         record: dict[str, Any] = manifest_record(
                             str(candidate.protein_id), model, coordinate, "downloaded"
                         )
+                        record["storage_action"] = "reused" if reused else "uploaded"
                         downloaded += 1
                     except Exception as exc:
                         session.rollback()
