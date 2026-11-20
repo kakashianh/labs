@@ -45,9 +45,7 @@ def test_minio_put_file_streams_and_signs_request(tmp_path: Path) -> None:
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize(
-    "key", ["/absolute.cif", "../escape.cif", "a//b.cif", "a/./b.cif"]
-)
+@pytest.mark.parametrize("key", ["/absolute.cif", "../escape.cif", "a//b.cif", "a/./b.cif"])
 def test_minio_rejects_unsafe_object_key(key: str) -> None:
     store = MinioObjectStore(
         endpoint="localhost:9000",
