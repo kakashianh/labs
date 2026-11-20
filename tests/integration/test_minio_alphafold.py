@@ -15,13 +15,12 @@ from protein3d.ingestion.minio_storage import MinioObjectStore
 def test_minio_bucket_upload_head_and_streaming_readback(tmp_path: Path) -> None:
     username = "protein3dtest"
     password = "protein3d-test-secret"
-    image = "minio/minio:RELEASE.2025-09-06T17-38-46Z"
+    image = "soldevelo/minio:2026.7.17"
     container = (
         DockerContainer(image)
         .with_exposed_ports(9000)
         .with_env("MINIO_ROOT_USER", username)
         .with_env("MINIO_ROOT_PASSWORD", password)
-        .with_command("server /data")
     )
     with container as minio:
         host = minio.get_container_host_ip()
