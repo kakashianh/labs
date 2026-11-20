@@ -1,5 +1,6 @@
 """Unit tests for bounded AlphaFold crawler outcome handling."""
 
+import hashlib
 import json
 import uuid
 from pathlib import Path
@@ -9,7 +10,7 @@ from unittest.mock import MagicMock
 import pytest
 from sqlalchemy.orm import Session
 
-from protein3d.ingestion.alphafold import DownloadedCoordinate, parse_prediction
+from protein3d.ingestion.alphafold import AlphaFoldClient, DownloadedCoordinate, parse_prediction
 from protein3d.ingestion.alphafold_crawler import (
     ProteinCandidate,
     crawl_candidates,
@@ -56,7 +57,7 @@ def test_crawler_reuses_existing_minio_object_when_checksum_matches(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     payload = b"data_AF-Q9Y261-F1\n#\n"
-    checksum = "b2d8e5e5"
+    checksum = hashlib.sha256(payload).hexdigest()
     model = parse_prediction(
         "Q9Y261",
         [
@@ -78,7 +79,9 @@ def test_crawler_reuses_existing_minio_object_when_checksum_matches(
     client = MagicMock()
     client.get_predictions.return_value = [model]
 
-    def write_download(_model: object, _protein_id: str, destination: Path, **_kwargs: object):
+    def write_download(
+        _model: object, _protein_id: str, destination: Path, **_kwargs: object
+    ) -> DownloadedCoordinate:
         destination.write_bytes(payload)
         return coordinate
 
