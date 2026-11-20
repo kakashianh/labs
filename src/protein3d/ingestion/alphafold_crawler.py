@@ -168,9 +168,19 @@ def crawl_candidates(
                         stored_size = object_store.head_object(object_key)
                         if stored_size != coordinate.size_bytes:
                             raise RuntimeError(
-                                f"MinIO readback size mismatch: expected "
+                                f"MinIO HEAD size mismatch: expected "
                                 f"{coordinate.size_bytes}, got {stored_size}"
                             )
+                        readback_path = temp_root / f"{uuid.uuid4().hex}.readback.cif"
+                        readback_size, readback_sha256 = object_store.get_file(
+                            object_key, readback_path
+                        )
+                        if (
+                            readback_size != coordinate.size_bytes
+                            or readback_sha256 != coordinate.sha256
+                        ):
+                            raise RuntimeError("MinIO readback checksum/size verification failed")
+                        readback_path.unlink(missing_ok=True)
                         persist_alpha_fold_artifacts(
                             session,
                             candidate.protein_id,
