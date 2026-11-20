@@ -170,9 +170,7 @@ def test_fixture_crawl_persists_verified_minio_artifact_and_resumes(
                             sha256: str,
                         ) -> None:
                             self.put_calls.append(object_key)
-                            self.delegate.put_file(
-                                object_key, file_path, content_type, sha256
-                            )
+                            self.delegate.put_file(object_key, file_path, content_type, sha256)
 
                     tracking_store = TrackingObjectStore(object_store)
 
@@ -226,9 +224,9 @@ def test_fixture_crawl_persists_verified_minio_artifact_and_resumes(
                     assert artifact is not None
                     assert artifact.checksum == coordinate.sha256
                     assert artifact.dataset_run_id == runs[-1].dataset_run_id
-                    assert tracking_store.head_object(
-                        f"artifacts/{coordinate.object_key}"
-                    ) == len(payload)
+                    assert tracking_store.head_object(f"artifacts/{coordinate.object_key}") == len(
+                        payload
+                    )
         finally:
             engine.dispose()
             get_settings.cache_clear()
