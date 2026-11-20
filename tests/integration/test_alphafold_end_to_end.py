@@ -11,6 +11,7 @@ from urllib.request import urlopen
 import pytest
 from alembic import command
 from alembic.config import Config
+from pydantic import SecretStr
 from sqlalchemy import create_engine, func, select
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
@@ -139,7 +140,7 @@ def test_fixture_crawl_persists_verified_minio_artifact_and_resumes(
                         object_storage_endpoint=f"{host}:{port}",
                         object_storage_bucket="protein3d-test",
                         object_storage_access_key=username,
-                        object_storage_secret_key=password,
+                        object_storage_secret_key=SecretStr(password),
                         object_storage_prefix="artifacts",
                         external_request_timeout_seconds=10,
                         external_max_retries=0,
