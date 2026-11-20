@@ -27,7 +27,11 @@ class MinioObjectStore:
         if not parsed.hostname or parsed.path not in ("", "/"):
             raise ValueError("MinIO endpoint must be a host with optional port")
         host = parsed.netloc
-        connection_type = http.client.HTTPSConnection if parsed.scheme == "https" else http.client.HTTPConnection
+        connection_type = (
+            http.client.HTTPSConnection
+            if parsed.scheme == "https"
+            else http.client.HTTPConnection
+        )
         return connection_type(host, timeout=self.timeout_seconds), host
 
     def _signed_headers(
