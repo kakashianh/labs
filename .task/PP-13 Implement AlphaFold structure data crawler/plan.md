@@ -21,7 +21,7 @@ The crawler is a source-ingestion component only. It does not parse structures, 
 - Read candidate proteins from PP-12 PostgreSQL metadata; do not create a second independent protein cohort.
 - Initial project cohort is Homo sapiens (NCBI Taxonomy ID `9606`), but make taxonomy and sample/limit selection configurable rather than embedding the taxon throughout crawler code.
 - Only query AFDB for proteins with a valid, resolved UniProt accession mapping.
-- Use the PP-12 opaque `proteins.id` UUID as the internal `protein_id`. UniProt accessions and AFDB model identifiers remain external identifiers and must never be substituted for the internal UUID.
+- Use the PP-12 opaque `proteins.protein_id` UUID as the internal `protein_id`. UniProt accessions and AFDB model identifiers remain external identifiers and must never be substituted for the internal UUID.
 - Preserve unresolved, ambiguous, merged, deprecated, and missing mappings as explicit outcomes; do not turn them into “no structure”.
 - Support one or more AFDB model records for an accession where the current API reports isoforms or fragments. Do not silently collapse distinct model entities.
 
@@ -47,10 +47,10 @@ The crawler is a source-ingestion component only. It does not parse structures, 
 Inspect PP-12 models and query the existing protein/mapping tables. Define deterministic selection, model identity, API response parsing, and the crawler's outcome categories.
 
 **To-do**
-- [ ] Implement configurable taxonomy filter (default `9606`), sample limit, and deterministic cohort ordering.
-- [ ] Select only proteins with a resolved UniProt mapping; retain explicit skip reasons for other mapping states.
-- [ ] Define typed models for current AFDB API response fields, including multiple model records/isoforms where returned.
-- [ ] Document current endpoint, API schema reference, coordinate URL selection, and source metadata fields.
+- [x] Implement configurable taxonomy filter (default `9606`), sample limit (safe default 10; hard maximum 10,000), and deterministic cohort ordering.
+- [x] Select only proteins with a resolved UniProt mapping; unresolved/ambiguous/deprecated mapping rows are excluded and are not mislabeled as no-model (per-mapping skip manifest rows remain a follow-up).
+- [x] Define typed models for current AFDB API response fields, including multiple model records/isoforms where returned.
+- [x] Document current endpoint, API schema reference, coordinate URL selection, and source metadata fields.
 - [ ] Define distinct outcomes: discovered, downloaded, no model (confirmed 404), unsupported-by-API, skipped-invalid-mapping, retryable failure, and permanent failure.
 
 ### Step 2 — Implement the AlphaFold API client
@@ -58,36 +58,36 @@ Inspect PP-12 models and query the existing protein/mapping tables. Define deter
 Create a small HTTP client/adapter with bounded timeouts, conservative retries, and clear error classification.
 
 **To-do**
-- [ ] Implement configurable base URL, request timeout, retry count/backoff, and user-agent through typed application settings.
-- [ ] Handle 404 as a confirmed no-model result; handle 429 and transient 5xx/network errors with bounded backoff and respect `Retry-After` when present.
-- [ ] Treat malformed JSON, schema drift, missing required model identifiers, and invalid coordinate URLs as explicit parse/contract failures.
-- [ ] Avoid retrying permanent client errors; redact credentials and avoid logging sensitive configuration.
-- [ ] Add deterministic HTTP fixtures for current API response examples, including multiple model records.
+- [x] Implement configurable base URL, request timeout, retry count/backoff, and user-agent through typed application settings.
+- [x] Handle 404 as a confirmed no-model result; handle 429 and transient 5xx/network errors with bounded backoff and respect numeric/date `Retry-After` values.
+- [x] Treat malformed JSON, schema drift, missing required model identifiers, and invalid coordinate URLs as explicit parse/contract failures.
+- [x] Avoid retrying permanent client errors; redact credentials and avoid logging sensitive configuration.
+- [x] Add deterministic HTTP fixtures for current API response examples, including multiple model records.
 
 ### Step 3 — Implement metadata discovery and resumability
 
 Normalize each API model record and associate it with the internal protein UUID without downloading coordinates yet.
 
 **To-do**
-- [ ] Extract model entity ID, accession, model version/release metadata, sequence start/end, sequence length, coordinate URLs, and available confidence/source metadata.
-- [ ] Preserve raw source metadata needed for audit/debugging in the existing JSON metadata field where appropriate.
-- [ ] Define a stable source structure identity and verify it against PP-12 uniqueness constraints before persistence.
-- [ ] Make discovery safe to resume: repeated API responses update/reuse the same logical structure record rather than creating duplicates.
-- [ ] Distinguish confirmed absence of a model from upstream/API/network failure.
-- [ ] Preserve retrieval timestamp and source release/version when supplied; do not fabricate a version.
+- [x] Extract model entity ID, accession, model version/release metadata, sequence start/end, sequence length, coordinate URLs, and available confidence/source metadata.
+- [x] Preserve raw source metadata needed for audit/debugging in the existing JSON metadata field where appropriate.
+- [x] Define a stable source structure identity and verify it against PP-12 uniqueness constraints before persistence.
+- [x] Make persistence safe to resume: repeated API responses update/reuse the same logical structure and artifact records rather than creating duplicates. (Discovery-only rows are not created before a successful download.)
+- [x] Distinguish confirmed absence of a model from upstream/API/network failure.
+- [x] Preserve retrieval timestamp and source release/version when supplied; do not fabricate a version.
 
 ### Step 4 — Implement streaming download and MinIO storage
 
 Download the selected mmCIF coordinate file from the API-provided URL and persist it through the PP-12 storage abstraction.
 
 **To-do**
-- [ ] Stream response bytes with bounded timeouts and size limits; do not buffer large structure files fully in memory.
+- [x] Stream response bytes to a temporary file with bounded timeouts and size limits; do not buffer large structure files fully in memory.
 - [ ] Validate HTTP status, expected content type (allow documented upstream variations), non-empty content, and basic mmCIF signature/format sanity.
-- [ ] Calculate SHA-256 and byte size while streaming.
-- [ ] Upload to MinIO using a deterministic, path-safe object key derived from source/model identity and version; never use untrusted URL path fragments directly.
-- [ ] Use the configured MinIO bucket/prefix and existing storage URI contract; do not hardcode credentials or endpoints.
-- [ ] Verify uploaded object metadata/readback in integration tests.
-- [ ] Persist artifact success only after storage upload succeeds; leave failed transfers retryable and avoid dangling “successful” metadata.
+- [x] Calculate SHA-256 and byte size while streaming.
+- [x] Upload to MinIO in bounded chunks using a deterministic, path-safe object key derived from internal protein/model identity and version; never use untrusted URL path fragments directly.
+- [x] Use the configured MinIO bucket/prefix and existing storage URI contract; do not hardcode credentials or endpoints.
+- [x] Verify uploaded object size and streamed GET checksum/readback in a real-MinIO integration test.
+- [x] Persist artifact success only after storage upload and readback verification succeed; leave failed transfers retryable and avoid dangling “successful” metadata.
 - [ ] Skip unchanged artifacts by checksum and reuse existing object/metadata where safe.
 
 ### Step 5 — Integrate PP-12 metadata persistence
@@ -95,11 +95,11 @@ Download the selected mmCIF coordinate file from the API-provided URL and persis
 Use existing SQLAlchemy models and repository/storage abstractions. No schema migration is expected in this task.
 
 **To-do**
-- [ ] Create or update `structures` rows using the existing source/source-structure/version/format fields and internal protein UUID relationships supported by the schema.
-- [ ] Create or update `artifacts` rows with backend, URI, format/content type, byte size, checksum algorithm/value, source provenance, and optional dataset/job linkage supported by PP-12.
-- [ ] Associate each structure with the correct internal `protein_id`; never use a UniProt accession as the foreign key.
-- [ ] Record run/job state and counts using the PP-12 lifecycle conventions where applicable.
-- [ ] Make database writes transactional and idempotent; handle uniqueness conflicts by reloading/updating the existing logical record.
+- [x] Create or update `structures` rows using existing source/source-structure/version/format fields; PP-12 has no direct `structures.protein_id` FK, so the internal UUID is recorded in `structures.metadata_json.protein_id` until PP-21 creates chain associations.
+- [x] Create or update `artifacts` rows with backend, URI, format/content type, byte size, checksum algorithm/value, source provenance, and dataset/job linkage.
+- [x] Preserve the correct internal `protein_id` UUID in structure metadata; never use a UniProt accession as an internal key or fabricate chain associations before PP-21.
+- [x] Record run/job state and counts using the PP-12 lifecycle conventions.
+- [x] Make database writes transactional per completed model and idempotent through PP-12 structure/artifact unique keys.
 - [ ] Confirm actual PP-12 constraints and model field names before implementation. If a required relationship or field is absent, document the gap and request a separate schema change.
 
 ### Step 6 — Validation, tests, and sample execution
@@ -107,24 +107,24 @@ Use existing SQLAlchemy models and repository/storage abstractions. No schema mi
 Test API, persistence, and object storage boundaries independently, then run a small reproducible sample.
 
 **To-do**
-- [ ] Unit-test cohort selection, API parsing, multiple model records, normalization, URL validation, error classification, checksum, and deterministic object-key generation.
+- [x] Add unit coverage for API parsing, multiple model records, URL validation, checksum/streaming, object-key safety, and long-protein unsupported outcomes. Candidate selection and persistence are covered by PostgreSQL integration tests.
 - [ ] Cover 404, 429/Retry-After, 5xx, timeout, connection failure, malformed JSON, missing fields, invalid URL, empty response, and corrupt/non-mmCIF payload.
-- [ ] Add PostgreSQL integration tests with Testcontainers for structure/artifact/run persistence, uniqueness, rollback, and repeated-run idempotency.
-- [ ] Add MinIO integration tests for upload, metadata/checksum, readback, and retry after failed upload; use an actual MinIO service/container rather than mocks for this boundary.
+- [x] Add PostgreSQL Testcontainers integration coverage for deterministic candidate selection, structure/artifact persistence, metadata linkage, and repeated-upsert idempotency. Rollback-specific crawler failure coverage remains open.
+- [x] Add a real MinIO Testcontainers integration test for bucket creation, streaming upload, HEAD size, and streamed GET checksum/readback. Failure/retry injection remains open.
 - [ ] Test combined crawler flow with a small fixture-backed cohort and verify database-to-object-store consistency.
 - [ ] Document and execute a small live sample against AFDB and the PP-11 Compose MinIO service when credentials/runtime are available; record exact sample size and results.
 - [ ] Verify resume behavior by running the same sample twice and confirming no duplicate logical structures/artifacts.
-- [ ] Emit a machine-readable manifest for PP-16 containing internal protein UUID, external accession, AFDB model ID/version, source URL, sequence range, format, storage URI, size, checksum, retrieval status, and skip/failure reason.
+- [x] Emit a machine-readable JSONL manifest for PP-16 containing internal protein UUID, external accession, AFDB model ID/version, source URL, sequence range, format, artifact key, size, checksum, retrieval status, and unsupported/failure reason.
 
 ### Step 7 — Documentation and downstream handoff
 
 Publish the operational and data contracts required by PP-16 and PP-21.
 
 **To-do**
-- [ ] Document setup/configuration, source attribution/license, rate-limit policy, small-sample execution, resume/retry, and troubleshooting.
-- [ ] Document manifest schema and outcome/status semantics for PP-16.
-- [ ] Document mmCIF artifact and metadata contract for PP-21; explicitly state that parsing and chain association happen downstream.
-- [ ] Record known limitations, especially models/fragments unavailable through the individual API and upstream schema/version changes.
+- [x] Document setup/configuration, source attribution/license, bounded sample execution, resume/retry, and troubleshooting. Rate-limit behavior is implemented in the client.
+- [x] Document manifest outcome/status semantics for PP-16.
+- [x] Document mmCIF artifact and metadata contract for PP-21; explicitly state that parsing and chain association happen downstream.
+- [x] Record known limitations, especially models/fragments unavailable through the individual API and upstream schema/version changes.
 - [ ] Update this plan with test commands/results, sample counts, source metadata/version, and any deferred manual checks.
 
 ## 4. Deliverables
