@@ -6,7 +6,7 @@ from email.message import Message
 from io import BytesIO
 from pathlib import Path
 from unittest.mock import patch
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 
 import pytest
 
@@ -217,6 +217,34 @@ def test_download_cif_rejects_non_cif_payload(tmp_path: Path) -> None:
     with patch(
         "protein3d.ingestion.alphafold.urlopen",
         return_value=FakeCifResponse(b"<html>not a CIF file</html>"),
+    ):
+        with pytest.raises(AlphaFoldContractError, match="mmCIF"):
+            AlphaFoldClient(max_retries=0).download_cif_to_path(
+                model,
+                "7e5c2f48-1f1a-4b22-9b13-2d7e43d66a81",
+                destination,
+            )
+    assert not destination.exists()
+
+
+
+@pytest.mark.unit
+def test_client_classifies_connection_failure() -> None:
+    with patch(
+        "protein3d.ingestion.alphafold.urlopen",
+        side_effect=URLError("connection refused"),
+    ):
+        with pytest.raises(AlphaFoldError, match="failed after retries"):
+            AlphaFoldClient(max_retries=0).get_predictions("Q9Y261")
+
+
+@pytest.mark.unit
+def test_download_cif_rejects_empty_coordinate_response(tmp_path: Path) -> None:
+    destination = tmp_path / "empty.cif"
+    model = parse_prediction("Q9Y261", [RECORD])[0]
+    with patch(
+        "protein3d.ingestion.alphafold.urlopen",
+        return_value=FakeCifResponse(b""),
     ):
         with pytest.raises(AlphaFoldContractError, match="mmCIF"):
             AlphaFoldClient(max_retries=0).download_cif_to_path(
