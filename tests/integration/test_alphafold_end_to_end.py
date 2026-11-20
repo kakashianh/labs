@@ -148,14 +148,6 @@ def test_fixture_crawl_persists_verified_minio_artifact_and_resumes(
                         alphafold_max_coordinate_bytes=1024 * 1024,
                     )
 
-                    monkeypatch.setattr(
-                        "protein3d.ingestion.alphafold_crawler.AlphaFoldClient",
-                        lambda **_kwargs: cast(AlphaFoldClient, client),
-                    )
-                    monkeypatch.setattr(
-                        "protein3d.ingestion.alphafold_crawler.MinioObjectStore",
-                        lambda **_kwargs: cast(MinioObjectStore, tracking_store),
-                    )
                     class TrackingObjectStore:
                         def __init__(self, delegate: MinioObjectStore) -> None:
                             self.delegate = delegate
@@ -183,6 +175,15 @@ def test_fixture_crawl_persists_verified_minio_artifact_and_resumes(
                             )
 
                     tracking_store = TrackingObjectStore(object_store)
+
+                    monkeypatch.setattr(
+                        "protein3d.ingestion.alphafold_crawler.AlphaFoldClient",
+                        lambda **_kwargs: cast(AlphaFoldClient, client),
+                    )
+                    monkeypatch.setattr(
+                        "protein3d.ingestion.alphafold_crawler.MinioObjectStore",
+                        lambda **_kwargs: cast(MinioObjectStore, tracking_store),
+                    )
 
                     first = run_configured_crawl(
                         session,
