@@ -182,7 +182,10 @@ def crawl_candidates(
                         artifact_uri = artifact_storage.uri_for(coordinate.object_key)
                         parsed_uri = urlsplit(artifact_uri)
                         object_key = parsed_uri.path.lstrip("/")
-                        if parsed_uri.scheme != "s3" or parsed_uri.netloc != artifact_storage.bucket:
+                        if (
+                            parsed_uri.scheme != "s3"
+                            or parsed_uri.netloc != artifact_storage.bucket
+                        ):
                             raise ValueError("Artifact storage returned an unexpected S3 URI")
                         object_store.put_file(
                             object_key,
