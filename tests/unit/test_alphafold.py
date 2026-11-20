@@ -12,6 +12,7 @@ import pytest
 
 from protein3d.ingestion.alphafold import (
     AlphaFoldClient,
+    AlphaFoldError,
     AlphaFoldContractError,
     AlphaFoldNotFound,
     _retry_delay,
@@ -174,7 +175,7 @@ def test_download_cif_removes_partial_file_when_size_limit_exceeded(
         "protein3d.ingestion.alphafold.urlopen",
         return_value=FakeCifResponse(b"data_example\n" + b"x" * 100),
     ):
-        with pytest.raises(Exception, match="size limit"):
+        with pytest.raises(AlphaFoldError, match="size limit"):
             AlphaFoldClient(max_retries=0).download_cif_to_path(
                 model,
                 "7e5c2f48-1f1a-4b22-9b13-2d7e43d66a81",
@@ -183,3 +184,8 @@ def test_download_cif_removes_partial_file_when_size_limit_exceeded(
                 chunk_size=8,
             )
     assert not destination.exists()
+
+
+@pytest.mark.unit
+def test_retry_delay_accepts_http_date() -> None:
+    assert _retry_delay("Wed, 21 Oct 2015 07:28:00 GMT", 0) == 0.0
