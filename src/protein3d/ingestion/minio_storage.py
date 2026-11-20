@@ -150,8 +150,8 @@ class MinioObjectStore:
         finally:
             connection.close()
 
-    def head_object(self, object_key: str) -> int:
-        """Return stored object size or raise when the object is unavailable."""
+    def head_object(self, object_key: str) -> int | None:
+        """Return stored object size, or None when the object does not exist."""
         path = self._object_path(object_key)
         connection, host = self._connection()
         try:
@@ -163,6 +163,8 @@ class MinioObjectStore:
             )
             response = connection.getresponse()
             response.read()
+            if response.status == 404:
+                return None
             if response.status not in (200, 204):
                 raise RuntimeError(f"MinIO object HEAD returned HTTP {response.status}")
             return int(response.getheader("Content-Length", "0"))
