@@ -1,6 +1,7 @@
 """Unit tests for bounded AlphaFold crawler outcome handling."""
 
 import json
+import uuid
 from pathlib import Path
 from unittest.mock import MagicMock
 from typing import cast
@@ -24,7 +25,7 @@ def test_long_protein_is_reported_unsupported_without_api_request(
     object_store = MagicMock()
     manifest = tmp_path / "alphafold.jsonl"
     candidate = ProteinCandidate(
-        protein_id=__import__("uuid").UUID("7e5c2f48-1f1a-4b22-9b13-2d7e43d66a81"),
+        protein_id=uuid.UUID("7e5c2f48-1f1a-4b22-9b13-2d7e43d66a81"),
         accession="Q9Y261",
         sequence_length=2801,
     )
