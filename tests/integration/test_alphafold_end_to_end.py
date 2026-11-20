@@ -2,6 +2,7 @@
 
 import hashlib
 import time
+import uuid
 from pathlib import Path
 from typing import cast
 from unittest.mock import MagicMock
@@ -153,6 +154,7 @@ def test_fixture_crawl_persists_verified_minio_artifact_and_resumes(
                         def __init__(self, delegate: MinioObjectStore) -> None:
                             self.delegate = delegate
                             self.put_calls: list[str] = []
+                            self.fail_next_put = False
 
                         def ensure_bucket(self) -> None:
                             self.delegate.ensure_bucket()
@@ -171,6 +173,9 @@ def test_fixture_crawl_persists_verified_minio_artifact_and_resumes(
                             sha256: str,
                         ) -> None:
                             self.put_calls.append(object_key)
+                            if self.fail_next_put:
+                                self.fail_next_put = False
+                                raise RuntimeError("simulated MinIO upload interruption")
                             self.delegate.put_file(object_key, file_path, content_type, sha256)
 
                     tracking_store = TrackingObjectStore(object_store)
@@ -183,6 +188,26 @@ def test_fixture_crawl_persists_verified_minio_artifact_and_resumes(
                         "protein3d.ingestion.alphafold_crawler.MinioObjectStore",
                         lambda **_kwargs: cast(MinioObjectStore, tracking_store),
                     )
+
+                    tracking_store.fail_next_put = True
+                    failed = run_configured_crawl(
+                        session,
+                        settings,
+                        tmp_path / "failed.jsonl",
+                        sample_limit=1,
+                    )
+                    assert failed.failed == 1
+                    assert failed.retryable_failed == 1
+                    assert failed.permanent_failed == 0
+                    assert session.scalar(select(func.count()).select_from(Structure)) == 0
+                    assert session.scalar(select(func.count()).select_from(Artifact)) == 0
+                    failed_run = session.get(DatasetRun, uuid.UUID(failed.dataset_run_id or ""))
+                    failed_job = session.get(Job, uuid.UUID(failed.job_id or ""))
+                    assert failed_run is not None
+                    assert failed_run.status == DatasetStatus.FAILED.value
+                    assert failed_job is not None
+                    assert failed_job.status == JobStatus.FAILED.value
+                    tracking_store.put_calls.clear()
 
                     first = run_configured_crawl(
                         session,
@@ -206,14 +231,20 @@ def test_fixture_crawl_persists_verified_minio_artifact_and_resumes(
                     assert tracking_store.put_calls == []
                     assert session.scalar(select(func.count()).select_from(Structure)) == 1
                     assert session.scalar(select(func.count()).select_from(Artifact)) == 1
-                    assert session.scalar(select(func.count()).select_from(DatasetRun)) == 2
-                    assert session.scalar(select(func.count()).select_from(Job)) == 2
+                    assert session.scalar(select(func.count()).select_from(DatasetRun)) == 3
+                    assert session.scalar(select(func.count()).select_from(Job)) == 3
 
                     runs = session.scalars(select(DatasetRun).order_by(DatasetRun.started_at)).all()
-                    assert all(run.status == DatasetStatus.COMPLETED.value for run in runs)
+                    assert runs[0].status == DatasetStatus.FAILED.value
+                    assert all(
+                        run.status == DatasetStatus.COMPLETED.value for run in runs[1:]
+                    )
                     assert runs[-1].provenance["downloaded"] == 1
                     jobs = session.scalars(select(Job).order_by(Job.started_at)).all()
-                    assert all(job.status == JobStatus.SUCCEEDED.value for job in jobs)
+                    assert jobs[0].status == JobStatus.FAILED.value
+                    assert all(
+                        job.status == JobStatus.SUCCEEDED.value for job in jobs[1:]
+                    )
 
                     structure = session.scalar(select(Structure))
                     assert structure is not None
