@@ -13,7 +13,7 @@ import re
 import time
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlparse
@@ -217,6 +217,59 @@ class AlphaFoldClient:
             sha256=checksum,
         )
         return body, metadata
+
+
+    def download_cif_to_path(
+        self,
+        model: AlphaFoldModel,
+        protein_id: str,
+        destination: Path,
+        max_bytes: int = 100_000_000,
+        chunk_size: int = 1024 * 1024,
+    ) -> DownloadedCoordinate:
+        """Stream a CIF response to disk while enforcing size and hashing bytes."""
+        if not _is_safe_https_url(model.cif_url):
+            raise AlphaFoldContractError("Coordinate URL must use HTTPS")
+        if not re.fullmatch(r"[0-9a-fA-F-]{36}", protein_id):
+            raise ValueError("protein_id must be an internal UUID")
+        if max_bytes < 1 or chunk_size < 1:
+            raise ValueError("max_bytes and chunk_size must be positive")
+
+        request = Request(model.cif_url, headers={"User-Agent": self.user_agent})
+        digest = hashlib.sha256()
+        size = 0
+        prefix = bytearray()
+        try:
+            with urlopen(request, timeout=self.timeout_seconds) as response:
+                content_type = response.headers.get("Content-Type", "application/octet-stream")
+                with destination.open("wb") as output:
+                    while chunk := response.read(chunk_size):
+                        size += len(chunk)
+                        if size > max_bytes:
+                            raise AlphaFoldError("Coordinate file exceeds configured size limit")
+                        if len(prefix) < 4096:
+                            prefix.extend(chunk[: 4096 - len(prefix)])
+                        digest.update(chunk)
+                        output.write(chunk)
+        except (HTTPError, URLError, TimeoutError, OSError) as exc:
+            destination.unlink(missing_ok=True)
+            raise AlphaFoldError("Coordinate download failed") from exc
+
+        if not size or b"data_" not in bytes(prefix).lower():
+            destination.unlink(missing_ok=True)
+            raise AlphaFoldContractError("Downloaded payload is empty or not recognizable mmCIF")
+
+        version = model.model_version or "unversioned"
+        safe_model = re.sub(r"[^A-Za-z0-9_.-]", "_", model.model_entity_id)
+        object_key = str(PurePosixPath("alphafold", protein_id, safe_model, version, "model.cif"))
+        return DownloadedCoordinate(
+            source_url=model.cif_url,
+            retrieved_at=datetime.now(UTC).isoformat(),
+            object_key=object_key,
+            content_type=content_type.split(";", maxsplit=1)[0],
+            size_bytes=size,
+            sha256=digest.hexdigest(),
+        )
 
 
 def _retry_delay(retry_after: str | None, attempt: int) -> float:
