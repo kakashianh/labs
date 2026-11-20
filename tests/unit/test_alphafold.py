@@ -134,7 +134,7 @@ def test_retry_delay_is_bounded(header: str | None, attempt: int, expected: floa
 class FakeCifResponse(BytesIO):
     headers = {"Content-Type": "chemical/x-cif; charset=utf-8"}
 
-    def __enter__(self):
+    def __enter__(self) -> "FakeCifResponse":
         return self
 
     def __exit__(self, *args: object) -> None:
