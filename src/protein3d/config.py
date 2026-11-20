@@ -71,6 +71,10 @@ class Settings(BaseSettings):
 
     external_request_timeout_seconds: float = Field(default=20.0, gt=0, le=300)
     external_max_retries: int = Field(default=3, ge=0, le=10)
+    alphafold_api_base_url: str = "https://alphafold.ebi.ac.uk/api"
+    alphafold_taxonomy_id: int = Field(default=9606, ge=1)
+    alphafold_sample_limit: int = Field(default=10, ge=1, le=10_000)
+    alphafold_max_coordinate_bytes: int = Field(default=100_000_000, ge=1024)
     processing_batch_size: int = Field(default=500, ge=1, le=100_000)
     processing_concurrency: int = Field(default=2, ge=1, le=64)
 
@@ -113,6 +117,10 @@ class Settings(BaseSettings):
             "object_storage_secure": self.object_storage_secure,
             "graph_enabled": self.graph_enabled,
             "vector_enabled": self.vector_enabled,
+            "alphafold_api_base_url": self.alphafold_api_base_url,
+            "alphafold_taxonomy_id": self.alphafold_taxonomy_id,
+            "alphafold_sample_limit": self.alphafold_sample_limit,
+            "alphafold_max_coordinate_bytes": self.alphafold_max_coordinate_bytes,
             "processing_batch_size": self.processing_batch_size,
             "processing_concurrency": self.processing_concurrency,
         }
