@@ -148,7 +148,7 @@ Publish the operational and data contracts required by PP-16 and PP-21.
 - [x] PostgreSQL structure/artifact metadata remains consistent with object storage and uses existing PP-12 schema.
 - [x] Re-running the same fixture-backed cohort is idempotent and resumable; the live AFDB cohort repetition is deferred.
 - [x] Manifest is consumable by PP-16 and artifact contract is documented for PP-21.
-- [x] Unit tests, PostgreSQL integration tests, and MinIO integration tests pass in GitHub Actions run `44656513813`.
+- [x] Unit tests, PostgreSQL integration tests, and MinIO integration tests pass in GitHub Actions run `44656674505`.
 - [x] A small live sample and resumed run are explicitly marked deferred with the reason (the user's local Compose runtime and secrets are not accessible from this execution environment; no live run is reported as passed).
 
 ## 6. Testing strategy
@@ -167,7 +167,7 @@ Publish the operational and data contracts required by PP-16 and PP-21.
 
 ## 8. Completion notes
 
-- **Automated validation:** GitHub Actions [run 44656513813](https://github.com/kakashianh/labs/actions/runs/44656513813) passed Ruff lint, Ruff format, Mypy, unit tests (47 passed), PostgreSQL/MinIO integration tests (6 passed), package/CLI smoke checks, and Docker Compose validation.
+- **Automated validation:** GitHub Actions [run 44656674505](https://github.com/kakashianh/labs/actions/runs/44656674505) passed Ruff lint, Ruff format, Mypy, unit tests (47 passed), PostgreSQL/MinIO integration tests (6 passed), package/CLI smoke checks, and Docker Compose validation.
 - **Reproduction commands:** `uv run --locked ruff check .`; `uv run --locked ruff format --check .`; `uv run --locked mypy src tests`; `uv run --locked pytest -m unit`; `uv run --locked pytest -m integration`.
 - **Fixture-backed sample:** taxonomy `9606`, sample limit `1`, UniProt accession `Q9Y261`, AFDB model entity `AF-Q9Y261-F1`, source version `6`. The first configured run simulated a MinIO upload interruption and verified no structure/artifact row was committed; the second run uploaded and verified the mmCIF object; the third run reused the object after SHA-256 readback. Assertions confirmed one logical structure, one artifact, one failed then two successful dataset/job runs.
 - **Source/API contract:** current AFDB fields and API-provided `cifUrl`; model version is persisted as returned. No live API response was used in the fixture test.
