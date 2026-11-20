@@ -3,8 +3,8 @@
 import json
 import uuid
 from pathlib import Path
-from unittest.mock import MagicMock
 from typing import cast
+from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy.orm import Session
