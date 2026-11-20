@@ -4,6 +4,8 @@ import hashlib
 import socket
 import time
 from pathlib import Path
+from urllib.error import URLError
+from urllib.request import urlopen
 
 import pytest
 from testcontainers.core.container import DockerContainer  # type: ignore[import-untyped]
@@ -27,13 +29,17 @@ def test_minio_bucket_upload_head_and_streaming_readback(tmp_path: Path) -> None
         port = int(minio.get_exposed_port(9000))
 
         deadline = time.monotonic() + 60
+        health_url = f"http://{host}:{port}/minio/health/ready"
         while True:
             try:
-                with socket.create_connection((host, port), timeout=1):
-                    break
-            except OSError:
+                with urlopen(health_url, timeout=2) as response:
+                    if response.status == 200:
+                        break
+            except (OSError, URLError):
                 if time.monotonic() >= deadline:
-                    raise TimeoutError("MinIO did not become reachable within 60 seconds") from None
+                    raise TimeoutError(
+                        "MinIO did not become ready within 60 seconds"
+                    ) from None
                 time.sleep(1)
 
         store = MinioObjectStore(
