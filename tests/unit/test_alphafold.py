@@ -131,7 +131,6 @@ def test_retry_delay_is_bounded(header: str | None, attempt: int, expected: floa
     assert _retry_delay(header, attempt) == expected
 
 
-
 class FakeCifResponse(BytesIO):
     headers = {"Content-Type": "chemical/x-cif; charset=utf-8"}
 
