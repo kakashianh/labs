@@ -124,7 +124,6 @@ def test_crawler_reuses_existing_minio_object_when_checksum_matches(
     assert record["storage_action"] == "reused"
 
 
-
 @pytest.mark.unit
 def test_crawler_manifest_distinguishes_retryable_and_permanent_api_failures(
     tmp_path: Path,
