@@ -50,7 +50,6 @@ def test_long_protein_is_reported_unsupported_without_api_request(
     assert "outside PP-13 scope" in record["reason"]
 
 
-
 @pytest.mark.unit
 def test_crawler_reuses_existing_minio_object_when_checksum_matches(
     tmp_path: Path,
