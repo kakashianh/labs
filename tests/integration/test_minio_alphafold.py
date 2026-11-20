@@ -15,7 +15,7 @@ from protein3d.ingestion.minio_storage import MinioObjectStore
 def test_minio_bucket_upload_head_and_streaming_readback(tmp_path: Path) -> None:
     username = "protein3dtest"
     password = "protein3d-test-secret"
-    image = "quay.io/minio/minio:RELEASE.2025-09-06T17-38-46Z"
+    image = "minio/minio:RELEASE.2025-09-06T17-38-46Z"
     container = (
         DockerContainer(image)
         .with_exposed_ports(9000)
