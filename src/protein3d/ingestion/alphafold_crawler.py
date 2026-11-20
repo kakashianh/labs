@@ -335,12 +335,8 @@ def run_configured_crawl(
             "unsupported": summary.unsupported,
             "failed": summary.failed,
         }
-        job.status = (
-            JobStatus.FAILED.value if summary.failed else JobStatus.SUCCEEDED.value
-        )
-        job.error_summary = (
-            f"{summary.failed} model(s) failed" if summary.failed else None
-        )
+        job.status = JobStatus.FAILED.value if summary.failed else JobStatus.SUCCEEDED.value
+        job.error_summary = f"{summary.failed} model(s) failed" if summary.failed else None
         job.finished_at = finished
         session.commit()
         return CrawlSummary(
