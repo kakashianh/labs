@@ -1,5 +1,7 @@
 """PostgreSQL integration coverage for the AlphaFold crawler persistence boundary."""
 
+# ruff: noqa: I001
+
 import uuid
 
 import pytest
