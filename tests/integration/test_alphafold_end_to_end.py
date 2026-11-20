@@ -154,21 +154,35 @@ def test_fixture_crawl_persists_verified_minio_artifact_and_resumes(
                     )
                     monkeypatch.setattr(
                         "protein3d.ingestion.alphafold_crawler.MinioObjectStore",
-                        lambda **_kwargs: object_store,
+                        lambda **_kwargs: cast(MinioObjectStore, tracking_store),
                     )
-                    original_put_file = object_store.put_file
-                    put_calls: list[str] = []
+                    class TrackingObjectStore:
+                        def __init__(self, delegate: MinioObjectStore) -> None:
+                            self.delegate = delegate
+                            self.put_calls: list[str] = []
 
-                    def tracked_put_file(
-                        object_key: str,
-                        file_path: Path,
-                        content_type: str,
-                        sha256: str,
-                    ) -> None:
-                        put_calls.append(object_key)
-                        original_put_file(object_key, file_path, content_type, sha256)
+                        def ensure_bucket(self) -> None:
+                            self.delegate.ensure_bucket()
 
-                    object.__setattr__(object_store, "put_file", tracked_put_file)
+                        def head_object(self, object_key: str) -> int | None:
+                            return self.delegate.head_object(object_key)
+
+                        def get_file(self, object_key: str, destination: Path) -> tuple[int, str]:
+                            return self.delegate.get_file(object_key, destination)
+
+                        def put_file(
+                            self,
+                            object_key: str,
+                            file_path: Path,
+                            content_type: str,
+                            sha256: str,
+                        ) -> None:
+                            self.put_calls.append(object_key)
+                            self.delegate.put_file(
+                                object_key, file_path, content_type, sha256
+                            )
+
+                    tracking_store = TrackingObjectStore(object_store)
 
                     first = run_configured_crawl(
                         session,
@@ -178,9 +192,9 @@ def test_fixture_crawl_persists_verified_minio_artifact_and_resumes(
                     )
                     assert first.downloaded == 1
                     assert first.failed == 0
-                    assert len(put_calls) == 1
+                    assert len(tracking_store.put_calls) == 1
 
-                    put_calls.clear()
+                    tracking_store.put_calls.clear()
                     second = run_configured_crawl(
                         session,
                         settings,
@@ -189,7 +203,7 @@ def test_fixture_crawl_persists_verified_minio_artifact_and_resumes(
                     )
                     assert second.downloaded == 1
                     assert second.failed == 0
-                    assert put_calls == []
+                    assert tracking_store.put_calls == []
                     assert session.scalar(select(func.count()).select_from(Structure)) == 1
                     assert session.scalar(select(func.count()).select_from(Artifact)) == 1
                     assert session.scalar(select(func.count()).select_from(DatasetRun)) == 2
@@ -211,7 +225,7 @@ def test_fixture_crawl_persists_verified_minio_artifact_and_resumes(
                     assert artifact is not None
                     assert artifact.checksum == coordinate.sha256
                     assert artifact.dataset_run_id == runs[-1].dataset_run_id
-                    assert object_store.head_object(
+                    assert tracking_store.head_object(
                         f"artifacts/{coordinate.object_key}"
                     ) == len(payload)
         finally:
