@@ -4,9 +4,9 @@ import hashlib
 import time
 from pathlib import Path
 from typing import cast
+from unittest.mock import MagicMock
 from urllib.error import URLError
 from urllib.request import urlopen
-from unittest.mock import MagicMock
 
 import pytest
 from alembic import command
