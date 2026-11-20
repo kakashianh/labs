@@ -15,6 +15,8 @@ from protein3d.ingestion.alphafold_crawler import select_candidates
 from protein3d.ingestion.alphafold_repository import persist_alpha_fold_artifacts
 from protein3d.metadata.models import (
     Artifact,
+    DatasetRun,
+    Job,
     Protein,
     ProteinIdMapping,
     Structure,
@@ -87,7 +89,7 @@ def test_crawler_candidate_selection_and_metadata_upsert(
                 assert candidates[0].accession == "A0A000"
                 assert select_candidates(session, 9606, 0) == []
 
-                model = parse_prediction("Q9Y261", [RECORD])[0]
+                model = parse_prediction("A0A000", [RECORD])[0]
                 coordinate = DownloadedCoordinate(
                     source_url=model.cif_url,
                     retrieved_at="2026-11-20T00:00:00+00:00",
@@ -100,8 +102,22 @@ def test_crawler_candidate_selection_and_metadata_upsert(
                     "s3://protein3d-artifacts/artifacts/"
                     f"{coordinate.object_key}"
                 )
-                run_id = uuid.uuid4()
-                job_id = uuid.uuid4()
+                dataset_run = DatasetRun(
+                    dataset_name="alphafold-test",
+                    dataset_type="structure_crawl",
+                    source="alphafold_db",
+                )
+                session.add(dataset_run)
+                session.flush()
+                job = Job(
+                    dataset_run_id=dataset_run.dataset_run_id,
+                    job_type="alphafold_structure_crawl",
+                    idempotency_key=f"alphafold-test:{uuid.uuid4()}",
+                )
+                session.add(job)
+                session.flush()
+                run_id = dataset_run.dataset_run_id
+                job_id = job.job_id
 
                 persist_alpha_fold_artifacts(
                     session,
