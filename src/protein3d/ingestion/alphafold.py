@@ -188,63 +188,6 @@ class AlphaFoldClient:
             time.sleep(delay)
         raise AlphaFoldRetryableError("AFDB request exhausted retries")
 
-    def download_cif(
-        self,
-        model: AlphaFoldModel,
-        protein_id: str,
-        max_bytes: int = 100_000_000,
-    ) -> tuple[bytes, DownloadedCoordinate]:
-        """Download a CIF payload with size bound and checksum.
-
-        Object-store upload is deliberately performed by the caller so that a
-        database row is never marked successful before the upload completes.
-        """
-        if not _is_safe_https_url(model.cif_url):
-            raise AlphaFoldContractError("Coordinate URL must use HTTPS")
-        if not re.fullmatch(r"[0-9a-fA-F-]{36}", protein_id):
-            raise ValueError("protein_id must be an internal UUID")
-        request = Request(model.cif_url, headers={"User-Agent": self.user_agent})
-        try:
-            with urlopen(request, timeout=self.timeout_seconds) as response:
-                content_type = response.headers.get("Content-Type", "application/octet-stream")
-                chunks: list[bytes] = []
-                size = 0
-                while chunk := response.read(1024 * 1024):
-                    size += len(chunk)
-                    if size > max_bytes:
-                        raise AlphaFoldPermanentError(
-                            "Coordinate file exceeds configured size limit"
-                        )
-                    chunks.append(chunk)
-        except HTTPError as exc:
-            if exc.code == 429 or exc.code >= 500:
-                raise AlphaFoldRetryableError(f"Coordinate download HTTP {exc.code}") from exc
-            raise AlphaFoldPermanentError(f"Coordinate download HTTP {exc.code}") from exc
-        except (URLError, TimeoutError) as exc:
-            raise AlphaFoldRetryableError("Coordinate download failed") from exc
-        body = b"".join(chunks)
-        if not body or not _has_mmcif_data_block(body[:4096]):
-            raise AlphaFoldContractError("Downloaded payload is empty or not recognizable mmCIF")
-        media_type = content_type.split(";", maxsplit=1)[0].strip().lower()
-        if not _is_supported_cif_content_type(media_type):
-            raise AlphaFoldContractError(f"Unexpected coordinate content type: {media_type}")
-        checksum = hashlib.sha256(body).hexdigest()
-        version = model.model_version or "unversioned"
-        safe_model = re.sub(r"[^A-Za-z0-9_.-]", "_", model.model_entity_id)
-        safe_version = re.sub(r"[^A-Za-z0-9_.-]", "_", version)
-        object_key = str(
-            PurePosixPath("alphafold", protein_id, safe_model, safe_version, "model.cif")
-        )
-        metadata = DownloadedCoordinate(
-            source_url=model.cif_url,
-            retrieved_at=datetime.now(UTC).isoformat(),
-            object_key=object_key,
-            content_type=content_type.split(";", maxsplit=1)[0],
-            size_bytes=len(body),
-            sha256=checksum,
-        )
-        return body, metadata
-
     def download_cif_to_path(
         self,
         model: AlphaFoldModel,
