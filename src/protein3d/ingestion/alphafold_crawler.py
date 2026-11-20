@@ -20,6 +20,8 @@ from protein3d.ingestion.alphafold import (
     AlphaFoldClient,
     AlphaFoldError,
     AlphaFoldNotFound,
+    AlphaFoldPermanentError,
+    AlphaFoldRetryableError,
     manifest_record,
 )
 from protein3d.ingestion.alphafold_repository import persist_alpha_fold_artifacts
@@ -51,6 +53,8 @@ class CrawlSummary:
     no_model: int
     unsupported: int
     failed: int
+    retryable_failed: int
+    permanent_failed: int
     manifest_path: str
     dataset_run_id: str | None = None
     job_id: str | None = None
@@ -102,7 +106,8 @@ def crawl_candidates(
     retries idempotent. Each successful object is HEAD-verified before metadata
     is committed. The manifest is append-only JSONL for crash recovery.
     """
-    discovered = downloaded = no_model = unsupported = failed = 0
+    discovered = downloaded = no_model = unsupported = 0
+    failed = retryable_failed = permanent_failed = 0
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
 
     with TemporaryDirectory(prefix="protein3d-afdb-") as temp_dir:
@@ -141,15 +146,30 @@ def crawl_candidates(
                         },
                     )
                     continue
-                except AlphaFoldError as exc:
+                except AlphaFoldRetryableError as exc:
                     failed += 1
+                    retryable_failed += 1
                     _write_manifest(
                         manifest,
                         {
                             "protein_id": str(candidate.protein_id),
                             "source": AFDB_SOURCE,
                             "accession": candidate.accession,
-                            "status": "failed",
+                            "status": "retryable_failure",
+                            "reason": str(exc),
+                        },
+                    )
+                    continue
+                except (AlphaFoldPermanentError, AlphaFoldError) as exc:
+                    failed += 1
+                    permanent_failed += 1
+                    _write_manifest(
+                        manifest,
+                        {
+                            "protein_id": str(candidate.protein_id),
+                            "source": AFDB_SOURCE,
+                            "accession": candidate.accession,
+                            "status": "permanent_failure",
                             "reason": str(exc),
                         },
                     )
@@ -237,14 +257,37 @@ def crawl_candidates(
                         )
                         record["storage_action"] = "reused" if reused else "uploaded"
                         downloaded += 1
-                    except Exception as exc:
+                    except AlphaFoldRetryableError as exc:
                         session.rollback()
                         failed += 1
+                        retryable_failed += 1
                         record = manifest_record(
                             str(candidate.protein_id),
                             model,
                             None,
-                            "failed",
+                            "retryable_failure",
+                            reason=f"{type(exc).__name__}: {exc}",
+                        )
+                    except (AlphaFoldPermanentError, ValueError) as exc:
+                        session.rollback()
+                        failed += 1
+                        permanent_failed += 1
+                        record = manifest_record(
+                            str(candidate.protein_id),
+                            model,
+                            None,
+                            "permanent_failure",
+                            reason=f"{type(exc).__name__}: {exc}",
+                        )
+                    except Exception as exc:
+                        session.rollback()
+                        failed += 1
+                        retryable_failed += 1
+                        record = manifest_record(
+                            str(candidate.protein_id),
+                            model,
+                            None,
+                            "retryable_failure",
                             reason=f"{type(exc).__name__}: {exc}",
                         )
                     finally:
@@ -257,6 +300,8 @@ def crawl_candidates(
         no_model=no_model,
         unsupported=unsupported,
         failed=failed,
+        retryable_failed=retryable_failed,
+        permanent_failed=permanent_failed,
         manifest_path=str(manifest_path),
         dataset_run_id=str(dataset_run_id) if dataset_run_id else None,
         job_id=str(job_id) if job_id else None,
@@ -348,9 +393,16 @@ def run_configured_crawl(
             "no_model": summary.no_model,
             "unsupported": summary.unsupported,
             "failed": summary.failed,
+            "retryable_failed": summary.retryable_failed,
+            "permanent_failed": summary.permanent_failed,
         }
         job.status = JobStatus.FAILED.value if summary.failed else JobStatus.SUCCEEDED.value
-        job.error_summary = f"{summary.failed} model(s) failed" if summary.failed else None
+        job.error_summary = (
+            f"{summary.retryable_failed} retryable and "
+            f"{summary.permanent_failed} permanent model failure(s)"
+            if summary.failed
+            else None
+        )
         job.finished_at = finished
         session.commit()
         return CrawlSummary(
@@ -359,6 +411,8 @@ def run_configured_crawl(
             no_model=summary.no_model,
             unsupported=summary.unsupported,
             failed=summary.failed,
+            retryable_failed=summary.retryable_failed,
+            permanent_failed=summary.permanent_failed,
             manifest_path=summary.manifest_path,
             dataset_run_id=str(run.dataset_run_id),
             job_id=str(job.job_id),
