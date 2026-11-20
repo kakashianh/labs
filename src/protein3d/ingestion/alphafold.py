@@ -183,9 +183,7 @@ class AlphaFoldClient:
                 raise AlphaFoldContractError("AFDB returned malformed JSON") from exc
             except (URLError, TimeoutError) as exc:
                 if attempt >= self.max_retries:
-                    raise AlphaFoldRetryableError(
-                        "AFDB request failed after retries"
-                    ) from exc
+                    raise AlphaFoldRetryableError("AFDB request failed after retries") from exc
                 delay = _retry_delay(None, attempt)
             time.sleep(delay)
         raise AlphaFoldRetryableError("AFDB request exhausted retries")
@@ -220,12 +218,8 @@ class AlphaFoldClient:
                     chunks.append(chunk)
         except HTTPError as exc:
             if exc.code == 429 or exc.code >= 500:
-                raise AlphaFoldRetryableError(
-                    f"Coordinate download HTTP {exc.code}"
-                ) from exc
-            raise AlphaFoldPermanentError(
-                f"Coordinate download HTTP {exc.code}"
-            ) from exc
+                raise AlphaFoldRetryableError(f"Coordinate download HTTP {exc.code}") from exc
+            raise AlphaFoldPermanentError(f"Coordinate download HTTP {exc.code}") from exc
         except (URLError, TimeoutError) as exc:
             raise AlphaFoldRetryableError("Coordinate download failed") from exc
         body = b"".join(chunks)
@@ -284,8 +278,8 @@ class AlphaFoldClient:
                         size += len(chunk)
                         if size > max_bytes:
                             raise AlphaFoldPermanentError(
-                            "Coordinate file exceeds configured size limit"
-                        )
+                                "Coordinate file exceeds configured size limit"
+                            )
                         if len(prefix) < 4096:
                             prefix.extend(chunk[: 4096 - len(prefix)])
                         digest.update(chunk)
@@ -296,12 +290,8 @@ class AlphaFoldClient:
         except HTTPError as exc:
             destination.unlink(missing_ok=True)
             if exc.code == 429 or exc.code >= 500:
-                raise AlphaFoldRetryableError(
-                    f"Coordinate download HTTP {exc.code}"
-                ) from exc
-            raise AlphaFoldPermanentError(
-                f"Coordinate download HTTP {exc.code}"
-            ) from exc
+                raise AlphaFoldRetryableError(f"Coordinate download HTTP {exc.code}") from exc
+            raise AlphaFoldPermanentError(f"Coordinate download HTTP {exc.code}") from exc
         except (URLError, TimeoutError, OSError) as exc:
             destination.unlink(missing_ok=True)
             raise AlphaFoldRetryableError("Coordinate download failed") from exc
