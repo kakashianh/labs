@@ -1,8 +1,10 @@
 """Unit tests for the AlphaFold API adapter and manifest contract."""
 
+import hashlib
 import json
 from email.message import Message
 from io import BytesIO
+from pathlib import Path
 from unittest.mock import patch
 from urllib.error import HTTPError
 
@@ -127,3 +129,58 @@ def test_manifest_keeps_internal_uuid_and_external_accession_separate() -> None:
 )
 def test_retry_delay_is_bounded(header: str | None, attempt: int, expected: float) -> None:
     assert _retry_delay(header, attempt) == expected
+
+
+
+class FakeCifResponse(BytesIO):
+    headers = {"Content-Type": "chemical/x-cif; charset=utf-8"}
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self.close()
+
+
+@pytest.mark.unit
+def test_download_cif_streams_to_path_and_calculates_checksum(tmp_path: Path) -> None:
+    payload = b"data_AF-Q9Y261-F1\n#\n"
+    model = parse_prediction("Q9Y261", [RECORD])[0]
+    destination = tmp_path / "model.cif"
+    with patch(
+        "protein3d.ingestion.alphafold.urlopen",
+        return_value=FakeCifResponse(payload),
+    ):
+        result = AlphaFoldClient(max_retries=0).download_cif_to_path(
+            model,
+            "7e5c2f48-1f1a-4b22-9b13-2d7e43d66a81",
+            destination,
+            max_bytes=1024,
+            chunk_size=4,
+        )
+    assert destination.read_bytes() == payload
+    assert result.size_bytes == len(payload)
+    assert result.sha256 == hashlib.sha256(payload).hexdigest()
+    assert result.content_type == "chemical/x-cif"
+    assert result.object_key.endswith("/6/model.cif")
+
+
+@pytest.mark.unit
+def test_download_cif_removes_partial_file_when_size_limit_exceeded(
+    tmp_path: Path,
+) -> None:
+    model = parse_prediction("Q9Y261", [RECORD])[0]
+    destination = tmp_path / "too-large.cif"
+    with patch(
+        "protein3d.ingestion.alphafold.urlopen",
+        return_value=FakeCifResponse(b"data_example\n" + b"x" * 100),
+    ):
+        with pytest.raises(Exception, match="size limit"):
+            AlphaFoldClient(max_retries=0).download_cif_to_path(
+                model,
+                "7e5c2f48-1f1a-4b22-9b13-2d7e43d66a81",
+                destination,
+                max_bytes=20,
+                chunk_size=8,
+            )
+    assert not destination.exists()
