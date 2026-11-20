@@ -87,7 +87,8 @@ def test_crawler_candidate_selection_and_metadata_upsert(
                 assert len(candidates) == 1
                 assert candidates[0].protein_id == target.protein_id
                 assert candidates[0].accession == "A0A000"
-                assert select_candidates(session, 9606, 0) == []
+                with pytest.raises(ValueError, match="sample_limit"):
+                    select_candidates(session, 9606, 0)
 
                 model = parse_prediction("A0A000", [RECORD])[0]
                 coordinate = DownloadedCoordinate(
