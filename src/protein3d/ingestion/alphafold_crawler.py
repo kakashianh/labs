@@ -11,7 +11,7 @@ from tempfile import TemporaryDirectory
 from typing import Any
 from urllib.parse import urlsplit
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from protein3d.config import Settings
@@ -59,14 +59,15 @@ def select_candidates(
 ) -> list[ProteinCandidate]:
     """Select a deterministic, bounded cohort with resolved UniProt mappings."""
     rows = session.execute(
-        select(Protein.protein_id, ProteinIdMapping.source_id)
+        select(Protein.protein_id, func.min(ProteinIdMapping.source_id))
         .join(ProteinIdMapping, ProteinIdMapping.protein_id == Protein.protein_id)
         .where(
             Protein.organism_id == str(taxonomy_id),
             ProteinIdMapping.source == "uniprot",
             ProteinIdMapping.mapping_status == "resolved",
         )
-        .order_by(Protein.protein_id, ProteinIdMapping.source_id)
+        .group_by(Protein.protein_id)
+        .order_by(Protein.protein_id)
         .limit(sample_limit)
     ).all()
     return [
