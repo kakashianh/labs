@@ -50,7 +50,7 @@ After PP-11 Compose services are healthy, apply the PP-12 migrations and configu
 uv run --locked protein3d alphafold-crawl --sample-limit 10 --manifest data/manifests/alphafold-sample.jsonl
 ```
 
-The command creates a `dataset_runs` row and a `jobs` row, records per-model outcomes in the JSONL manifest, and prints run/job IDs and counts. Outcomes include `downloaded`, `no_model`, `unsupported`, and `failed`. Proteins longer than 2,700 residues are reported as `unsupported` for this individual-API workflow rather than being mislabeled as no-model. Re-run the same command with the same cohort/manifest to exercise deterministic object keys and metadata upserts.
+The command creates a `dataset_runs` row and a `jobs` row, records per-model outcomes in the JSONL manifest, and prints run/job IDs and counts. Retryable network/HTTP/storage errors are separated from permanent API-contract/input errors so operators can rerun transient failures without confusing them with invalid source data. Outcomes include `downloaded`, `no_model`, `unsupported`, `retryable_failure`, and `permanent_failure`. Proteins longer than 2,700 residues are reported as `unsupported` for this individual-API workflow rather than being mislabeled as no-model. Re-run the same command with the same cohort/manifest to exercise deterministic object keys and metadata upserts.
 
 ## Attribution
 
