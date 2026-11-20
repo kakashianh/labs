@@ -22,15 +22,17 @@ class MinioObjectStore:
     timeout_seconds: float = 30.0
 
     def _connection(self) -> tuple[http.client.HTTPConnection, str]:
-        raw = self.endpoint if "://" in self.endpoint else f"{'https' if self.secure else 'http'}://{self.endpoint}"
+        raw = (
+            self.endpoint
+            if "://" in self.endpoint
+            else f"{'https' if self.secure else 'http'}://{self.endpoint}"
+        )
         parsed = urlsplit(raw)
         if not parsed.hostname or parsed.path not in ("", "/"):
             raise ValueError("MinIO endpoint must be a host with optional port")
         host = parsed.netloc
         connection_type = (
-            http.client.HTTPSConnection
-            if parsed.scheme == "https"
-            else http.client.HTTPConnection
+            http.client.HTTPSConnection if parsed.scheme == "https" else http.client.HTTPConnection
         )
         return connection_type(host, timeout=self.timeout_seconds), host
 
@@ -105,7 +107,9 @@ class MinioObjectStore:
             connection.close()
             connection, host = self._connection()
             connection.request(
-                "PUT", path, body=b"",
+                "PUT",
+                path,
+                body=b"",
                 headers=self._signed_headers("PUT", path, host, empty_hash, None),
             )
             response = connection.getresponse()
@@ -130,9 +134,7 @@ class MinioObjectStore:
         path = self._object_path(object_key)
         connection, host = self._connection()
         try:
-            headers = self._signed_headers(
-                "PUT", path, host, sha256, content_type
-            )
+            headers = self._signed_headers("PUT", path, host, sha256, content_type)
             headers["Content-Length"] = str(size)
             connection.putrequest("PUT", path, skip_accept_encoding=True)
             for name, value in headers.items():
@@ -166,7 +168,6 @@ class MinioObjectStore:
             return int(response.getheader("Content-Length", "0"))
         finally:
             connection.close()
-
 
     def get_file(self, object_key: str, destination: Path) -> tuple[int, str]:
         """Stream an object back to disk and return its size and SHA-256."""
