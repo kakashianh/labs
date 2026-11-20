@@ -222,7 +222,6 @@ class AlphaFoldClient:
         )
         return body, metadata
 
-
     def download_cif_to_path(
         self,
         model: AlphaFoldModel,
