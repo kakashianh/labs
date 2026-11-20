@@ -203,8 +203,12 @@ class AlphaFoldClient:
         except (HTTPError, URLError, TimeoutError) as exc:
             raise AlphaFoldError("Coordinate download failed") from exc
         body = b"".join(chunks)
-        if not body or b"data_" not in body[:4096].lower():
+        if not body or not _has_mmcif_data_block(body[:4096]):
             raise AlphaFoldContractError("Downloaded payload is empty or not recognizable mmCIF")
+        if not _is_supported_cif_content_type(metadata.content_type):
+            raise AlphaFoldContractError(
+                f"Unexpected coordinate content type: {metadata.content_type}"
+            )
         checksum = hashlib.sha256(body).hexdigest()
         version = model.model_version or "unversioned"
         safe_model = re.sub(r"[^A-Za-z0-9_.-]", "_", model.model_entity_id)
@@ -245,6 +249,11 @@ class AlphaFoldClient:
         try:
             with urlopen(request, timeout=self.timeout_seconds) as response:
                 content_type = response.headers.get("Content-Type", "application/octet-stream")
+                media_type = content_type.split(";", maxsplit=1)[0].strip().lower()
+                if not _is_supported_cif_content_type(media_type):
+                    raise AlphaFoldContractError(
+                        f"Unexpected coordinate content type: {media_type}"
+                    )
                 with destination.open("wb") as output:
                     while chunk := response.read(chunk_size):
                         size += len(chunk)
@@ -261,7 +270,7 @@ class AlphaFoldClient:
             destination.unlink(missing_ok=True)
             raise AlphaFoldError("Coordinate download failed") from exc
 
-        if not size or b"data_" not in bytes(prefix).lower():
+        if not size or not _has_mmcif_data_block(bytes(prefix)):
             destination.unlink(missing_ok=True)
             raise AlphaFoldContractError("Downloaded payload is empty or not recognizable mmCIF")
 
@@ -276,6 +285,25 @@ class AlphaFoldClient:
             size_bytes=size,
             sha256=digest.hexdigest(),
         )
+
+
+def _is_supported_cif_content_type(content_type: str) -> bool:
+    """Allow common AFDB/mmCIF server content-type variations."""
+    return content_type.lower() in {
+        "chemical/x-cif",
+        "chemical/x-mmcif",
+        "application/cif",
+        "application/x-cif",
+        "application/x-mmcif",
+        "application/octet-stream",
+        "binary/octet-stream",
+        "text/plain",
+    }
+
+
+def _has_mmcif_data_block(prefix: bytes) -> bool:
+    """Require a CIF data_ block near the start, allowing leading comments."""
+    return re.search(rb"(?im)^\\s*data_[^\\s]*", prefix) is not None
 
 
 def _retry_delay(retry_after: str | None, attempt: int) -> float:
