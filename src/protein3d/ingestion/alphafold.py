@@ -207,7 +207,10 @@ class AlphaFoldClient:
         checksum = hashlib.sha256(body).hexdigest()
         version = model.model_version or "unversioned"
         safe_model = re.sub(r"[^A-Za-z0-9_.-]", "_", model.model_entity_id)
-        object_key = str(PurePosixPath("alphafold", protein_id, safe_model, version, "model.cif"))
+        safe_version = re.sub(r"[^A-Za-z0-9_.-]", "_", version)
+        object_key = str(
+            PurePosixPath("alphafold", protein_id, safe_model, safe_version, "model.cif")
+        )
         metadata = DownloadedCoordinate(
             source_url=model.cif_url,
             retrieved_at=datetime.now(UTC).isoformat(),
@@ -251,6 +254,9 @@ class AlphaFoldClient:
                             prefix.extend(chunk[: 4096 - len(prefix)])
                         digest.update(chunk)
                         output.write(chunk)
+        except AlphaFoldError:
+            destination.unlink(missing_ok=True)
+            raise
         except (HTTPError, URLError, TimeoutError, OSError) as exc:
             destination.unlink(missing_ok=True)
             raise AlphaFoldError("Coordinate download failed") from exc
