@@ -10,7 +10,13 @@ from unittest.mock import MagicMock
 import pytest
 from sqlalchemy.orm import Session
 
-from protein3d.ingestion.alphafold import AlphaFoldClient, DownloadedCoordinate, parse_prediction
+from protein3d.ingestion.alphafold import (
+    AlphaFoldClient,
+    AlphaFoldContractError,
+    AlphaFoldRateLimit,
+    DownloadedCoordinate,
+    parse_prediction,
+)
 from protein3d.ingestion.alphafold_crawler import (
     ProteinCandidate,
     crawl_candidates,
@@ -116,3 +122,42 @@ def test_crawler_reuses_existing_minio_object_when_checksum_matches(
     object_store.get_file.assert_called_once()
     record = json.loads((tmp_path / "resume.jsonl").read_text().splitlines()[0])
     assert record["storage_action"] == "reused"
+
+
+
+@pytest.mark.unit
+def test_crawler_manifest_distinguishes_retryable_and_permanent_api_failures(
+    tmp_path: Path,
+) -> None:
+    client = MagicMock()
+    client.get_predictions.side_effect = [
+        AlphaFoldRateLimit("AFDB 429"),
+        AlphaFoldContractError("AFDB response contract changed"),
+    ]
+    candidates = [
+        ProteinCandidate(
+            protein_id=uuid.UUID("7e5c2f48-1f1a-4b22-9b13-2d7e43d66a81"),
+            accession="Q9Y261",
+        ),
+        ProteinCandidate(
+            protein_id=uuid.UUID("a8e3f9a8-cd21-4e1f-b4f6-7a6d5c4b3a21"),
+            accession="P12345",
+        ),
+    ]
+    manifest = tmp_path / "failures.jsonl"
+    summary = crawl_candidates(
+        candidates,
+        session=cast(Session, MagicMock()),
+        client=cast(AlphaFoldClient, client),
+        object_store=cast(MinioObjectStore, MagicMock()),
+        artifact_storage=S3ArtifactStorage("protein3d-artifacts"),
+        manifest_path=manifest,
+    )
+    records = [json.loads(line) for line in manifest.read_text().splitlines()]
+    assert summary.failed == 2
+    assert summary.retryable_failed == 1
+    assert summary.permanent_failed == 1
+    assert [record["status"] for record in records] == [
+        "retryable_failure",
+        "permanent_failure",
+    ]
