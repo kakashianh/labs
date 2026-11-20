@@ -35,6 +35,7 @@ def test_minio_put_file_streams_and_signs_request(tmp_path: Path) -> None:
     connection.putrequest.assert_called_once_with(
         "PUT",
         "/protein3d-artifacts/artifacts/alphafold/uuid/model.cif",
+        skip_host=True,
         skip_accept_encoding=True,
     )
     assert any(call.args == (payload,) for call in connection.send.call_args_list)
