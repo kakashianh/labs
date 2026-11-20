@@ -109,9 +109,7 @@ def test_fixture_crawl_persists_verified_minio_artifact_and_resumes(
                     coordinate = DownloadedCoordinate(
                         source_url=model.cif_url,
                         retrieved_at="2026-11-20T00:00:00+00:00",
-                        object_key=(
-                            f"alphafold/{protein.protein_id}/AF-Q9Y261-F1/6/model.cif"
-                        ),
+                        object_key=(f"alphafold/{protein.protein_id}/AF-Q9Y261-F1/6/model.cif"),
                         content_type="chemical/x-cif",
                         size_bytes=len(payload),
                         sha256=hashlib.sha256(payload).hexdigest(),
@@ -187,9 +185,9 @@ def test_fixture_crawl_persists_verified_minio_artifact_and_resumes(
                     artifact = session.scalar(select(Artifact))
                     assert artifact is not None
                     assert artifact.checksum == coordinate.sha256
-                    assert object_store.head_object(
-                        f"artifacts/{coordinate.object_key}"
-                    ) == len(payload)
+                    assert object_store.head_object(f"artifacts/{coordinate.object_key}") == len(
+                        payload
+                    )
         finally:
             engine.dispose()
             get_settings.cache_clear()
