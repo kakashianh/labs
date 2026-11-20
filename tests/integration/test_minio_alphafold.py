@@ -36,9 +36,7 @@ def test_minio_bucket_upload_head_and_streaming_readback(tmp_path: Path) -> None
                         break
             except (OSError, URLError):
                 if time.monotonic() >= deadline:
-                    raise TimeoutError(
-                        "MinIO did not become ready within 60 seconds"
-                    ) from None
+                    raise TimeoutError("MinIO did not become ready within 60 seconds") from None
                 time.sleep(1)
 
         store = MinioObjectStore(
