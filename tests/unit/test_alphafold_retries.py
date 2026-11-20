@@ -72,7 +72,6 @@ def test_client_classifies_timeout_and_malformed_json() -> None:
             AlphaFoldClient(max_retries=0).get_predictions("Q9Y261")
 
 
-
 @pytest.mark.unit
 def test_exhausted_rate_limit_is_retryable() -> None:
     url = "https://alphafold.ebi.ac.uk/api/prediction/Q9Y261"
