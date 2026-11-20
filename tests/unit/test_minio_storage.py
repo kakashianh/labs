@@ -91,3 +91,22 @@ def test_signed_head_object_request_returns_content_length() -> None:
     assert size == 1234
     connection.request.assert_called_once()
     assert connection.request.call_args.args[0] == "HEAD"
+
+
+@pytest.mark.unit
+def test_head_object_returns_none_when_object_is_missing() -> None:
+    connection = MagicMock()
+    response = MagicMock()
+    response.status = 404
+    connection.getresponse.return_value = response
+    with patch(
+        "protein3d.ingestion.minio_storage.http.client.HTTPConnection",
+        return_value=connection,
+    ):
+        size = MinioObjectStore(
+            endpoint="localhost:9000",
+            bucket="protein3d-artifacts",
+            access_key="user",
+            secret_key="secret",
+        ).head_object("artifacts/missing.cif")
+    assert size is None
