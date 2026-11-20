@@ -164,5 +164,34 @@ class MinioObjectStore:
             connection.close()
 
 
+    def get_file(self, object_key: str, destination: Path) -> tuple[int, str]:
+        """Stream an object back to disk and return its size and SHA-256."""
+        path = self._object_path(object_key)
+        connection, host = self._connection()
+        digest = hashlib.sha256()
+        size = 0
+        try:
+            connection.request(
+                "GET",
+                path,
+                headers=self._signed_headers(
+                    "GET", path, host, hashlib.sha256(b"").hexdigest(), None
+                ),
+            )
+            response = connection.getresponse()
+            if response.status != 200:
+                response.read()
+                raise RuntimeError(f"MinIO object GET returned HTTP {response.status}")
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            with destination.open("wb") as output:
+                while chunk := response.read(1024 * 1024):
+                    output.write(chunk)
+                    digest.update(chunk)
+                    size += len(chunk)
+            return size, digest.hexdigest()
+        finally:
+            connection.close()
+
+
 def _sign(key: bytes, value: str) -> bytes:
     return hmac.new(key, value.encode(), hashlib.sha256).digest()
