@@ -136,7 +136,7 @@ class MinioObjectStore:
         try:
             headers = self._signed_headers("PUT", path, host, sha256, content_type)
             headers["Content-Length"] = str(size)
-            connection.putrequest("PUT", path, skip_accept_encoding=True)
+            connection.putrequest("PUT", path, skip_host=True, skip_accept_encoding=True)
             for name, value in headers.items():
                 connection.putheader(name, value)
             connection.endheaders()
