@@ -139,24 +139,24 @@ Publish the operational and data contracts required by PP-16 and PP-21.
 
 ## 5. Acceptance criteria
 
-- [ ] Cohort is sourced from PP-12 and selection is configurable and deterministic.
-- [ ] Internal protein UUIDs and external UniProt/AFDB identifiers are never conflated.
-- [ ] Current AFDB API fields and API-provided coordinate URLs are used; deprecated response fields and hand-built URLs are not relied upon.
-- [ ] Multiple model entities/isoforms are represented without accidental collapsing.
+- [x] Cohort is sourced from PP-12 and selection is configurable and deterministic.
+- [x] Internal protein UUIDs and external UniProt/AFDB identifiers are never conflated.
+- [x] Current AFDB API fields and API-provided coordinate URLs are used; deprecated response fields and hand-built URLs are not relied upon.
+- [x] Multiple model entities/isoforms are represented without accidental collapsing.
 - [x] No-model, unsupported-by-API, and retryable/permanent failures are distinguishable. Non-resolved mappings are excluded from the AFDB cohort and are not mislabeled as no-model; per-mapping skip manifest rows are deferred.
-- [ ] Valid mmCIF files are streamed to MinIO and verified by size/checksum/readback.
-- [ ] PostgreSQL structure/artifact metadata remains consistent with object storage and uses existing PP-12 schema.
-- [ ] Re-running the same cohort is idempotent and resumable.
-- [ ] Manifest is consumable by PP-16 and artifact contract is documented for PP-21.
-- [ ] Unit tests, PostgreSQL integration tests, and MinIO integration tests pass.
+- [x] Valid mmCIF files are streamed to MinIO and verified by size/checksum/readback.
+- [x] PostgreSQL structure/artifact metadata remains consistent with object storage and uses existing PP-12 schema.
+- [x] Re-running the same fixture-backed cohort is idempotent and resumable; the live AFDB cohort repetition is deferred.
+- [x] Manifest is consumable by PP-16 and artifact contract is documented for PP-21.
+- [x] Unit tests, PostgreSQL integration tests, and MinIO integration tests pass in GitHub Actions run `44655916277`.
 - [x] A small live sample and resumed run are explicitly marked deferred with the reason (the user's local Compose runtime and secrets are not accessible from this execution environment; no live run is reported as passed).
 
 ## 6. Testing strategy
 
 - **Unit:** API adapter/parser, selection, normalization, error classification, URL validation, checksums, object-key safety, manifest serialization.
 - **PostgreSQL integration:** Testcontainers using the real PP-12 schema and migrations.
-- **Object storage integration:** real MinIO service/container, upload/readback/checksum and failure/retry paths.
-- **End-to-end sample:** small cohort against AFDB API and PP-11 Compose MinIO; repeat run to verify idempotency.
+- **Object storage integration:** real MinIO-compatible service/container, bucket creation, upload/readback/checksum and deterministic object reuse. MinIO-specific injected upload-failure/retry coverage remains open.
+- **End-to-end sample:** fixture-backed one-protein cohort against Testcontainers PostgreSQL + MinIO-compatible storage; repeated run verifies idempotency. A live AFDB + user-local Compose run is deferred as documented above.
 - **Quality gates:** Ruff, Mypy, pytest, migration checks, and relevant Compose validation.
 
 ## 7. Cross-task handoff
@@ -167,4 +167,8 @@ Publish the operational and data contracts required by PP-16 and PP-21.
 
 ## 8. Completion notes
 
-Record AFDB API/schema reference and retrieval date, source release/version where available, cohort selection parameters, discovered/downloaded/skipped/failed counts, artifact checksum/size summaries, test commands/results, live sample and resume results, and deviations.
+- **Automated validation:** GitHub Actions [run 44655916277](https://github.com/kakashianh/labs/actions/runs/44655916277) passed Ruff lint, Ruff format, Mypy, unit tests (45 passed), PostgreSQL/MinIO integration tests (6 passed), package/CLI smoke checks, and Docker Compose validation.
+- **Fixture-backed sample:** taxonomy `9606`, sample limit `1`, UniProt accession `Q9Y261`, AFDB model entity `AF-Q9Y261-F1`, source version `6`. The first configured run uploaded and verified the mmCIF object; the second run reused the object after SHA-256 readback. Assertions confirmed one logical structure, one artifact, and two successful dataset/job runs.
+- **Source/API contract:** current AFDB fields and API-provided `cifUrl`; model version is persisted as returned. No live API response was used in the fixture test.
+- **Deferred manual check:** run `uv run --locked protein3d alphafold-crawl --sample-limit 10 --manifest data/manifests/alphafold-live-sample.jsonl` from the user's PP-11 Compose/Codespaces environment after its database and MinIO services are available. This environment cannot access that private runtime or credentials, so live AFDB download and live second-run counts are not claimed as passed.
+- **Known follow-ups:** per-mapping skip manifest rows for unresolved/ambiguous/deprecated mappings and injected MinIO upload-failure/retry integration coverage are not implemented in PP-13.
