@@ -41,6 +41,7 @@ class ProteinCandidate:
 
     protein_id: uuid.UUID
     accession: str
+    sequence_length: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,6 +49,7 @@ class CrawlSummary:
     discovered: int
     downloaded: int
     no_model: int
+    unsupported: int
     failed: int
     manifest_path: str
     dataset_run_id: str | None = None
@@ -59,7 +61,11 @@ def select_candidates(
 ) -> list[ProteinCandidate]:
     """Select a deterministic, bounded cohort with resolved UniProt mappings."""
     rows = session.execute(
-        select(Protein.protein_id, func.min(ProteinIdMapping.source_id))
+        select(
+            Protein.protein_id,
+            func.min(ProteinIdMapping.source_id),
+            func.length(Protein.sequence),
+        )
         .join(ProteinIdMapping, ProteinIdMapping.protein_id == Protein.protein_id)
         .where(
             Protein.organism_id == str(taxonomy_id),
@@ -71,7 +77,7 @@ def select_candidates(
         .limit(sample_limit)
     ).all()
     return [
-        ProteinCandidate(protein_id=row[0], accession=row[1])
+        ProteinCandidate(protein_id=row[0], accession=row[1], sequence_length=row[2])
         for row in rows
     ]
 
@@ -94,13 +100,30 @@ def crawl_candidates(
     retries idempotent. Each successful object is HEAD-verified before metadata
     is committed. The manifest is append-only JSONL for crash recovery.
     """
-    discovered = downloaded = no_model = failed = 0
+    discovered = downloaded = no_model = unsupported = failed = 0
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
 
     with TemporaryDirectory(prefix="protein3d-afdb-") as temp_dir:
         temp_root = Path(temp_dir)
         with manifest_path.open("a", encoding="utf-8") as manifest:
             for candidate in candidates:
+                if candidate.sequence_length is not None and candidate.sequence_length > 2700:
+                    unsupported += 1
+                    _write_manifest(
+                        manifest,
+                        {
+                            "protein_id": str(candidate.protein_id),
+                            "source": AFDB_SOURCE,
+                            "accession": candidate.accession,
+                            "sequence_length": candidate.sequence_length,
+                            "status": "unsupported",
+                            "reason": (
+                                "Protein exceeds the individual API length limit; "
+                                "proteome archive fragments are outside PP-13 scope"
+                            ),
+                        },
+                    )
+                    continue
                 try:
                     models = client.get_predictions(candidate.accession)
                 except AlphaFoldNotFound:
@@ -213,6 +236,7 @@ def crawl_candidates(
         discovered=discovered,
         downloaded=downloaded,
         no_model=no_model,
+        unsupported=unsupported,
         failed=failed,
         manifest_path=str(manifest_path),
         dataset_run_id=str(dataset_run_id) if dataset_run_id else None,
@@ -303,6 +327,7 @@ def run_configured_crawl(
             "discovered": summary.discovered,
             "downloaded": summary.downloaded,
             "no_model": summary.no_model,
+            "unsupported": summary.unsupported,
             "failed": summary.failed,
         }
         job.status = (
@@ -317,6 +342,7 @@ def run_configured_crawl(
             discovered=summary.discovered,
             downloaded=summary.downloaded,
             no_model=summary.no_model,
+            unsupported=summary.unsupported,
             failed=summary.failed,
             manifest_path=summary.manifest_path,
             dataset_run_id=str(run.dataset_run_id),
