@@ -34,9 +34,7 @@ def test_minio_bucket_upload_head_and_streaming_readback(tmp_path: Path) -> None
                     break
             except OSError:
                 if time.monotonic() >= deadline:
-                    raise TimeoutError(
-                        "MinIO did not become reachable within 60 seconds"
-                    ) from None
+                    raise TimeoutError("MinIO did not become reachable within 60 seconds") from None
                 time.sleep(1)
 
         store = MinioObjectStore(
@@ -48,7 +46,7 @@ def test_minio_bucket_upload_head_and_streaming_readback(tmp_path: Path) -> None
         )
         store.ensure_bucket()
 
-        payload = (b"data_AF-Q9Y261-F1\n#\n" + b"ATOM " * 10000)
+        payload = b"data_AF-Q9Y261-F1\n#\n" + b"ATOM " * 10000
         source = tmp_path / "model.cif"
         source.write_bytes(payload)
         checksum = hashlib.sha256(payload).hexdigest()
