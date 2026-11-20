@@ -56,12 +56,12 @@ def test_client_classifies_timeout_and_malformed_json() -> None:
         "protein3d.ingestion.alphafold.urlopen",
         side_effect=TimeoutError("request timed out"),
     ):
-        with pytest.raises(AlphaFoldError, match="malformed JSON"):
+        with pytest.raises(AlphaFoldError, match="failed after retries"):
             AlphaFoldClient(max_retries=0).get_predictions("Q9Y261")
 
     with patch(
         "protein3d.ingestion.alphafold.urlopen",
         return_value=BytesIO(b"{not-json"),
     ):
-        with pytest.raises(AlphaFoldError, match="failed after retries"):
+        with pytest.raises(AlphaFoldError, match="malformed JSON"):
             AlphaFoldClient(max_retries=0).get_predictions("Q9Y261")
