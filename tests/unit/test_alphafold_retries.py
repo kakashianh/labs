@@ -8,7 +8,12 @@ from urllib.error import HTTPError
 
 import pytest
 
-from protein3d.ingestion.alphafold import AlphaFoldClient, AlphaFoldError
+from protein3d.ingestion.alphafold import (
+    AlphaFoldClient,
+    AlphaFoldError,
+    AlphaFoldPermanentError,
+    AlphaFoldRateLimit,
+)
 
 RECORD = {
     "modelEntityId": "AF-Q9Y261-F1",
@@ -65,3 +70,29 @@ def test_client_classifies_timeout_and_malformed_json() -> None:
     ):
         with pytest.raises(AlphaFoldError, match="malformed JSON"):
             AlphaFoldClient(max_retries=0).get_predictions("Q9Y261")
+
+
+
+@pytest.mark.unit
+def test_exhausted_rate_limit_is_retryable() -> None:
+    url = "https://alphafold.ebi.ac.uk/api/prediction/Q9Y261"
+    error = HTTPError(url, 429, "Too Many Requests", Message(), None)
+    with patch(
+        "protein3d.ingestion.alphafold.urlopen",
+        side_effect=error,
+    ):
+        with pytest.raises(AlphaFoldRateLimit):
+            AlphaFoldClient(max_retries=0).get_predictions("Q9Y261")
+
+
+@pytest.mark.unit
+def test_permanent_client_http_error_is_not_retried() -> None:
+    url = "https://alphafold.ebi.ac.uk/api/prediction/Q9Y261"
+    error = HTTPError(url, 401, "Unauthorized", Message(), None)
+    with patch(
+        "protein3d.ingestion.alphafold.urlopen",
+        side_effect=error,
+    ) as request:
+        with pytest.raises(AlphaFoldPermanentError):
+            AlphaFoldClient(max_retries=3).get_predictions("Q9Y261")
+    request.assert_called_once()
