@@ -60,6 +60,8 @@ def select_candidates(
     session: Session, taxonomy_id: int, sample_limit: int
 ) -> list[ProteinCandidate]:
     """Select a deterministic, bounded cohort with resolved UniProt mappings."""
+    if sample_limit < 1 or sample_limit > 10_000:
+        raise ValueError("sample_limit must be between 1 and 10000")
     rows = session.execute(
         select(
             Protein.protein_id,
@@ -252,8 +254,8 @@ def run_configured_crawl(
 ) -> CrawlSummary:
     """Run one auditable dataset/job execution using PP-12 configuration."""
     limit = sample_limit if sample_limit is not None else settings.alphafold_sample_limit
-    if limit < 1:
-        raise ValueError("sample_limit must be positive")
+    if limit < 1 or limit > 10_000:
+        raise ValueError("sample_limit must be between 1 and 10000")
     candidates = select_candidates(session, settings.alphafold_taxonomy_id, limit)
     run = DatasetRun(
         dataset_name="alphafold_structures",
