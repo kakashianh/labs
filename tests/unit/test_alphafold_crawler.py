@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 from sqlalchemy.orm import Session
 
+from protein3d.ingestion.alphafold import DownloadedCoordinate, parse_prediction
 from protein3d.ingestion.alphafold_crawler import (
     ProteinCandidate,
     crawl_candidates,
@@ -46,3 +47,70 @@ def test_long_protein_is_reported_unsupported_without_api_request(
     assert record["status"] == "unsupported"
     assert record["sequence_length"] == 2801
     assert "outside PP-13 scope" in record["reason"]
+
+
+
+@pytest.mark.unit
+def test_crawler_reuses_existing_minio_object_when_checksum_matches(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = b"data_AF-Q9Y261-F1\n#\n"
+    checksum = "b2d8e5e5"
+    model = parse_prediction(
+        "Q9Y261",
+        [
+            {
+                "modelEntityId": "AF-Q9Y261-F1",
+                "cifUrl": "https://alphafold.ebi.ac.uk/files/model.cif",
+                "latestVersion": 6,
+            }
+        ],
+    )[0]
+    coordinate = DownloadedCoordinate(
+        source_url=model.cif_url,
+        retrieved_at="2026-11-20T00:00:00+00:00",
+        object_key="alphafold/7e5c2f48-1f1a-4b22-9b13-2d7e43d66a81/AF-Q9Y261-F1/6/model.cif",
+        content_type="chemical/x-cif",
+        size_bytes=len(payload),
+        sha256=checksum,
+    )
+    client = MagicMock()
+    client.get_predictions.return_value = [model]
+
+    def write_download(_model: object, _protein_id: str, destination: Path, **_kwargs: object):
+        destination.write_bytes(payload)
+        return coordinate
+
+    client.download_cif_to_path.side_effect = write_download
+    object_store = MagicMock()
+    object_store.head_object.return_value = len(payload)
+
+    def write_readback(_key: str, destination: Path) -> tuple[int, str]:
+        destination.write_bytes(payload)
+        return len(payload), checksum
+
+    object_store.get_file.side_effect = write_readback
+    monkeypatch.setattr(
+        "protein3d.ingestion.alphafold_crawler.persist_alpha_fold_artifacts",
+        MagicMock(),
+    )
+    summary = crawl_candidates(
+        [
+            ProteinCandidate(
+                protein_id=uuid.UUID("7e5c2f48-1f1a-4b22-9b13-2d7e43d66a81"),
+                accession="Q9Y261",
+            )
+        ],
+        session=cast(Session, MagicMock()),
+        client=cast(AlphaFoldClient, client),
+        object_store=cast(MinioObjectStore, object_store),
+        artifact_storage=S3ArtifactStorage("protein3d-artifacts"),
+        manifest_path=tmp_path / "resume.jsonl",
+    )
+    assert summary.downloaded == 1
+    assert summary.failed == 0
+    object_store.put_file.assert_not_called()
+    object_store.get_file.assert_called_once()
+    record = json.loads((tmp_path / "resume.jsonl").read_text().splitlines()[0])
+    assert record["storage_action"] == "reused"
