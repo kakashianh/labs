@@ -155,8 +155,8 @@ Publish the operational and data contracts required by PP-16 and PP-21.
 
 - **Unit:** API adapter/parser, selection, normalization, error classification, URL validation, checksums, object-key safety, manifest serialization.
 - **PostgreSQL integration:** Testcontainers using the real PP-12 schema and migrations.
-- **Object storage integration:** real MinIO-compatible service/container, bucket creation, upload/readback/checksum and deterministic object reuse. MinIO-specific injected upload-failure/retry coverage remains open.
-- **End-to-end sample:** fixture-backed one-protein cohort against Testcontainers PostgreSQL + MinIO-compatible storage; repeated run verifies idempotency. A live AFDB + user-local Compose run is deferred as documented above.
+- **Object storage integration:** real MinIO-compatible service/container, bucket creation, upload/readback/checksum, deterministic object reuse, and injected upload-failure followed by a successful retry.
+- **End-to-end sample:** fixture-backed one-protein cohort against Testcontainers PostgreSQL + MinIO-compatible storage; injected first upload failure leaves no structure/artifact metadata, the next run uploads successfully, and the third run reuses the object. A live AFDB + user-local Compose run is deferred as documented above.
 - **Quality gates:** Ruff, Mypy, pytest, migration checks, and relevant Compose validation.
 
 ## 7. Cross-task handoff
@@ -167,8 +167,8 @@ Publish the operational and data contracts required by PP-16 and PP-21.
 
 ## 8. Completion notes
 
-- **Automated validation:** GitHub Actions [run 44655916277](https://github.com/kakashianh/labs/actions/runs/44655916277) passed Ruff lint, Ruff format, Mypy, unit tests (45 passed), PostgreSQL/MinIO integration tests (6 passed), package/CLI smoke checks, and Docker Compose validation.
-- **Fixture-backed sample:** taxonomy `9606`, sample limit `1`, UniProt accession `Q9Y261`, AFDB model entity `AF-Q9Y261-F1`, source version `6`. The first configured run uploaded and verified the mmCIF object; the second run reused the object after SHA-256 readback. Assertions confirmed one logical structure, one artifact, and two successful dataset/job runs.
+- **Automated validation:** GitHub Actions [run 44656327029](https://github.com/kakashianh/labs/actions/runs/44656327029) passed Ruff lint, Ruff format, Mypy, unit tests (47 passed), PostgreSQL/MinIO integration tests (6 passed), package/CLI smoke checks, and Docker Compose validation.
+- **Fixture-backed sample:** taxonomy `9606`, sample limit `1`, UniProt accession `Q9Y261`, AFDB model entity `AF-Q9Y261-F1`, source version `6`. The first configured run simulated a MinIO upload interruption and verified no structure/artifact row was committed; the second run uploaded and verified the mmCIF object; the third run reused the object after SHA-256 readback. Assertions confirmed one logical structure, one artifact, one failed then two successful dataset/job runs.
 - **Source/API contract:** current AFDB fields and API-provided `cifUrl`; model version is persisted as returned. No live API response was used in the fixture test.
 - **Deferred manual check:** run `uv run --locked protein3d alphafold-crawl --sample-limit 10 --manifest data/manifests/alphafold-live-sample.jsonl` from the user's PP-11 Compose/Codespaces environment after its database and MinIO services are available. This environment cannot access that private runtime or credentials, so live AFDB download and live second-run counts are not claimed as passed.
 - **Known follow-ups:** per-mapping skip manifest rows for unresolved/ambiguous/deprecated mappings and injected MinIO upload-failure/retry integration coverage are not implemented in PP-13.
