@@ -214,7 +214,9 @@ class AlphaFoldClient:
                 while chunk := response.read(1024 * 1024):
                     size += len(chunk)
                     if size > max_bytes:
-                        raise AlphaFoldPermanentError("Coordinate file exceeds configured size limit")
+                        raise AlphaFoldPermanentError(
+                            "Coordinate file exceeds configured size limit"
+                        )
                     chunks.append(chunk)
         except HTTPError as exc:
             if exc.code == 429 or exc.code >= 500:
@@ -281,7 +283,9 @@ class AlphaFoldClient:
                     while chunk := response.read(chunk_size):
                         size += len(chunk)
                         if size > max_bytes:
-                            raise AlphaFoldPermanentError("Coordinate file exceeds configured size limit")
+                            raise AlphaFoldPermanentError(
+                            "Coordinate file exceeds configured size limit"
+                        )
                         if len(prefix) < 4096:
                             prefix.extend(chunk[: 4096 - len(prefix)])
                         digest.update(chunk)
