@@ -205,10 +205,9 @@ class AlphaFoldClient:
         body = b"".join(chunks)
         if not body or not _has_mmcif_data_block(body[:4096]):
             raise AlphaFoldContractError("Downloaded payload is empty or not recognizable mmCIF")
-        if not _is_supported_cif_content_type(metadata.content_type):
-            raise AlphaFoldContractError(
-                f"Unexpected coordinate content type: {metadata.content_type}"
-            )
+        media_type = content_type.split(";", maxsplit=1)[0].strip().lower()
+        if not _is_supported_cif_content_type(media_type):
+            raise AlphaFoldContractError(f"Unexpected coordinate content type: {media_type}")
         checksum = hashlib.sha256(body).hexdigest()
         version = model.model_version or "unversioned"
         safe_model = re.sub(r"[^A-Za-z0-9_.-]", "_", model.model_entity_id)
