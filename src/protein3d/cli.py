@@ -68,7 +68,8 @@ def _run_alphafold_crawl(sample_limit: int | None, manifest: Path | None) -> int
             "AlphaFold crawl finished: "
             f"discovered={summary.discovered}, downloaded={summary.downloaded}, "
             f"no_model={summary.no_model}, unsupported={summary.unsupported}, "
-            f"failed={summary.failed}, "
+            f"failed={summary.failed} "
+            f"(retryable={summary.retryable_failed}, permanent={summary.permanent_failed}), "
             f"dataset_run_id={summary.dataset_run_id}, job_id={summary.job_id}, "
             f"manifest={summary.manifest_path}"
         )
