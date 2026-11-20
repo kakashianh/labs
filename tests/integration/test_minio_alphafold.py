@@ -1,7 +1,6 @@
 """Live MinIO integration test for bucket creation, upload, and readback."""
 
 import hashlib
-import socket
 import time
 from pathlib import Path
 from urllib.error import URLError
