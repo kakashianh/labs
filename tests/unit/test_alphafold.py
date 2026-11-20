@@ -189,3 +189,40 @@ def test_download_cif_removes_partial_file_when_size_limit_exceeded(
 @pytest.mark.unit
 def test_retry_delay_accepts_http_date() -> None:
     assert _retry_delay("Wed, 21 Oct 2015 07:28:00 GMT", 0) == 0.0
+
+
+
+@pytest.mark.unit
+def test_download_cif_rejects_html_content_type(tmp_path: Path) -> None:
+    response = FakeCifResponse(b"data_example\n#\n")
+    response.headers = {"Content-Type": "text/html"}
+    destination = tmp_path / "html.cif"
+    model = parse_prediction("Q9Y261", [RECORD])[0]
+    with patch(
+        "protein3d.ingestion.alphafold.urlopen",
+        return_value=response,
+    ):
+        with pytest.raises(AlphaFoldContractError, match="content type"):
+            AlphaFoldClient(max_retries=0).download_cif_to_path(
+                model,
+                "7e5c2f48-1f1a-4b22-9b13-2d7e43d66a81",
+                destination,
+            )
+    assert not destination.exists()
+
+
+@pytest.mark.unit
+def test_download_cif_rejects_non_cif_payload(tmp_path: Path) -> None:
+    destination = tmp_path / "corrupt.cif"
+    model = parse_prediction("Q9Y261", [RECORD])[0]
+    with patch(
+        "protein3d.ingestion.alphafold.urlopen",
+        return_value=FakeCifResponse(b"<html>not a CIF file</html>"),
+    ):
+        with pytest.raises(AlphaFoldContractError, match="mmCIF"):
+            AlphaFoldClient(max_retries=0).download_cif_to_path(
+                model,
+                "7e5c2f48-1f1a-4b22-9b13-2d7e43d66a81",
+                destination,
+            )
+    assert not destination.exists()
