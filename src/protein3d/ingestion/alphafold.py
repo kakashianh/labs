@@ -302,7 +302,7 @@ def _is_supported_cif_content_type(content_type: str) -> bool:
 
 def _has_mmcif_data_block(prefix: bytes) -> bool:
     """Require a CIF data_ block near the start, allowing leading comments."""
-    return re.search(rb"(?im)^\\s*data_[^\\s]*", prefix) is not None
+    return re.search(rb"(?im)^\s*data_[^\s]*", prefix) is not None
 
 
 def _retry_delay(retry_after: str | None, attempt: int) -> float:
