@@ -17,17 +17,25 @@ from sqlalchemy.orm import Session
 from testcontainers.core.container import DockerContainer  # type: ignore[import-untyped]
 from testcontainers.postgres import PostgresContainer  # type: ignore[import-untyped]
 
-from protein3d.config import get_settings
+from protein3d.config import Settings, get_settings
 from protein3d.ingestion.alphafold import (
     AlphaFoldClient,
     AlphaFoldModel,
     DownloadedCoordinate,
     parse_prediction,
 )
-from protein3d.ingestion.alphafold_crawler import ProteinCandidate, crawl_candidates
+from protein3d.ingestion.alphafold_crawler import run_configured_crawl
 from protein3d.ingestion.minio_storage import MinioObjectStore
-from protein3d.metadata.models import Artifact, Protein, ProteinIdMapping, Structure
-from protein3d.metadata.storage import S3ArtifactStorage
+from protein3d.metadata.models import (
+    Artifact,
+    DatasetRun,
+    DatasetStatus,
+    Job,
+    JobStatus,
+    Protein,
+    ProteinIdMapping,
+    Structure,
+)
 
 
 @pytest.mark.integration
@@ -127,14 +135,26 @@ def test_fixture_crawl_persists_verified_minio_artifact_and_resumes(
                         return coordinate
 
                     client.download_cif_to_path.side_effect = download_fixture
-                    storage = S3ArtifactStorage(
-                        bucket="protein3d-test",
-                        prefix="artifacts",
+                    settings = Settings(
+                        object_storage_endpoint=f"{host}:{port}",
+                        object_storage_bucket="protein3d-test",
+                        object_storage_access_key=username,
+                        object_storage_secret_key=password,
+                        object_storage_prefix="artifacts",
+                        external_request_timeout_seconds=10,
+                        external_max_retries=0,
+                        alphafold_taxonomy_id=9606,
+                        alphafold_sample_limit=1,
+                        alphafold_max_coordinate_bytes=1024 * 1024,
                     )
-                    candidate = ProteinCandidate(
-                        protein_id=protein.protein_id,
-                        accession="Q9Y261",
-                        sequence_length=20,
+
+                    monkeypatch.setattr(
+                        "protein3d.ingestion.alphafold_crawler.AlphaFoldClient",
+                        lambda **_kwargs: cast(AlphaFoldClient, client),
+                    )
+                    monkeypatch.setattr(
+                        "protein3d.ingestion.alphafold_crawler.MinioObjectStore",
+                        lambda **_kwargs: object_store,
                     )
                     original_put_file = object_store.put_file
                     put_calls: list[str] = []
@@ -150,32 +170,37 @@ def test_fixture_crawl_persists_verified_minio_artifact_and_resumes(
 
                     object.__setattr__(object_store, "put_file", tracked_put_file)
 
-                    first = crawl_candidates(
-                        [candidate],
-                        session=session,
-                        client=cast(AlphaFoldClient, client),
-                        object_store=object_store,
-                        artifact_storage=storage,
-                        manifest_path=tmp_path / "first.jsonl",
+                    first = run_configured_crawl(
+                        session,
+                        settings,
+                        tmp_path / "first.jsonl",
+                        sample_limit=1,
                     )
                     assert first.downloaded == 1
                     assert first.failed == 0
                     assert len(put_calls) == 1
 
                     put_calls.clear()
-                    second = crawl_candidates(
-                        [candidate],
-                        session=session,
-                        client=cast(AlphaFoldClient, client),
-                        object_store=object_store,
-                        artifact_storage=storage,
-                        manifest_path=tmp_path / "second.jsonl",
+                    second = run_configured_crawl(
+                        session,
+                        settings,
+                        tmp_path / "second.jsonl",
+                        sample_limit=1,
                     )
                     assert second.downloaded == 1
                     assert second.failed == 0
                     assert put_calls == []
                     assert session.scalar(select(func.count()).select_from(Structure)) == 1
                     assert session.scalar(select(func.count()).select_from(Artifact)) == 1
+                    assert session.scalar(select(func.count()).select_from(DatasetRun)) == 2
+                    assert session.scalar(select(func.count()).select_from(Job)) == 2
+
+                    runs = session.scalars(select(DatasetRun).order_by(DatasetRun.started_at)).all()
+                    assert all(run.status == DatasetStatus.COMPLETED.value for run in runs)
+                    assert runs[-1].provenance["downloaded"] == 1
+                    jobs = session.scalars(select(Job).order_by(Job.started_at)).all()
+                    assert all(job.status == JobStatus.SUCCEEDED.value for job in jobs)
+
                     structure = session.scalar(select(Structure))
                     assert structure is not None
                     assert structure.metadata_json["protein_id"] == str(protein.protein_id)
@@ -185,9 +210,10 @@ def test_fixture_crawl_persists_verified_minio_artifact_and_resumes(
                     artifact = session.scalar(select(Artifact))
                     assert artifact is not None
                     assert artifact.checksum == coordinate.sha256
-                    assert object_store.head_object(f"artifacts/{coordinate.object_key}") == len(
-                        payload
-                    )
+                    assert artifact.dataset_run_id == runs[-1].dataset_run_id
+                    assert object_store.head_object(
+                        f"artifacts/{coordinate.object_key}"
+                    ) == len(payload)
         finally:
             engine.dispose()
             get_settings.cache_clear()
