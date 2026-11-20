@@ -13,6 +13,7 @@ import re
 import time
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -283,7 +284,13 @@ def _retry_delay(retry_after: str | None, attempt: int) -> float:
         try:
             return min(max(float(retry_after), 0.0), 60.0)
         except ValueError:
-            pass
+            try:
+                retry_at = parsedate_to_datetime(retry_after)
+                if retry_at.tzinfo is None:
+                    retry_at = retry_at.replace(tzinfo=UTC)
+                return min(max((retry_at - datetime.now(UTC)).total_seconds(), 0.0), 60.0)
+            except (TypeError, ValueError, OverflowError):
+                pass
     return min(2.0**attempt, 30.0)
 
 
