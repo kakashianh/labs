@@ -2,7 +2,6 @@
 
 import hashlib
 import time
-import uuid
 from pathlib import Path
 from typing import cast
 from urllib.error import URLError
@@ -139,8 +138,19 @@ def test_fixture_crawl_persists_verified_minio_artifact_and_resumes(
                         accession="Q9Y261",
                         sequence_length=20,
                     )
-                    put_file = MagicMock(wraps=object_store.put_file)
-                    object_store.put_file = put_file
+                    original_put_file = object_store.put_file
+                    put_calls: list[str] = []
+
+                    def tracked_put_file(
+                        object_key: str,
+                        file_path: Path,
+                        content_type: str,
+                        sha256: str,
+                    ) -> None:
+                        put_calls.append(object_key)
+                        original_put_file(object_key, file_path, content_type, sha256)
+
+                    object.__setattr__(object_store, "put_file", tracked_put_file)
 
                     first = crawl_candidates(
                         [candidate],
@@ -152,9 +162,9 @@ def test_fixture_crawl_persists_verified_minio_artifact_and_resumes(
                     )
                     assert first.downloaded == 1
                     assert first.failed == 0
-                    assert put_file.call_count == 1
+                    assert len(put_calls) == 1
 
-                    put_file.reset_mock()
+                    put_calls.clear()
                     second = crawl_candidates(
                         [candidate],
                         session=session,
@@ -165,7 +175,7 @@ def test_fixture_crawl_persists_verified_minio_artifact_and_resumes(
                     )
                     assert second.downloaded == 1
                     assert second.failed == 0
-                    assert put_file.call_count == 0
+                    assert put_calls == []
                     assert session.scalar(select(func.count()).select_from(Structure)) == 1
                     assert session.scalar(select(func.count()).select_from(Artifact)) == 1
                     structure = session.scalar(select(Structure))
