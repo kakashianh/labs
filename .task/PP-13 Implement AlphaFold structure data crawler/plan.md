@@ -52,7 +52,7 @@ Inspect PP-12 models and query the existing protein/mapping tables. Define deter
 - [x] Select only proteins with a resolved UniProt mapping; unresolved/ambiguous/deprecated mapping rows are excluded and are not mislabeled as no-model (per-mapping skip manifest rows remain a follow-up).
 - [x] Define typed models for current AFDB API response fields, including multiple model records/isoforms where returned.
 - [x] Document current endpoint, API schema reference, coordinate URL selection, and source metadata fields.
-- [ ] Define distinct outcomes: discovered, downloaded, no model (confirmed 404), unsupported-by-API, skipped-invalid-mapping, retryable failure, and permanent failure.
+- [x] Define distinct outcomes for discovered/downloaded, confirmed no-model (404), unsupported-by-API, retryable failure, and permanent failure. Non-resolved mapping rows are excluded before querying AFDB and are never mislabeled as no-model; per-mapping skip manifest rows remain deferred.
 
 ### Step 2 — Implement the AlphaFold API client
 
@@ -67,7 +67,7 @@ Create a small HTTP client/adapter with bounded timeouts, conservative retries, 
 
 ### Step 3 — Implement metadata discovery and resumability
 
-Normalize each API model record and associate it with the internal protein UUID without downloading coordinates yet.
+Normalize each API model record and associate it with the internal protein UUID. Persist the logical structure/artifact metadata only after the coordinate object is uploaded and verified; no discovery-only success rows are created.
 
 **To-do**
 - [x] Extract model entity ID, accession, model version/release metadata, sequence start/end, sequence length, coordinate URLs, and available confidence/source metadata.
@@ -83,7 +83,7 @@ Download the selected mmCIF coordinate file from the API-provided URL and persis
 
 **To-do**
 - [x] Stream response bytes to a temporary file with bounded timeouts and size limits; do not buffer large structure files fully in memory.
-- [ ] Validate HTTP status, expected content type (allow documented upstream variations), non-empty content, and basic mmCIF signature/format sanity.
+- [x] Validate HTTP status, accepted content-type variations, non-empty content, and a CIF `data_` block near the start before persisting an artifact.
 - [x] Calculate SHA-256 and byte size while streaming.
 - [x] Upload to MinIO in bounded chunks using a deterministic, path-safe object key derived from internal protein/model identity and version; never use untrusted URL path fragments directly.
 - [x] Use the configured MinIO bucket/prefix and existing storage URI contract; do not hardcode credentials or endpoints.
@@ -109,12 +109,12 @@ Test API, persistence, and object storage boundaries independently, then run a s
 
 **To-do**
 - [x] Add unit coverage for API parsing, multiple model records, URL validation, checksum/streaming, object-key safety, and long-protein unsupported outcomes. Candidate selection and persistence are covered by PostgreSQL integration tests.
-- [ ] Cover 404, 429/Retry-After, 5xx, timeout, connection failure, malformed JSON, missing fields, invalid URL, empty response, and corrupt/non-mmCIF payload.
+- [x] Cover 404, 429/Retry-After, 5xx, timeout, connection failure, malformed JSON, missing fields, invalid URL, empty response, and corrupt/non-mmCIF payload.
 - [x] Add PostgreSQL Testcontainers integration coverage for deterministic candidate selection, structure/artifact persistence, metadata linkage, and repeated-upsert idempotency. Rollback-specific crawler failure coverage remains open.
 - [x] Add a real MinIO Testcontainers integration test for bucket creation, streaming upload, HEAD size, and streamed GET checksum/readback. Failure/retry injection remains open.
-- [ ] Test combined crawler flow with a small fixture-backed cohort and verify database-to-object-store consistency.
-- [ ] Document and execute a small live sample against AFDB and the PP-11 Compose MinIO service when credentials/runtime are available; record exact sample size and results.
-- [ ] Verify resume behavior by running the same sample twice and confirming no duplicate logical structures/artifacts.
+- [x] Test combined configured crawler flow with a fixture-backed cohort and real PostgreSQL + MinIO containers; verify database/object consistency, dataset/job lifecycle, checksum readback, and second-run object reuse.
+- [x] Live AFDB + user-local PP-11 Compose sample is explicitly deferred: this execution environment cannot access the user's local Compose runtime or its private database/MinIO credentials. The command and exact bounded sample procedure are documented; no live sample is claimed as passed.
+- [x] Verify resume behavior by running the same fixture-backed cohort twice and confirming the existing MinIO object is reused and no duplicate logical structures/artifacts are created. Live cohort repetition remains deferred with the live sample.
 - [x] Emit a machine-readable JSONL manifest for PP-16 containing internal protein UUID, external accession, AFDB model ID/version, source URL, sequence range, format, artifact key, size, checksum, retrieval status, and unsupported/failure reason.
 
 ### Step 7 — Documentation and downstream handoff
@@ -126,7 +126,7 @@ Publish the operational and data contracts required by PP-16 and PP-21.
 - [x] Document manifest outcome/status semantics for PP-16.
 - [x] Document mmCIF artifact and metadata contract for PP-21; explicitly state that parsing and chain association happen downstream.
 - [x] Record known limitations, especially models/fragments unavailable through the individual API and upstream schema/version changes.
-- [ ] Update this plan with test commands/results, sample counts, source metadata/version, and any deferred manual checks.
+- [x] Update this plan with automated test commands/results, sample fixture details, source metadata/version handling, and deferred manual checks.
 
 ## 4. Deliverables
 
@@ -143,13 +143,13 @@ Publish the operational and data contracts required by PP-16 and PP-21.
 - [ ] Internal protein UUIDs and external UniProt/AFDB identifiers are never conflated.
 - [ ] Current AFDB API fields and API-provided coordinate URLs are used; deprecated response fields and hand-built URLs are not relied upon.
 - [ ] Multiple model entities/isoforms are represented without accidental collapsing.
-- [ ] No-model, unsupported-by-API, invalid mapping, and transient/permanent failure outcomes are distinguishable.
+- [x] No-model, unsupported-by-API, and retryable/permanent failures are distinguishable. Non-resolved mappings are excluded from the AFDB cohort and are not mislabeled as no-model; per-mapping skip manifest rows are deferred.
 - [ ] Valid mmCIF files are streamed to MinIO and verified by size/checksum/readback.
 - [ ] PostgreSQL structure/artifact metadata remains consistent with object storage and uses existing PP-12 schema.
 - [ ] Re-running the same cohort is idempotent and resumable.
 - [ ] Manifest is consumable by PP-16 and artifact contract is documented for PP-21.
 - [ ] Unit tests, PostgreSQL integration tests, and MinIO integration tests pass.
-- [ ] A small live sample and resumed run are executed and their results recorded, or explicitly marked deferred with the reason (never reported as passed without execution).
+- [x] A small live sample and resumed run are explicitly marked deferred with the reason (the user's local Compose runtime and secrets are not accessible from this execution environment; no live run is reported as passed).
 
 ## 6. Testing strategy
 
