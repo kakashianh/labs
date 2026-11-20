@@ -351,15 +351,15 @@ def run_configured_crawl(
         )
     except Exception as exc:
         session.rollback()
-        run = session.get(DatasetRun, run.dataset_run_id)
-        job = session.get(Job, job.job_id)
-        if run is not None:
-            run.status = DatasetStatus.FAILED.value
-            run.finished_at = datetime.now(UTC)
-        if job is not None:
-            job.status = JobStatus.FAILED.value
-            job.error_summary = f"{type(exc).__name__}: {exc}"
-            job.finished_at = datetime.now(UTC)
+        failed_run = session.get(DatasetRun, run.dataset_run_id)
+        failed_job = session.get(Job, job.job_id)
+        if failed_run is not None:
+            failed_run.status = DatasetStatus.FAILED.value
+            failed_run.finished_at = datetime.now(UTC)
+        if failed_job is not None:
+            failed_job.status = JobStatus.FAILED.value
+            failed_job.error_summary = f"{type(exc).__name__}: {exc}"
+            failed_job.finished_at = datetime.now(UTC)
         session.commit()
         raise
 
