@@ -110,11 +110,11 @@ Test API, persistence, and object storage boundaries independently, then run a s
 **To-do**
 - [x] Add unit coverage for API parsing, multiple model records, URL validation, checksum/streaming, object-key safety, and long-protein unsupported outcomes. Candidate selection and persistence are covered by PostgreSQL integration tests.
 - [x] Cover 404, 429/Retry-After, 5xx, timeout, connection failure, malformed JSON, missing fields, invalid URL, empty response, and corrupt/non-mmCIF payload.
-- [x] Add PostgreSQL Testcontainers integration coverage for deterministic candidate selection, structure/artifact persistence, metadata linkage, and repeated-upsert idempotency. Rollback-specific crawler failure coverage remains open.
-- [x] Add a real MinIO Testcontainers integration test for bucket creation, streaming upload, HEAD size, and streamed GET checksum/readback. Failure/retry injection remains open.
-- [x] Test combined configured crawler flow with a fixture-backed cohort and real PostgreSQL + MinIO containers; verify database/object consistency, dataset/job lifecycle, checksum readback, and second-run object reuse.
+- [x] Add PostgreSQL Testcontainers integration coverage for deterministic candidate selection, structure/artifact persistence, metadata linkage, repeated-upsert idempotency, and rollback when MinIO upload fails.
+- [x] Add a real MinIO Testcontainers integration test for bucket creation, streaming upload, HEAD size, streamed GET checksum/readback, and injected upload failure followed by successful retry.
+- [x] Test combined configured crawler flow with a fixture-backed cohort and real PostgreSQL + MinIO containers; verify database/object consistency, dataset/job lifecycle, upload-failure rollback, retry success, checksum readback, and subsequent object reuse.
 - [x] Live AFDB + user-local PP-11 Compose sample is explicitly deferred: this execution environment cannot access the user's local Compose runtime or its private database/MinIO credentials. The command and exact bounded sample procedure are documented; no live sample is claimed as passed.
-- [x] Verify resume behavior by running the same fixture-backed cohort twice and confirming the existing MinIO object is reused and no duplicate logical structures/artifacts are created. Live cohort repetition remains deferred with the live sample.
+- [x] Verify resume behavior by running the same fixture-backed cohort through a failed upload, successful retry, and subsequent rerun; the existing MinIO object is reused and no duplicate logical structures/artifacts are created. Live cohort repetition remains deferred with the live sample.
 - [x] Emit a machine-readable JSONL manifest for PP-16 containing internal protein UUID, external accession, AFDB model ID/version, source URL, sequence range, format, artifact key, size, checksum, retrieval status, and unsupported/failure reason.
 
 ### Step 7 — Documentation and downstream handoff
@@ -148,7 +148,7 @@ Publish the operational and data contracts required by PP-16 and PP-21.
 - [x] PostgreSQL structure/artifact metadata remains consistent with object storage and uses existing PP-12 schema.
 - [x] Re-running the same fixture-backed cohort is idempotent and resumable; the live AFDB cohort repetition is deferred.
 - [x] Manifest is consumable by PP-16 and artifact contract is documented for PP-21.
-- [x] Unit tests, PostgreSQL integration tests, and MinIO integration tests pass in GitHub Actions run `44655916277`.
+- [x] Unit tests, PostgreSQL integration tests, and MinIO integration tests pass in GitHub Actions run `44656327029`.
 - [x] A small live sample and resumed run are explicitly marked deferred with the reason (the user's local Compose runtime and secrets are not accessible from this execution environment; no live run is reported as passed).
 
 ## 6. Testing strategy
@@ -171,4 +171,4 @@ Publish the operational and data contracts required by PP-16 and PP-21.
 - **Fixture-backed sample:** taxonomy `9606`, sample limit `1`, UniProt accession `Q9Y261`, AFDB model entity `AF-Q9Y261-F1`, source version `6`. The first configured run simulated a MinIO upload interruption and verified no structure/artifact row was committed; the second run uploaded and verified the mmCIF object; the third run reused the object after SHA-256 readback. Assertions confirmed one logical structure, one artifact, one failed then two successful dataset/job runs.
 - **Source/API contract:** current AFDB fields and API-provided `cifUrl`; model version is persisted as returned. No live API response was used in the fixture test.
 - **Deferred manual check:** run `uv run --locked protein3d alphafold-crawl --sample-limit 10 --manifest data/manifests/alphafold-live-sample.jsonl` from the user's PP-11 Compose/Codespaces environment after its database and MinIO services are available. This environment cannot access that private runtime or credentials, so live AFDB download and live second-run counts are not claimed as passed.
-- **Known follow-ups:** per-mapping skip manifest rows for unresolved/ambiguous/deprecated mappings and injected MinIO upload-failure/retry integration coverage are not implemented in PP-13.
+- **Known follow-up:** per-mapping skip manifest rows for unresolved/ambiguous/deprecated mappings are not implemented in PP-13. Those mapping rows are excluded from the AFDB cohort and are not mislabeled as no-model.
