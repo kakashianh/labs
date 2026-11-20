@@ -30,15 +30,23 @@ class AlphaFoldError(Exception):
     """Base class for AlphaFold retrieval errors."""
 
 
-class AlphaFoldNotFound(AlphaFoldError):
+class AlphaFoldRetryableError(AlphaFoldError):
+    """A transient API, network, or storage operation can be retried later."""
+
+
+class AlphaFoldPermanentError(AlphaFoldError):
+    """A permanent client, source-contract, or input error needs intervention."""
+
+
+class AlphaFoldNotFound(AlphaFoldPermanentError):
     """The API confirmed that no prediction exists for the accession."""
 
 
-class AlphaFoldRateLimit(AlphaFoldError):
+class AlphaFoldRateLimit(AlphaFoldRetryableError):
     """The API rate-limited the request after retry attempts."""
 
 
-class AlphaFoldContractError(AlphaFoldError):
+class AlphaFoldContractError(AlphaFoldPermanentError):
     """The upstream response does not match the supported API contract."""
 
 
@@ -163,16 +171,24 @@ class AlphaFoldClient:
                     if attempt >= self.max_retries:
                         raise AlphaFoldRateLimit(url) from exc
                     delay = _retry_delay(exc.headers.get("Retry-After"), attempt)
-                elif exc.code >= 500 and attempt < self.max_retries:
+                elif exc.code >= 500:
+                    if attempt >= self.max_retries:
+                        raise AlphaFoldRetryableError(
+                            f"AFDB HTTP {exc.code} after retries"
+                        ) from exc
                     delay = _retry_delay(None, attempt)
                 else:
-                    raise AlphaFoldError(f"AFDB HTTP {exc.code}") from exc
-            except (URLError, TimeoutError, json.JSONDecodeError) as exc:
+                    raise AlphaFoldPermanentError(f"AFDB HTTP {exc.code}") from exc
+            except json.JSONDecodeError as exc:
+                raise AlphaFoldContractError("AFDB returned malformed JSON") from exc
+            except (URLError, TimeoutError) as exc:
                 if attempt >= self.max_retries:
-                    raise AlphaFoldError("AFDB request failed after retries") from exc
+                    raise AlphaFoldRetryableError(
+                        "AFDB request failed after retries"
+                    ) from exc
                 delay = _retry_delay(None, attempt)
             time.sleep(delay)
-        raise AlphaFoldError("AFDB request exhausted retries")
+        raise AlphaFoldRetryableError("AFDB request exhausted retries")
 
     def download_cif(
         self,
@@ -265,9 +281,18 @@ class AlphaFoldClient:
         except AlphaFoldError:
             destination.unlink(missing_ok=True)
             raise
-        except (HTTPError, URLError, TimeoutError, OSError) as exc:
+        except HTTPError as exc:
             destination.unlink(missing_ok=True)
-            raise AlphaFoldError("Coordinate download failed") from exc
+            if exc.code == 429 or exc.code >= 500:
+                raise AlphaFoldRetryableError(
+                    f"Coordinate download HTTP {exc.code}"
+                ) from exc
+            raise AlphaFoldPermanentError(
+                f"Coordinate download HTTP {exc.code}"
+            ) from exc
+        except (URLError, TimeoutError, OSError) as exc:
+            destination.unlink(missing_ok=True)
+            raise AlphaFoldRetryableError("Coordinate download failed") from exc
 
         if not size or not _has_mmcif_data_block(bytes(prefix)):
             destination.unlink(missing_ok=True)
