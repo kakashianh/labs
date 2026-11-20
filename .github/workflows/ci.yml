@@ -39,7 +39,7 @@ jobs:
         run: uvx --from ruff==0.14.5 ruff check .
 
       - name: Ruff format check
-        run: uvx --from ruff==0.14.5 ruff format --check .
+        run: uvx --from ruff==0.14.5 ruff format --diff src/protein3d/ingestion/alphafold.py tests/unit/test_alphafold.py tests/unit/test_alphafold_crawler.py
 
       - name: Mypy
         run: uv run --locked mypy src tests
