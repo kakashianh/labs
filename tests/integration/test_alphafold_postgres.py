@@ -12,6 +12,7 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 from testcontainers.postgres import PostgresContainer  # type: ignore[import-untyped]
 
+from protein3d.config import get_settings
 from protein3d.ingestion.alphafold import DownloadedCoordinate, parse_prediction
 from protein3d.ingestion.alphafold_crawler import select_candidates
 from protein3d.ingestion.alphafold_repository import persist_alpha_fold_artifacts
@@ -46,6 +47,7 @@ def test_crawler_candidate_selection_and_metadata_upsert(
         monkeypatch.setenv("PROTEIN3D_DATABASE_NAME", str(url.database))
         monkeypatch.setenv("PROTEIN3D_DATABASE_USER", str(url.username))
         monkeypatch.setenv("PROTEIN3D_DATABASE_PASSWORD", str(url.password))
+        get_settings.cache_clear()
 
         cfg = Config("alembic.ini")
         command.upgrade(cfg, "head")
@@ -153,3 +155,4 @@ def test_crawler_candidate_selection_and_metadata_upsert(
                 assert artifact.job_id == job_id
         finally:
             engine.dispose()
+            get_settings.cache_clear()
