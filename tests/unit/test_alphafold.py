@@ -191,7 +191,6 @@ def test_retry_delay_accepts_http_date() -> None:
     assert _retry_delay("Wed, 21 Oct 2015 07:28:00 GMT", 0) == 0.0
 
 
-
 @pytest.mark.unit
 def test_download_cif_rejects_html_content_type(tmp_path: Path) -> None:
     response = FakeCifResponse(b"data_example\n#\n")
