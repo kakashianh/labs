@@ -160,7 +160,7 @@ def crawl_candidates(
                         },
                     )
                     continue
-                except (AlphaFoldPermanentError, AlphaFoldError) as exc:
+                except AlphaFoldError as exc:
                     failed += 1
                     permanent_failed += 1
                     _write_manifest(
