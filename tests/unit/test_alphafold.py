@@ -227,7 +227,6 @@ def test_download_cif_rejects_non_cif_payload(tmp_path: Path) -> None:
     assert not destination.exists()
 
 
-
 @pytest.mark.unit
 def test_client_classifies_connection_failure() -> None:
     with patch(
