@@ -16,12 +16,14 @@ def test_minio_bucket_upload_head_and_streaming_readback(tmp_path: Path) -> None
     username = "protein3dtest"
     password = "protein3d-test-secret"
     image = "quay.io/minio/minio:RELEASE.2025-09-06T17-38-46Z"
-    with DockerContainer(image) as minio:
-        minio.with_exposed_ports(9000)
-        minio.with_env("MINIO_ROOT_USER", username)
-        minio.with_env("MINIO_ROOT_PASSWORD", password)
-        minio.with_command("server /data")
-        minio.start()
+    container = (
+        DockerContainer(image)
+        .with_exposed_ports(9000)
+        .with_env("MINIO_ROOT_USER", username)
+        .with_env("MINIO_ROOT_PASSWORD", password)
+        .with_command("server /data")
+    )
+    with container as minio:
         host = minio.get_container_host_ip()
         port = int(minio.get_exposed_port(9000))
 
