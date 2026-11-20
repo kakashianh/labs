@@ -37,10 +37,20 @@ PP-13 does not create `structure_protein_chains` rows. PP-21 creates those assoc
 ## Operational notes
 
 - Configure object storage through the existing `PROTEIN3D_OBJECT_STORAGE_*` settings and AFDB controls through `PROTEIN3D_ALPHAFOLD_*`.
-- Use a small, deterministic cohort first. Do not launch a full proteome crawl as a validation step.
+- The default cohort limit is 10 records per run; the CLI enforces a hard maximum of 10,000. Use a small, deterministic cohort first. Do not launch a full proteome crawl as a validation step.
 - MinIO bucket provisioning is an infrastructure responsibility (PP-11); create/verify the configured bucket before running the crawler.
 - Keep the JSONL manifest with the dataset run. Each row reports internal protein UUID, accession, model ID, source URL, sequence range, artifact checksum/size, and outcome.
 - Re-run the same cohort to validate deterministic object keys and metadata upserts. Verify object readback and database consistency before declaring the run successful.
+
+## Running a bounded crawl
+
+After PP-11 Compose services are healthy, apply the PP-12 migrations and configure the `PROTEIN3D_DATABASE_*` and `PROTEIN3D_OBJECT_STORAGE_*` environment variables. The default taxonomy is `9606` and the default sample limit is `10`.
+
+```bash
+uv run --locked protein3d alphafold-crawl --sample-limit 10 --manifest data/manifests/alphafold-sample.jsonl
+```
+
+The command creates a `dataset_runs` row and a `jobs` row, records per-model outcomes in the JSONL manifest, and prints run/job IDs and counts. Outcomes include `downloaded`, `no_model`, `unsupported`, and `failed`. Proteins longer than 2,700 residues are reported as `unsupported` for this individual-API workflow rather than being mislabeled as no-model. Re-run the same command with the same cohort/manifest to exercise deterministic object keys and metadata upserts.
 
 ## Attribution
 
