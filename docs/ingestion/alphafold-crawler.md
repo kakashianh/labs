@@ -38,7 +38,7 @@ PP-13 does not create `structure_protein_chains` rows. PP-21 creates those assoc
 
 - Configure object storage through the existing `PROTEIN3D_OBJECT_STORAGE_*` settings and AFDB controls through `PROTEIN3D_ALPHAFOLD_*`.
 - The default cohort limit is 10 records per run; the CLI enforces a hard maximum of 10,000. Use a small, deterministic cohort first. Do not launch a full proteome crawl as a validation step.
-- MinIO bucket provisioning is an infrastructure responsibility (PP-11); create/verify the configured bucket before running the crawler.
+- MinIO bucket provisioning is an infrastructure responsibility (PP-11); the crawler now creates the configured bucket if absent. The Compose/test image is pinned to `soldevelo/minio:2026.7.17`, an unofficial community-maintained packaging of the MinIO S3-compatible server; upstream MinIO Community Edition is archived, so treat this image as an explicit third-party dependency rather than an official MinIO release.
 - Keep the JSONL manifest with the dataset run. Each row reports internal protein UUID, accession, model ID, source URL, sequence range, artifact checksum/size, and outcome.
 - Re-run the same cohort to validate deterministic object keys and metadata upserts. Verify object readback and database consistency before declaring the run successful.
 
